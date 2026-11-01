@@ -1,0 +1,48 @@
+{
+  "name": "${localWorkspaceFolderBasename}",
+  "service": "devcontainer",
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}"
+  },
+  "workspaceFolder": "/workspace",
+  "dockerComposeFile": ["./compose.yml"],
+  "forwardPorts": [3000],
+  "postCreateCommand": "sh .devcontainer/scripts/post_create.sh",
+  "postStartCommand": "sh .devcontainer/scripts/post_start.sh ${containerWorkspaceFolder}",
+  "features": {
+    "ghcr.io/devcontainers/features/aws-cli": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "stylelint.vscode-stylelint",
+        "formulahendry.auto-rename-tag",
+        "MariusAlchimavicius.json-to-ts",
+        "styled-components.vscode-styled-components",
+        "biomejs.biome",
+        // yaml, jsonc, json
+        "redhat.vscode-yaml",
+        "esbenp.prettier-vscode",
+        "richie5um2.vscode-sort-json",
+        // Git関連
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        "github.copilot",
+        // markdown
+        "yzhang.markdown-all-in-one",
+        "DavidAnson.vscode-markdownlint",
+        "bierner.github-markdown-preview",
+        // その他
+        "streetsidesoftware.code-spell-checker",
+        "naumovs.color-highlight",
+        "Gruntfuggly.todo-tree",
+        "oderwat.indent-rainbow",
+        "ms-vscode.live-server",
+        "usernamehw.errorlens",
+        "formulahendry.code-runner",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  }
+}

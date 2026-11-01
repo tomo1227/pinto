@@ -1,0 +1,14 @@
+{
+  "name": "pinto",
+  "private": true,
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @pinto/worker dev",
+    "build": "pnpm --filter @pinto/worker build",
+    "deploy": "pnpm --filter @pinto/worker deploy",
+    "typecheck": "pnpm --filter @pinto/worker typecheck"
+  }
+}

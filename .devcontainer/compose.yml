@@ -1,0 +1,21 @@
+name: Pinto
+
+services:
+  devcontainer:
+    hostname: ${DEVCONTAINTER_HOST_NAME}
+    container_name: ${DEVCONTAINTER_CONTAINER_NAME}
+    image: ${DEVCONTAINTER_IMAGE_NAME}
+    build:
+      context: ../
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - type: bind
+        source: ${LOCAL_WORKSPACE_FOLDER:-./../}
+        target: /workspace
+        consistency: cached
+      - type: bind
+        source: ${HOME}/.config/gh
+        target: /home/vscode/.config/gh
+    ports:
+      - ${HOST_IP}:${DEVCONTAINTER_HOST_PORT}:3000
+    tty: true
