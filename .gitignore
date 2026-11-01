@@ -156,3 +156,7 @@ vite.config.ts.timestamp-*
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
+apps/worker/public/*
+!apps/worker/public/.gitkeep
+apps/web/test-results/
+apps/web/playwright-report/

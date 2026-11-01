@@ -6,9 +6,19 @@
     "node": ">=26"
   },
   "scripts": {
-    "dev": "pnpm --filter @pinto/worker dev",
-    "build": "pnpm --filter @pinto/worker build",
+    "dev": "concurrently -k -n web,worker \"pnpm --filter @pinto/web dev -- --host 0.0.0.0\" \"pnpm --filter @pinto/worker dev -- --ip 0.0.0.0\"",
+    "build": "pnpm --filter @pinto/web build && pnpm --filter @pinto/worker build",
+    "preview": "pnpm build && pnpm --filter @pinto/worker preview",
     "deploy": "pnpm --filter @pinto/worker deploy",
-    "typecheck": "pnpm --filter @pinto/worker typecheck"
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test": "pnpm --filter @pinto/web test",
+    "test:watch": "pnpm --filter @pinto/web test:watch",
+    "test:e2e": "pnpm --filter @pinto/web test:e2e"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.4",
+    "concurrently": "^10.0.6"
   }
 }

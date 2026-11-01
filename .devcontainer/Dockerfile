@@ -9,7 +9,7 @@ ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 
 RUN apt update \
-    && apt install -y sudo findutils binutils pkg-config bash-completion gcc tar wget make curl openssh-client locales bash git gnupg2 ca-certificates vim xdg-utils gh
+    && apt install -y sudo findutils binutils pkg-config bash-completion gcc tar wget make curl openssh-client locales bash git gnupg2 ca-certificates vim xdg-utils gh libnspr4 libnss3 libatk1.0-0 libxdamage1 libxkbcommon0 libasound2t64 libatspi2.0-0
 
 RUN groupadd --gid $USER_GID $USERNAME  && \
     useradd --uid $USER_UID --gid $USER_GID -m $USERNAME  && \
