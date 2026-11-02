@@ -153,14 +153,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     return () => window.removeEventListener("keydown", handleHistoryShortcut);
   }, [future.length, past.length, redo, removeHold, selectedHoldId, notify, undo]);
 
-  function adjustSelectedHoldRadius(amount: number) {
-    if (!selectedHold) return;
-    const radius = selectedHold.markerRadius ?? 48;
-    void updateHold(selectedHold.id, {
-      markerRadius: Math.min(300, Math.max(4, radius + amount)),
-    });
-  }
-
   useEffect(() => {
     let imageObjectUrl: string | null = null;
     let active = true;
@@ -472,26 +464,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                   }}
                 />
               </label>
-              <button
-                className="hold-size-step"
-                type="button"
-                title="選択中の円を小さく"
-                aria-label="選択中の円を小さく"
-                disabled={!selectedHold || (selectedHold.markerRadius ?? 48) <= 4}
-                onClick={() => adjustSelectedHoldRadius(-4)}
-              >
-                <Minus size={13} />
-              </button>
-              <button
-                className="hold-size-step"
-                type="button"
-                title="選択中の円を大きく"
-                aria-label="選択中の円を大きく"
-                disabled={!selectedHold || (selectedHold.markerRadius ?? 48) >= 300}
-                onClick={() => adjustSelectedHoldRadius(4)}
-              >
-                <Plus size={13} />
-              </button>
             </div>
             <button
               className="icon-button danger-text editor-reset"
