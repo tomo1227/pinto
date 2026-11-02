@@ -116,18 +116,24 @@ describe("wall image uploads", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     };
+    const nextHold = {
+      ...hold,
+      id: "hold-next",
+      position: { x: 0.6, y: 0.4 },
+    };
     await saveHold(hold);
-    useWorkspaceStore.setState({ selectedWallId: "wall-1", holds: [hold] });
+    await saveHold(nextHold);
+    useWorkspaceStore.setState({ selectedWallId: "wall-1", holds: [hold, nextHold] });
 
     await useWorkspaceStore.getState().appendHold(hold.id);
 
     const state = useWorkspaceStore.getState();
     expect(state.routes).toHaveLength(1);
     expect(state.selectedRouteId).toBe(state.routes[0].id);
-    expect(state.routes[0].holdIds).toEqual([]);
+    expect(state.routes[0].holdIds).toEqual([hold.id]);
 
-    await useWorkspaceStore.getState().appendHold(hold.id);
-    expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([hold.id]);
+    await useWorkspaceStore.getState().appendHold(nextHold.id);
+    expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([hold.id, nextHold.id]);
   });
 
   it("clears all wall holds and route references in one undoable action", async () => {

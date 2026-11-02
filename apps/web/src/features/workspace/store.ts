@@ -71,7 +71,7 @@ type WorkspaceState = {
   updateHold: (holdId: string, patch: Partial<Hold>) => Promise<void>;
   removeHold: (holdId: string) => Promise<void>;
   clearHolds: () => Promise<void>;
-  createRoute: (draft: RouteDraft) => Promise<ClimbingRoute>;
+  createRoute: (draft: RouteDraft, initialHoldId?: string) => Promise<ClimbingRoute>;
   updateRoute: (routeId: string, patch: Partial<ClimbingRoute>) => Promise<void>;
   duplicateRoute: (routeId: string) => Promise<ClimbingRoute>;
   removeRoute: (routeId: string) => Promise<void>;
@@ -386,7 +386,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       (route) => void notifyDiscord(route, "update", (message) => get().notify(message)),
     );
   },
-  async createRoute(draft) {
+  async createRoute(draft, initialHoldId) {
     const state = get();
     const wallId = state.selectedWallId;
     if (!wallId) throw new Error("壁を選択してください。");
@@ -396,7 +396,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       id: crypto.randomUUID(),
       wallId,
       name: draft.name.trim() || "新しいルート",
-      holdIds: [],
+      holdIds: initialHoldId ? [initialHoldId] : [],
       startHoldIds: [],
       finishHoldIds: [],
       source: "manual",
@@ -467,7 +467,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const route = state.routes.find((item) => item.id === state.selectedRouteId);
     if (!route) {
       if (state.routes.length > 0 || !state.selectedWallId) return;
-      await get().createRoute({ name: "新しいルート" });
+      await get().createRoute({ name: "新しいルート" }, holdId);
       return;
     }
     if (route.holdIds.includes(holdId)) {
