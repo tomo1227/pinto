@@ -81,6 +81,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
   const [autoDetectHolds, setAutoDetectHolds] = useState(true);
+  const [allowEllipses, setAllowEllipses] = useState(true);
   const [defaultHoldColor, setDefaultHoldColor] = useState("#e96d4d");
   const [createOpen, setCreateOpen] = useState(false);
   const [routeName, setRouteName] = useState("");
@@ -353,6 +354,21 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               <span className="auto-detect-control__status">{autoDetectHolds ? "ON" : "OFF"}</span>
             </button>
             <button
+              className={`auto-detect-control ellipse-mode-control ${allowEllipses ? "is-on" : ""}`}
+              type="button"
+              role="switch"
+              aria-label="自動検出で楕円を許可"
+              aria-checked={allowEllipses}
+              disabled={!autoDetectHolds}
+              onClick={() => setAllowEllipses((enabled) => !enabled)}
+            >
+              <span className="ellipse-mode-control__label">楕円</span>
+              <span className="auto-detect-control__track" aria-hidden="true">
+                <span />
+              </span>
+              <span className="auto-detect-control__status">{allowEllipses ? "ON" : "OFF"}</span>
+            </button>
+            <button
               className="button button--outline button--small editor-reset"
               type="button"
               title="この壁のホールドとルート上のホールド設定をすべてリセット"
@@ -405,8 +421,9 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               tool={tool}
               showLines={showLines}
               autoDetectHolds={autoDetectHolds}
-              onAddHold={(position, markerRadius, bounds) =>
-                void addHold(position, markerRadius, defaultHoldColor, bounds)
+              allowEllipses={allowEllipses}
+              onAddHold={(position, markerRadius, bounds, shape) =>
+                void addHold(position, markerRadius, defaultHoldColor, bounds, shape)
                   .then((hold) => setSelectedHoldId(hold.id))
                   .catch((reason: unknown) =>
                     notify(

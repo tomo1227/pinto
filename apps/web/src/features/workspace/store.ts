@@ -65,6 +65,7 @@ type WorkspaceState = {
     markerRadius?: number,
     color?: string,
     bounds?: Hold["bounds"],
+    shape?: Hold["shape"],
   ) => Promise<Hold>;
   moveHold: (holdId: string, position: Hold["position"]) => Promise<void>;
   updateHold: (holdId: string, patch: Partial<Hold>) => Promise<void>;
@@ -260,7 +261,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     await saveWall(updated);
     set({ walls: state.walls.map((item) => (item.id === wallId ? updated : item)) });
   },
-  async addHold(position, markerRadius, color, bounds) {
+  async addHold(position, markerRadius, color, bounds, shape) {
     const state = get();
     const wallId = state.selectedWallId;
     if (!wallId) throw new Error("編集する壁を選択してください。");
@@ -270,7 +271,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       wallId,
       position,
       ...(markerRadius === undefined ? {} : { markerRadius }),
-      ...(bounds ? { bounds, shape: { type: "ellipse" as const } } : {}),
+      ...(bounds ? { bounds } : {}),
+      ...(shape ? { shape } : {}),
       detectionSource: "manual",
       color: color ?? "#e96d4d",
       createdAt: now,

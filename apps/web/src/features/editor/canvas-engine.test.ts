@@ -95,7 +95,7 @@ describe("canvas coordinate engine", () => {
     expect(estimateHoldRadius(pixels, 100, 100, 50, 50)).toBeUndefined();
   });
 
-  it("finds an off-center hold and returns an expanded ellipse", () => {
+  it("fits an off-center hold without arbitrary padding", () => {
     const width = 120;
     const height = 100;
     const pixels = new Uint8ClampedArray(width * height * 4);
@@ -110,13 +110,28 @@ describe("canvas coordinate engine", () => {
       }
     }
 
-    const bounds = estimateHoldBounds(pixels, width, height, 68, 50);
+    const outline = estimateHoldBounds(pixels, width, height, 68, 50);
+    const bounds = outline?.bounds;
 
     expect(bounds).toBeDefined();
+    expect(bounds?.width).toBeLessThan(56);
+    expect(outline?.circleRadius).toBeGreaterThan(23);
     expect(bounds?.x).toBeLessThan(36);
     expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeGreaterThan(84);
     expect(bounds?.y).toBeLessThan(36);
     expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeGreaterThan(64);
+    if (bounds) {
+      const centerX = bounds.x + bounds.width / 2;
+      const centerY = bounds.y + bounds.height / 2;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (pixels[(y * width + x) * 4] !== 225) continue;
+          const ellipseDistance =
+            ((x - centerX) / (bounds.width / 2)) ** 2 + ((y - centerY) / (bounds.height / 2)) ** 2;
+          expect(ellipseDistance).toBeLessThanOrEqual(1);
+        }
+      }
+    }
   });
 
   it("draws route circles as transparent outlines with their sequence number", () => {
@@ -186,7 +201,33 @@ describe("canvas coordinate engine", () => {
       100,
     );
 
-    expect(context.ellipse).toHaveBeenCalledWith(50, 50, 10, 5, 0, 0, Math.PI * 2);
+    expect(context.ellipse).toHaveBeenCalledWith(50, 50, 11, 6, 0, 0, Math.PI * 2);
+  });
+
+  it("keeps a detected circular outline outside its fitted radius", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [
+          {
+            ...hold,
+            markerRadius: 20,
+            bounds: { x: 0.45, y: 0.45, width: 0.1, height: 0.1 },
+            shape: { type: "point" },
+          },
+        ],
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.arc).toHaveBeenCalledWith(50, 50, 6, 0, Math.PI * 2);
   });
 
   it("keeps a legacy hold's color stable when selected", () => {

@@ -42,6 +42,13 @@ export type DetectedHoldOutline = {
   position: Point;
   bounds: { x: number; y: number; width: number; height: number };
   markerRadius: number;
+  circleRadius: number;
+};
+
+type EstimatedHoldOutline = {
+  bounds: { x: number; y: number; width: number; height: number };
+  markerRadius: number;
+  circleRadius: number;
 };
 
 export function estimateHoldBounds(
@@ -50,7 +57,7 @@ export function estimateHoldBounds(
   height: number,
   seedX: number,
   seedY: number,
-): { x: number; y: number; width: number; height: number } | undefined {
+): EstimatedHoldOutline | undefined {
   const backgroundSamples: Color[] = [];
   for (let x = 2; x < width - 2; x += 4) {
     backgroundSamples.push(averageColorAt(pixels, width, height, x, 1));
@@ -131,12 +138,34 @@ export function estimateHoldBounds(
     return undefined;
   }
 
-  const padding = Math.max(3, Math.round(Math.max(componentWidth, componentHeight) * 0.08));
-  const left = Math.max(0, minX - padding);
-  const top = Math.max(0, minY - padding);
-  const right = Math.min(width - 1, maxX + padding);
-  const bottom = Math.min(height - 1, maxY + padding);
-  return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const radiusX = componentWidth / 2;
+  const radiusY = componentHeight / 2;
+  let ellipseScale = 1;
+  let circleRadius = 0;
+  for (let pointIndex = 0; pointIndex < tail; pointIndex += 1) {
+    const index = queue[pointIndex];
+    const x = index % width;
+    const y = Math.floor(index / width);
+    const deltaX = x - centerX;
+    const deltaY = y - centerY;
+    ellipseScale = Math.max(ellipseScale, Math.hypot(deltaX / radiusX, deltaY / radiusY));
+    circleRadius = Math.max(circleRadius, Math.hypot(deltaX, deltaY));
+  }
+
+  const ellipseRadiusX = radiusX * ellipseScale + 1;
+  const ellipseRadiusY = radiusY * ellipseScale + 1;
+  return {
+    bounds: {
+      x: centerX - ellipseRadiusX,
+      y: centerY - ellipseRadiusY,
+      width: ellipseRadiusX * 2,
+      height: ellipseRadiusY * 2,
+    },
+    markerRadius: Math.max(ellipseRadiusX, ellipseRadiusY),
+    circleRadius: circleRadius + 1,
+  };
 }
 
 export function detectHoldOutline(
@@ -159,19 +188,20 @@ export function detectHoldOutline(
     if (!context) return undefined;
     context.drawImage(image, left, top, size, size, 0, 0, size, size);
     const pixels = context.getImageData(0, 0, size, size).data;
-    const localBounds = estimateHoldBounds(pixels, size, size, centerX - left, centerY - top);
-    if (!localBounds) return undefined;
+    const localOutline = estimateHoldBounds(pixels, size, size, centerX - left, centerY - top);
+    if (!localOutline) return undefined;
 
     const bounds = {
-      x: (left + localBounds.x) / imageWidth,
-      y: (top + localBounds.y) / imageHeight,
-      width: localBounds.width / imageWidth,
-      height: localBounds.height / imageHeight,
+      x: (left + localOutline.bounds.x) / imageWidth,
+      y: (top + localOutline.bounds.y) / imageHeight,
+      width: localOutline.bounds.width / imageWidth,
+      height: localOutline.bounds.height / imageHeight,
     };
     return {
       position: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 },
       bounds,
-      markerRadius: Math.max(bounds.width * imageWidth, bounds.height * imageHeight) / 2,
+      markerRadius: localOutline.markerRadius,
+      circleRadius: localOutline.circleRadius,
     };
   } catch {
     return undefined;

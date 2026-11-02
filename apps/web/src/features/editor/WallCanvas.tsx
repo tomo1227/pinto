@@ -25,7 +25,13 @@ type Props = {
   tool: Tool;
   showLines: boolean;
   autoDetectHolds: boolean;
-  onAddHold: (position: Hold["position"], markerRadius: number, bounds?: Hold["bounds"]) => void;
+  allowEllipses: boolean;
+  onAddHold: (
+    position: Hold["position"],
+    markerRadius: number,
+    bounds?: Hold["bounds"],
+    shape?: Hold["shape"],
+  ) => void;
   onMoveHold: (id: string, position: Hold["position"]) => void;
   onRemoveHold: (id: string) => void;
   onSelectHold: (id: string | null) => void;
@@ -75,6 +81,7 @@ export function WallCanvas({
   tool,
   showLines,
   autoDetectHolds,
+  allowEllipses,
   onAddHold,
   onMoveHold,
   onRemoveHold,
@@ -215,15 +222,34 @@ export function WallCanvas({
           autoDetectHolds && imageRef.current
             ? detectHoldOutline(imageRef.current, position, wall.width, wall.height)
             : undefined;
-        const detectedRadius =
-          outline?.markerRadius ??
-          (autoDetectHolds && imageRef.current
+        const fallbackRadius =
+          autoDetectHolds && imageRef.current
             ? detectHoldRadius(imageRef.current, position, wall.width, wall.height)
-            : undefined);
+            : undefined;
+        const detectedPosition = outline?.position ?? position;
+        const detectedRadius = outline
+          ? allowEllipses
+            ? outline.markerRadius
+            : outline.circleRadius
+          : (fallbackRadius ?? 12 / imageRect.scale);
+        const fallbackBounds =
+          fallbackRadius === undefined
+            ? undefined
+            : {
+                x: position.x - fallbackRadius / wall.width,
+                y: position.y - fallbackRadius / wall.height,
+                width: (fallbackRadius * 2) / wall.width,
+                height: (fallbackRadius * 2) / wall.height,
+              };
         onAddHold(
-          outline?.position ?? position,
-          detectedRadius ?? 12 / imageRect.scale,
-          outline?.bounds,
+          detectedPosition,
+          detectedRadius,
+          outline?.bounds ?? fallbackBounds,
+          outline
+            ? { type: allowEllipses ? "ellipse" : "point" }
+            : fallbackRadius === undefined
+              ? undefined
+              : { type: "point" },
         );
       }
     } else {
