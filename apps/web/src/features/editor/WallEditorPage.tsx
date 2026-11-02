@@ -10,7 +10,6 @@ import {
   Eye,
   EyeOff,
   Hand,
-  Layers2,
   MapPin,
   Pencil,
   Plus,
@@ -29,7 +28,7 @@ import { getDiscordSettings, getImage, getWall } from "../../infrastructure/stor
 import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
-type Tool = "select" | "hold" | "route" | "pan";
+type Tool = "hold" | "route" | "pan";
 type Panel = "holds" | "routes";
 type RouteDraft = {
   name: string;
@@ -74,7 +73,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wall, setWall] = useState<Wall | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [wallName, setWallName] = useState("");
-  const [tool, setTool] = useState<Tool>("select");
+  const [tool, setTool] = useState<Tool>("hold");
   const [panel, setPanel] = useState<Panel>("routes");
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
@@ -131,6 +130,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         name: routeName,
         ...(routeGrade.trim() ? { grade: routeGrade.trim() } : {}),
       });
+      setTool("hold");
       setRouteName("");
       setRouteGrade("");
       setCreateOpen(false);
@@ -276,13 +276,13 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
             <fieldset className="tool-segment">
               <legend className="sr-only">キャンバスツール</legend>
               <button
-                className={tool === "select" ? "is-active" : ""}
+                className={tool === "pan" ? "is-active" : ""}
                 type="button"
-                title="選択"
-                aria-label="選択"
-                onClick={() => setTool("select")}
+                title="画像を移動"
+                aria-label="画像を移動"
+                onClick={() => setTool("pan")}
               >
-                <Layers2 size={17} />
+                <Hand size={17} />
               </button>
               <button
                 className={tool === "hold" ? "is-active" : ""}
@@ -301,15 +301,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 onClick={() => setTool("route")}
               >
                 <RouteIcon size={17} />
-              </button>
-              <button
-                className={tool === "pan" ? "is-active" : ""}
-                type="button"
-                title="画像を移動"
-                aria-label="画像を移動"
-                onClick={() => setTool("pan")}
-              >
-                <Hand size={17} />
               </button>
             </fieldset>
             <span className="toolbar-separator" />

@@ -1,12 +1,12 @@
 import tailwindcss from "@tailwindcss/vite";
-import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [
-    TanStackRouterVite({
+    tanstackRouter({
       target: "react",
       routesDirectory: "./src/app/routes",
       generatedRouteTree: "./src/app/routeTree.gen.ts",
@@ -25,7 +25,10 @@ export default defineConfig({
         display: "standalone",
         icons: [{ src: "/pinto-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" }],
       },
-      workbox: { globPatterns: ["**/*.{js,css,html,svg,png,woff2}"] },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
     }),
   ],
   server: {

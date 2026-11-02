@@ -109,7 +109,7 @@ export function DashboardPage() {
         <div>
           <p className="eyebrow">YOUR LOCAL WALL LIBRARY</p>
           <h1 className="display-title">
-            Walls <span>&</span> routes
+            Walls <span>&</span> Routes
           </h1>
           <p className="intro-copy">壁の写真から、次の一本をつくろう。</p>
         </div>
@@ -182,11 +182,11 @@ export function DashboardPage() {
               <input
                 className="file-input"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
                 required
                 onChange={(event) => setFile(event.currentTarget.files?.[0] ?? null)}
               />
-              <span className="field-hint">JPEG / PNG / WebP</span>
+              <span className="field-hint">JPEG / PNG / WebP / HEIC / HEIF</span>
             </label>
             {file && (
               <div className="selected-file">

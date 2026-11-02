@@ -89,6 +89,25 @@ function nextHistory(past: EditorSnapshot[], current: EditorSnapshot): EditorSna
   return [...past.slice(-99), current];
 }
 
+function isHeicFile(file: File): boolean {
+  return (
+    /\.(heic|heif)$/i.test(file.name) ||
+    ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(
+      file.type.toLowerCase(),
+    )
+  );
+}
+
+async function prepareWallImage(file: File): Promise<Blob> {
+  if (!isHeicFile(file)) return file;
+  try {
+    const { heicTo } = await import("heic-to");
+    return await heicTo({ blob: file, type: "image/jpeg", quality: 0.92 });
+  } catch {
+    throw new Error("HEIC画像を読み込めませんでした。別の画像を選択してください。");
+  }
+}
+
 function touchRoutesForHold(routes: ClimbingRoute[], holdId: string): ClimbingRoute[] {
   const updatedAt = new Date().toISOString();
   return routes.map((route) => (route.holdIds.includes(holdId) ? { ...route, updatedAt } : route));
@@ -193,16 +212,19 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     }
   },
   async createWall(file, name, inclination) {
-    if (!file.type.startsWith("image/")) throw new Error("画像ファイルを選択してください。");
-    const bitmap = await createImageBitmap(file);
+    if (!file.type.startsWith("image/") && !isHeicFile(file)) {
+      throw new Error("画像ファイルを選択してください。");
+    }
+    const imageBlob = await prepareWallImage(file);
+    const bitmap = await createImageBitmap(imageBlob);
     const now = new Date().toISOString();
     const image: ImageAsset = {
       id: crypto.randomUUID(),
-      blob: file,
-      mimeType: file.type,
+      blob: imageBlob,
+      mimeType: imageBlob.type,
       width: bitmap.width,
       height: bitmap.height,
-      size: file.size,
+      size: imageBlob.size,
       createdAt: now,
     };
     bitmap.close();
@@ -234,7 +256,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set({ walls: state.walls.map((item) => (item.id === wallId ? updated : item)) });
   },
   async addHold(position) {
-    const wallId = get().selectedWallId;
+    const state = get();
+    const wallId = state.selectedWallId;
     if (!wallId) throw new Error("編集する壁を選択してください。");
     const now = new Date().toISOString();
     const hold: Hold = {
@@ -246,7 +269,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    const state = get();
     set({
       holds: [...state.holds, hold],
       past: nextHistory(state.past, snapshot(state)),
@@ -323,7 +345,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     );
   },
   async createRoute(draft) {
-    const wallId = get().selectedWallId;
+    const state = get();
+    const wallId = state.selectedWallId;
     if (!wallId) throw new Error("壁を選択してください。");
     const now = new Date().toISOString();
     const route: ClimbingRoute = {
@@ -338,7 +361,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       createdAt: now,
       updatedAt: now,
     };
-    const state = get();
     set({
       routes: [...state.routes, route],
       selectedRouteId: route.id,
@@ -401,7 +423,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   async appendHold(holdId) {
     const state = get();
     const route = state.routes.find((item) => item.id === state.selectedRouteId);
-    if (!route || route.holdIds.includes(holdId)) return;
+    if (!route) {
+      if (state.routes.length > 0 || !state.selectedWallId) return;
+      await get().createRoute({ name: "新しいルート" });
+      return;
+    }
+    if (route.holdIds.includes(holdId)) {
+      await get().removeRouteHold(holdId);
+      return;
+    }
     await get().updateRoute(route.id, { holdIds: [...route.holdIds, holdId] });
   },
   async removeRouteHold(holdId) {

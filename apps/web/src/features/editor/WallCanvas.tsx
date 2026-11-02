@@ -14,7 +14,7 @@ import {
   type Viewport,
 } from "./canvas-engine";
 
-type Tool = "select" | "hold" | "route" | "pan";
+type Tool = "hold" | "route" | "pan";
 type Props = {
   wall: Wall;
   imageUrl: string;
@@ -190,10 +190,6 @@ export function WallCanvas({
     }
     if (hit && tool === "route") {
       onAppendHold(hit.id);
-      return;
-    }
-    if (hit) {
-      onSelectHold(hit.id);
       return;
     }
     if (tool === "hold") {

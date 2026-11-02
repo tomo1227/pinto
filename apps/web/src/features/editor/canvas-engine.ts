@@ -92,12 +92,15 @@ export function drawScene(
       if (index === 0) context.moveTo(point.x, point.y);
       else context.lineTo(point.x, point.y);
     });
-    context.strokeStyle = "#f2d13d";
-    context.lineWidth = 4;
     context.lineCap = "round";
     context.lineJoin = "round";
     context.shadowColor = "rgba(25, 30, 25, .65)";
     context.shadowBlur = 5;
+    context.strokeStyle = "#202522";
+    context.lineWidth = 8;
+    context.stroke();
+    context.strokeStyle = "#f2d13d";
+    context.lineWidth = 4;
     context.stroke();
     context.shadowBlur = 0;
   }
@@ -120,16 +123,12 @@ export function drawScene(
     } else {
       context.arc(point.x, point.y, radius, 0, Math.PI * 2);
     }
-    context.fillStyle = isStart
-      ? "#79c7a2"
-      : isFinish
-        ? "#ee795a"
-        : isInRoute
-          ? "#f2d13d"
-          : "#f7f6ef";
-    context.strokeStyle = isInRoute || isSelected ? "#202522" : "#49534e";
+    if (isFinish) {
+      context.fillStyle = "#ee795a";
+      context.fill();
+    }
+    context.strokeStyle = isStart ? "#79c7a2" : isInRoute || isSelected ? "#202522" : "#49534e";
     context.lineWidth = isSelected ? 3 : 2;
-    context.fill();
     context.stroke();
     if (isInRoute) {
       context.fillStyle = "#202522";
