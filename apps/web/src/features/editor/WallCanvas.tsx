@@ -1,4 +1,5 @@
 import type { Route as ClimbingRoute, Hold, Wall } from "@pinto/shared";
+import { Trash2 } from "lucide-react";
 import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
@@ -124,7 +125,7 @@ export function WallCanvas({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const dragRef = useRef<{ holdId: string; pointerId: number } | null>(null);
+  const dragRef = useRef<{ holdId: string; pointerId: number; pointerType: string } | null>(null);
   const resizeRef = useRef<ResizeGesture | null>(null);
   const panRef = useRef<{
     x: number;
@@ -135,6 +136,9 @@ export function WallCanvas({
   } | null>(null);
   const [viewport, setViewport] = useState<Viewport>({ zoom: 1, panX: 0, panY: 0 });
   const [imageReady, setImageReady] = useState(false);
+  const [touchDragging, setTouchDragging] = useState(false);
+  const [dragOverTrash, setDragOverTrash] = useState(false);
+  const trashTargetRef = useRef<HTMLDivElement>(null);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchRef = useRef<PinchGesture | null>(null);
 
@@ -237,6 +241,8 @@ export function WallCanvas({
           : {}),
       };
       dragRef.current = null;
+      setTouchDragging(false);
+      setDragOverTrash(false);
       resizeRef.current = null;
       panRef.current = null;
       return;
@@ -296,7 +302,13 @@ export function WallCanvas({
     if (hit && tool === "hold") {
       onSelectHold(hit.id);
       dragPositionRef.current = null;
-      dragRef.current = { holdId: hit.id, pointerId: event.pointerId };
+      setTouchDragging(false);
+      setDragOverTrash(false);
+      dragRef.current = {
+        holdId: hit.id,
+        pointerId: event.pointerId,
+        pointerType: event.pointerType,
+      };
       return;
     }
     if (hit && tool === "route") {
@@ -446,7 +458,22 @@ export function WallCanvas({
         },
         rect,
       );
-      if (clamped) setDragPosition(clamped);
+      if (clamped) {
+        if (dragRef.current.pointerType === "touch") {
+          setTouchDragging(true);
+          const targetBounds = trashTargetRef.current?.getBoundingClientRect();
+          setDragOverTrash(
+            Boolean(
+              targetBounds &&
+                event.clientX >= targetBounds.left &&
+                event.clientX <= targetBounds.right &&
+                event.clientY >= targetBounds.top &&
+                event.clientY <= targetBounds.bottom,
+            ),
+          );
+        }
+        setDragPosition(clamped);
+      }
     }
   }
 
@@ -511,11 +538,26 @@ export function WallCanvas({
       resizeRef.current = null;
     }
     if (dragRef.current?.pointerId === event.pointerId) {
-      if (dragPositionRef.current) {
-        onMoveHold(dragRef.current.holdId, dragPositionRef.current);
+      const drag = dragRef.current;
+      const targetBounds = trashTargetRef.current?.getBoundingClientRect();
+      const droppedOnTrash =
+        event.type === "pointerup" &&
+        drag.pointerType === "touch" &&
+        dragPositionRef.current !== null &&
+        targetBounds !== undefined &&
+        event.clientX >= targetBounds.left &&
+        event.clientX <= targetBounds.right &&
+        event.clientY >= targetBounds.top &&
+        event.clientY <= targetBounds.bottom;
+      if (droppedOnTrash) {
+        onRemoveHold(drag.holdId);
+      } else if (dragPositionRef.current) {
+        onMoveHold(drag.holdId, dragPositionRef.current);
       }
       dragRef.current = null;
       dragPositionRef.current = null;
+      setTouchDragging(false);
+      setDragOverTrash(false);
     }
     if (panRef.current?.pointerId === event.pointerId) panRef.current = null;
   }
@@ -540,6 +582,15 @@ export function WallCanvas({
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
       />
+      {touchDragging && (
+        <div
+          ref={trashTargetRef}
+          className={`canvas-touch-delete-target${dragOverTrash ? " is-active" : ""}`}
+          aria-hidden="true"
+        >
+          <Trash2 size={24} />
+        </div>
+      )}
       <div className="canvas-zoom-controls">
         <button
           className="icon-button"

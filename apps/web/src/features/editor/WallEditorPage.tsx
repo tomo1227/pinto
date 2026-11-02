@@ -107,7 +107,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (
         target?.isContentEditable ||
@@ -119,6 +118,26 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       }
 
       const key = event.key.toLowerCase();
+      const deleteFocusedControl = target?.closest("input, textarea, select");
+      if (
+        selectedHoldId &&
+        !event.repeat &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !deleteFocusedControl &&
+        (key === "delete" || key === "backspace")
+      ) {
+        event.preventDefault();
+        const holdId = selectedHoldId;
+        setSelectedHoldId(null);
+        void removeHold(holdId).catch((reason: unknown) =>
+          notify(reason instanceof Error ? reason.message : "ホールドを削除できませんでした。"),
+        );
+        return;
+      }
+
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
       const shouldUndo = key === "z" && !event.shiftKey;
       const shouldRedo = (key === "z" && event.shiftKey) || key === "y";
       if (!shouldUndo && !shouldRedo) return;
@@ -132,7 +151,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
     window.addEventListener("keydown", handleHistoryShortcut);
     return () => window.removeEventListener("keydown", handleHistoryShortcut);
-  }, [future.length, past.length, redo, undo]);
+  }, [future.length, past.length, redo, removeHold, selectedHoldId, notify, undo]);
 
   function adjustSelectedHoldRadius(amount: number) {
     if (!selectedHold) return;

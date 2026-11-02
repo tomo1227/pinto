@@ -925,6 +925,30 @@ a {
   position: absolute;
   inset: 0;
 }
+.canvas-touch-delete-target {
+  position: absolute;
+  z-index: 3;
+  bottom: 34px;
+  left: 50%;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: #b34e3c;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 3px 14px rgb(34 24 20 / 32%);
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition:
+    background 0.16s ease,
+    transform 0.16s ease;
+}
+.canvas-touch-delete-target.is-active {
+  background: #8d3026;
+  transform: translateX(-50%) scale(1.12);
+}
 .wall-canvas {
   display: block;
   width: 100%;
