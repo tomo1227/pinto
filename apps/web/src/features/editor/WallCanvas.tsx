@@ -9,13 +9,43 @@ import {
 import {
   canvasToNormalized,
   drawScene,
+  getHoldMarkerGeometry,
   getImageRect,
+  getResizeHandleAt,
+  type HoldResizeHandle,
   hitTestHold,
+  isInsideHoldMarker,
   type Viewport,
 } from "./canvas-engine";
 import { detectHoldOutline, detectHoldRadius } from "./hold-detection";
 
 type Tool = "hold" | "route" | "pan" | "eraser";
+type ResizeGesture = {
+  holdId: string;
+  pointerId: number;
+  handle: HoldResizeHandle;
+  centerX: number;
+  centerY: number;
+  outlineRadiusX: number;
+  outlineRadiusY: number;
+  scaleX: number;
+  scaleY: number;
+  imageScale: number;
+  lineWidth: number;
+  patch: Partial<Hold>;
+};
+type PinchGesture = {
+  mode: "viewport" | "hold";
+  distance: number;
+  zoom: number;
+  centerX: number;
+  centerY: number;
+  panX: number;
+  panY: number;
+  holdId?: string;
+  initialRadius?: number;
+  currentRadius?: number;
+};
 type Props = {
   wall: Wall;
   imageUrl: string;
@@ -33,6 +63,7 @@ type Props = {
     shape?: Hold["shape"],
   ) => void;
   onMoveHold: (id: string, position: Hold["position"]) => void;
+  onResizeHold: (id: string, patch: Partial<Hold>) => void;
   onRemoveHold: (id: string) => void;
   onSelectHold: (id: string | null) => void;
   onAppendHold: (id: string) => void;
@@ -46,6 +77,7 @@ function renderCanvasScene(
   route: ClimbingRoute | undefined,
   selectedHoldId: string | null,
   showLines: boolean,
+  allowEllipses: boolean,
   viewport: Viewport,
 ) {
   const bounds = canvas.getBoundingClientRect();
@@ -65,6 +97,7 @@ function renderCanvasScene(
       route,
       selectedHoldId,
       showLines,
+      allowEllipses,
       viewport,
     },
     bounds.width,
@@ -84,6 +117,7 @@ export function WallCanvas({
   allowEllipses,
   onAddHold,
   onMoveHold,
+  onResizeHold,
   onRemoveHold,
   onSelectHold,
   onAppendHold,
@@ -91,6 +125,7 @@ export function WallCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const dragRef = useRef<{ holdId: string; pointerId: number } | null>(null);
+  const resizeRef = useRef<ResizeGesture | null>(null);
   const panRef = useRef<{
     x: number;
     y: number;
@@ -101,14 +136,7 @@ export function WallCanvas({
   const [viewport, setViewport] = useState<Viewport>({ zoom: 1, panX: 0, panY: 0 });
   const [imageReady, setImageReady] = useState(false);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
-  const pinchRef = useRef<{
-    distance: number;
-    zoom: number;
-    centerX: number;
-    centerY: number;
-    panX: number;
-    panY: number;
-  } | null>(null);
+  const pinchRef = useRef<PinchGesture | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -132,12 +160,22 @@ export function WallCanvas({
     const image = imageRef.current;
     if (!canvas || !image || !imageReady) return;
     const render = () =>
-      renderCanvasScene(canvas, image, wall, holds, route, selectedHoldId, showLines, viewport);
+      renderCanvasScene(
+        canvas,
+        image,
+        wall,
+        holds,
+        route,
+        selectedHoldId,
+        showLines,
+        allowEllipses,
+        viewport,
+      );
     render();
     const observer = new ResizeObserver(render);
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [imageReady, wall, holds, route, selectedHoldId, showLines, viewport]);
+  }, [imageReady, wall, holds, route, selectedHoldId, showLines, allowEllipses, viewport]);
 
   function canvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -164,15 +202,42 @@ export function WallCanvas({
     if (pointersRef.current.size === 2) {
       const points = [...pointersRef.current.values()];
       const [first, second] = points;
+      const bounds = canvas.getBoundingClientRect();
+      const rect = getImageRect(
+        canvas.clientWidth,
+        canvas.clientHeight,
+        wall.width,
+        wall.height,
+        viewport,
+      );
+      const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
+      const geometry = selectedHold
+        ? getHoldMarkerGeometry(selectedHold, wall.width, wall.height, rect, true, allowEllipses)
+        : undefined;
+      const isHoldPinch =
+        tool === "hold" &&
+        selectedHold &&
+        geometry &&
+        isInsideHoldMarker({ x: first.x - bounds.left, y: first.y - bounds.top }, geometry) &&
+        isInsideHoldMarker({ x: second.x - bounds.left, y: second.y - bounds.top }, geometry);
       pinchRef.current = {
+        mode: isHoldPinch ? "hold" : "viewport",
         distance: Math.hypot(second.x - first.x, second.y - first.y),
         zoom: viewport.zoom,
         centerX: (first.x + second.x) / 2,
         centerY: (first.y + second.y) / 2,
         panX: viewport.panX,
         panY: viewport.panY,
+        ...(isHoldPinch && selectedHold
+          ? {
+              holdId: selectedHold.id,
+              initialRadius: selectedHold.markerRadius ?? 48,
+              currentRadius: selectedHold.markerRadius ?? 48,
+            }
+          : {}),
       };
       dragRef.current = null;
+      resizeRef.current = null;
       panRef.current = null;
       return;
     }
@@ -184,7 +249,36 @@ export function WallCanvas({
       wall.height,
       viewport,
     );
-    const hit = hitTestHold(point, holds, rect);
+    const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
+    if (tool === "hold" && selectedHold) {
+      const geometry = getHoldMarkerGeometry(
+        selectedHold,
+        wall.width,
+        wall.height,
+        rect,
+        true,
+        allowEllipses,
+      );
+      const handle = getResizeHandleAt(point, geometry);
+      if (handle) {
+        resizeRef.current = {
+          holdId: selectedHold.id,
+          pointerId: event.pointerId,
+          handle,
+          centerX: geometry.center.x,
+          centerY: geometry.center.y,
+          outlineRadiusX: geometry.outlineRadiusX,
+          outlineRadiusY: geometry.outlineRadiusY,
+          scaleX: selectedHold.markerScaleX ?? 1,
+          scaleY: selectedHold.markerScaleY ?? 1,
+          imageScale: rect.scale,
+          lineWidth: selectedHold.markerWidth ?? 3,
+          patch: {},
+        };
+        return;
+      }
+    }
+    const hit = hitTestHold(point, holds, rect, 24, wall.width, wall.height, allowEllipses);
     if (tool === "pan" || event.button === 1 || event.shiftKey) {
       panRef.current = {
         x: event.clientX,
@@ -201,6 +295,7 @@ export function WallCanvas({
     }
     if (hit && tool === "hold") {
       onSelectHold(hit.id);
+      dragPositionRef.current = null;
       dragRef.current = { holdId: hit.id, pointerId: event.pointerId };
       return;
     }
@@ -266,6 +361,15 @@ export function WallCanvas({
       const [first, second] = points;
       const pinch = pinchRef.current;
       const distance = Math.hypot(second.x - first.x, second.y - first.y);
+      if (pinch.mode === "hold" && pinch.holdId && pinch.initialRadius !== undefined) {
+        const markerRadius = Math.min(
+          300,
+          Math.max(4, pinch.initialRadius * (distance / Math.max(1, pinch.distance))),
+        );
+        pinch.currentRadius = markerRadius;
+        previewHold(pinch.holdId, { markerRadius });
+        return;
+      }
       const centerX = (first.x + second.x) / 2;
       const centerY = (first.y + second.y) / 2;
       setViewport({
@@ -273,6 +377,47 @@ export function WallCanvas({
         panX: pinch.panX + centerX - pinch.centerX,
         panY: pinch.panY + centerY - pinch.centerY,
       });
+      return;
+    }
+    if (resizeRef.current?.pointerId === event.pointerId) {
+      const gesture = resizeRef.current;
+      const point = canvasPoint(event);
+      const directionX = gesture.handle.includes("w") ? -1 : gesture.handle.includes("e") ? 1 : 0;
+      const directionY = gesture.handle.includes("n") ? -1 : gesture.handle.includes("s") ? 1 : 0;
+      const patch: Partial<Hold> = {};
+      if (allowEllipses && directionX !== 0) {
+        const radiusX = Math.max(4, Math.abs(point.x - gesture.centerX) - 6);
+        patch.markerScaleX = Math.min(
+          5,
+          Math.max(0.1, gesture.scaleX * (radiusX / Math.max(1, gesture.outlineRadiusX))),
+        );
+      }
+      if (allowEllipses && directionY !== 0) {
+        const radiusY = Math.max(4, Math.abs(point.y - gesture.centerY) - 6);
+        patch.markerScaleY = Math.min(
+          5,
+          Math.max(0.1, gesture.scaleY * (radiusY / Math.max(1, gesture.outlineRadiusY))),
+        );
+      }
+      if (!allowEllipses) {
+        const pointerRadiusX = Math.abs(point.x - gesture.centerX);
+        const pointerRadiusY = Math.abs(point.y - gesture.centerY);
+        const pointerRadius =
+          directionX !== 0 && directionY !== 0
+            ? Math.max(pointerRadiusX, pointerRadiusY)
+            : directionX !== 0
+              ? pointerRadiusX
+              : pointerRadiusY;
+        patch.markerRadius = Math.min(
+          300,
+          Math.max(
+            4,
+            (pointerRadius - 6 - gesture.lineWidth) / Math.max(0.001, gesture.imageScale),
+          ),
+        );
+      }
+      gesture.patch = patch;
+      previewHold(gesture.holdId, patch);
       return;
     }
     if (panRef.current?.pointerId === event.pointerId) {
@@ -322,18 +467,53 @@ export function WallCanvas({
           route,
           selectedHoldId,
           showLines,
+          allowEllipses,
           viewport,
         );
       }
     }
   }
 
+  function previewHold(holdId: string, patch: Partial<Hold>) {
+    const canvas = canvasRef.current;
+    if (!canvas || !imageRef.current) return;
+    renderCanvasScene(
+      canvas,
+      imageRef.current,
+      wall,
+      holds.map((hold) => (hold.id === holdId ? { ...hold, ...patch } : hold)),
+      route,
+      selectedHoldId,
+      showLines,
+      allowEllipses,
+      viewport,
+    );
+  }
+
   function onPointerUp(event: ReactPointerEvent<HTMLCanvasElement>) {
     pointersRef.current.delete(event.pointerId);
-    if (pointersRef.current.size < 2) pinchRef.current = null;
+    if (pinchRef.current?.mode === "hold" && pointersRef.current.size < 2) {
+      const pinch = pinchRef.current;
+      if (
+        pinch.holdId &&
+        pinch.currentRadius !== undefined &&
+        pinch.currentRadius !== pinch.initialRadius
+      ) {
+        onResizeHold(pinch.holdId, { markerRadius: pinch.currentRadius });
+      }
+      pinchRef.current = null;
+    } else if (pointersRef.current.size < 2) {
+      pinchRef.current = null;
+    }
+    if (resizeRef.current?.pointerId === event.pointerId) {
+      const resize = resizeRef.current;
+      if (Object.keys(resize.patch).length > 0) onResizeHold(resize.holdId, resize.patch);
+      resizeRef.current = null;
+    }
     if (dragRef.current?.pointerId === event.pointerId) {
-      const position = dragPositionRef.current ?? normalizedPoint(event);
-      if (position) onMoveHold(dragRef.current.holdId, position);
+      if (dragPositionRef.current) {
+        onMoveHold(dragRef.current.holdId, dragPositionRef.current);
+      }
       dragRef.current = null;
       dragPositionRef.current = null;
     }

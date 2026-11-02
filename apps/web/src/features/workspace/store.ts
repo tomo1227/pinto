@@ -274,7 +274,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       ...(bounds ? { bounds } : {}),
       ...(shape ? { shape } : {}),
       detectionSource: "manual",
-      color: color ?? "#e96d4d",
+      color: color ?? "#000000",
       createdAt: now,
       updatedAt: now,
     };

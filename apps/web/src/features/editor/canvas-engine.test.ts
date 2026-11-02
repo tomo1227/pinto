@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   canvasToNormalized,
   drawScene,
+  getHoldMarkerGeometry,
   getImageRect,
+  getResizeHandleAt,
   hitTestHold,
   normalizedToCanvas,
 } from "./canvas-engine";
@@ -36,6 +38,7 @@ function createCanvasContext(): CanvasRenderingContext2D {
   return {
     clearRect: vi.fn(),
     fillRect: vi.fn(),
+    strokeRect: vi.fn(),
     save: vi.fn(),
     beginPath: vi.fn(),
     rect: vi.fn(),
@@ -64,6 +67,24 @@ describe("canvas coordinate engine", () => {
   it("hit-tests markers in view coordinates", () => {
     expect(hitTestHold({ x: 503, y: 400 }, [hold], rect)?.id).toBe("hold-1");
     expect(hitTestHold({ x: 800, y: 400 }, [hold], rect)).toBeUndefined();
+    const enlargedHold = { ...hold, markerRadius: 60 };
+    expect(hitTestHold({ x: 575, y: 400 }, [enlargedHold], rect, 24, 400, 400)?.id).toBe(
+      enlargedHold.id,
+    );
+  });
+
+  it("locates resize handles on the selected marker frame", () => {
+    const markerRect = getImageRect(100, 100, 400, 400, { zoom: 1, panX: 0, panY: 0 });
+    const geometry = getHoldMarkerGeometry(
+      { ...hold, markerRadius: 40 },
+      400,
+      400,
+      markerRect,
+      true,
+    );
+
+    expect(getResizeHandleAt({ x: 27.5, y: 50 }, geometry)).toBe("w");
+    expect(getResizeHandleAt({ x: 50, y: 27.5 }, geometry)).toBe("n");
   });
 
   it("estimates a hold radius from a clear color boundary", () => {
@@ -204,6 +225,55 @@ describe("canvas coordinate engine", () => {
     expect(context.ellipse).toHaveBeenCalledWith(50, 50, 11, 6, 0, 0, Math.PI * 2);
   });
 
+  it("renders every saved ellipse as a 1:1 circle when ellipse mode is off", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [
+          {
+            ...hold,
+            markerRadius: 40,
+            markerScaleX: 2,
+            markerScaleY: 0.5,
+            bounds: { x: 0.4, y: 0.45, width: 0.2, height: 0.1 },
+            shape: { type: "ellipse" },
+          },
+        ],
+        allowEllipses: false,
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.ellipse).toHaveBeenCalledWith(50, 50, 11, 11, 0, 0, Math.PI * 2);
+    expect(context.arc).not.toHaveBeenCalled();
+  });
+
+  it("scales a circular marker horizontally and vertically", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [{ ...hold, markerRadius: 20, markerScaleX: 2, markerScaleY: 0.5 }],
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.ellipse).toHaveBeenCalledWith(50, 50, 11, 3.5, 0, 0, Math.PI * 2);
+  });
+
   it("keeps a detected circular outline outside its fitted radius", () => {
     const context = createCanvasContext();
 
@@ -230,7 +300,7 @@ describe("canvas coordinate engine", () => {
     expect(context.arc).toHaveBeenCalledWith(50, 50, 6, 0, Math.PI * 2);
   });
 
-  it("keeps a legacy hold's color stable when selected", () => {
+  it("draws a selection frame and resize handles around a selected hold", () => {
     const context = createCanvasContext();
 
     drawScene(
@@ -247,7 +317,8 @@ describe("canvas coordinate engine", () => {
       100,
     );
 
-    expect(context.strokeStyle).toBe("#49534e");
+    expect(context.strokeRect).toHaveBeenCalledTimes(9);
+    expect(context.strokeStyle).toBe("#1673e6");
   });
 
   it("draws a high-contrast line between consecutive route holds", () => {

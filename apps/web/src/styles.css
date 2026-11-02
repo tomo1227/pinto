@@ -697,6 +697,12 @@ a {
   padding: 0 11px;
   font-size: 11px;
 }
+.editor-history-button {
+  min-height: 31px;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 10px;
+}
 .editor-layout {
   min-height: 0;
   display: grid;
@@ -715,6 +721,72 @@ a {
   align-items: center;
   gap: 9px;
   margin-bottom: 10px;
+}
+.editor-reset {
+  color: #b34e3c;
+  background: #fff3f0;
+  border: 1px solid #e8b8ae;
+  cursor: pointer;
+}
+.editor-reset:hover:not(:disabled) {
+  color: #fff;
+  background: #b34e3c;
+  border-color: #b34e3c;
+}
+.hold-default-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.editor-settings-wrap {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.tool-settings-button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #647068;
+  background: #e8e9e2;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tool-settings-button:hover,
+.tool-settings-button.is-active {
+  color: #fff;
+  background: var(--ink);
+}
+.editor-settings-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 248px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #d4d6ce;
+  border-radius: 5px;
+  box-shadow: 0 8px 24px rgb(31 39 34 / 16%);
+}
+.editor-settings-popover .field-label {
+  gap: 7px;
+  margin: 0;
+  font-size: 11px;
+}
+.editor-settings-popover .auto-detect-control {
+  justify-content: space-between;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.editor-settings-popover .auto-detect-control__status {
+  text-align: right;
 }
 .tool-segment {
   display: inline-flex;
@@ -1178,9 +1250,12 @@ a {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 48px;
   align-items: center;
-  gap: 9px;
+  gap: 5px;
   color: var(--muted);
   font: 10px monospace;
+}
+.hold-range-value--steps {
+  grid-template-columns: 26px minmax(0, 1fr) 48px 26px;
 }
 .hold-range {
   width: 100%;
@@ -1189,6 +1264,25 @@ a {
 }
 .hold-range-value output {
   text-align: right;
+}
+.hold-size-step {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #4c5a50;
+  background: #fff;
+  border: 1px solid #d4d6ce;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.hold-size-step:hover:not(:disabled) {
+  background: #eeefe9;
+}
+.hold-size-step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .editor-loading {
   padding-top: 70px;
@@ -1340,6 +1434,10 @@ a {
     width: 29px;
     height: 29px;
   }
+  .editor-history-button {
+    min-height: 29px;
+    padding: 0 6px;
+  }
   .editor-save {
     min-height: 30px;
     padding: 0 8px;
@@ -1356,8 +1454,12 @@ a {
   }
   .editor-toolbar {
     min-height: 36px;
+    flex-wrap: wrap;
     gap: 5px;
     margin-bottom: 7px;
+  }
+  .editor-toolbar > .toolbar-spacer {
+    display: none;
   }
   .tool-segment {
     gap: 0;
@@ -1373,9 +1475,6 @@ a {
   .editor-toolbar .button--small {
     min-height: 30px;
     padding: 0 7px;
-  }
-  .editor-reset > span {
-    display: none;
   }
   .line-toggle > span {
     gap: 3px;
@@ -1417,6 +1516,9 @@ a {
   }
   .wall-title-button strong {
     max-width: 84px;
+  }
+  .editor-history-button > span {
+    display: none;
   }
   .editor-toolbar {
     gap: 3px;

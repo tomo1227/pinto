@@ -28,6 +28,8 @@ export type Hold = {
   color?: string;
   markerRadius?: number;
   markerWidth?: number;
+  markerScaleX?: number;
+  markerScaleY?: number;
   confidence?: number;
   metadata?: Record<string, unknown>;
   detectionSource: "manual" | "ai";

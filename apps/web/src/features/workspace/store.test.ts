@@ -102,6 +102,9 @@ describe("wall image uploads", () => {
     await useWorkspaceStore.getState().appendHold(addedHold.id);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([]);
     expect(useWorkspaceStore.getState().routes[0].finishHoldIds).toEqual([]);
+
+    const defaultColoredHold = await useWorkspaceStore.getState().addHold({ x: 0.3, y: 0.3 });
+    expect(defaultColoredHold.color).toBe("#000000");
   });
 
   it("creates the first route when a hold is added while there are no routes", async () => {

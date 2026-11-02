@@ -12,12 +12,14 @@ import {
   EyeOff,
   Hand,
   MapPin,
+  Minus,
   Pencil,
   Plus,
   Redo2,
   RotateCcw,
   Route as RouteIcon,
   Save,
+  Settings2,
   Trash2,
   Undo2,
   Upload,
@@ -82,7 +84,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [showLines, setShowLines] = useState(true);
   const [autoDetectHolds, setAutoDetectHolds] = useState(true);
   const [allowEllipses, setAllowEllipses] = useState(true);
-  const [defaultHoldColor, setDefaultHoldColor] = useState("#e96d4d");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [defaultHoldColor, setDefaultHoldColor] = useState("#000000");
   const [createOpen, setCreateOpen] = useState(false);
   const [routeName, setRouteName] = useState("");
   const [routeGrade, setRouteGrade] = useState("");
@@ -93,6 +96,51 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
+  const selectedHoldColor = !selectedHold
+    ? "#000000"
+    : (selectedHold.color ??
+      (route?.startHoldIds.includes(selectedHold.id)
+        ? "#79c7a2"
+        : route?.holdIds.includes(selectedHold.id)
+          ? "#202522"
+          : "#49534e"));
+
+  useEffect(() => {
+    function handleHistoryShortcut(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        target?.isContentEditable ||
+        target?.closest(
+          'textarea, select, input:not([type="range"]):not([type="color"]):not([type="checkbox"])',
+        )
+      ) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const shouldUndo = key === "z" && !event.shiftKey;
+      const shouldRedo = (key === "z" && event.shiftKey) || key === "y";
+      if (!shouldUndo && !shouldRedo) return;
+      event.preventDefault();
+      if (shouldRedo) {
+        if (future.length > 0) void redo();
+      } else if (past.length > 0) {
+        void undo();
+      }
+    }
+
+    window.addEventListener("keydown", handleHistoryShortcut);
+    return () => window.removeEventListener("keydown", handleHistoryShortcut);
+  }, [future.length, past.length, redo, undo]);
+
+  function adjustSelectedHoldRadius(amount: number) {
+    if (!selectedHold) return;
+    const radius = selectedHold.markerRadius ?? 48;
+    void updateHold(selectedHold.id, {
+      markerRadius: Math.min(300, Math.max(4, radius + amount)),
+    });
+  }
 
   useEffect(() => {
     let imageObjectUrl: string | null = null;
@@ -247,24 +295,26 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         )}
         <span className="header-spacer" />
         <button
-          className="icon-button"
+          className="button button--outline button--small editor-history-button"
           type="button"
           title="元に戻す"
           aria-label="元に戻す"
+          aria-keyshortcuts="Control+Z Meta+Z"
           disabled={past.length === 0}
           onClick={() => void undo()}
         >
-          <Undo2 size={17} />
+          <Undo2 size={15} /> <span>戻す</span>
         </button>
         <button
-          className="icon-button"
+          className="button button--outline button--small editor-history-button"
           type="button"
           title="やり直す"
           aria-label="やり直す"
+          aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y Meta+Y"
           disabled={future.length === 0}
           onClick={() => void redo()}
         >
-          <Redo2 size={17} />
+          <Redo2 size={15} /> <span>進む</span>
         </button>
         <button
           className="button button--primary editor-save"
@@ -318,6 +368,66 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <Eraser size={17} />
               </button>
             </fieldset>
+            <div className="editor-settings-wrap">
+              <button
+                className={`tool-settings-button ${settingsOpen ? "is-active" : ""}`}
+                type="button"
+                title="ホールド設定"
+                aria-label="ホールド設定"
+                aria-expanded={settingsOpen}
+                onClick={() => setSettingsOpen((open) => !open)}
+              >
+                <Settings2 size={17} />
+              </button>
+              {settingsOpen && (
+                <div className="editor-settings-popover" role="dialog" aria-label="ホールド設定">
+                  <label className="field-label">
+                    新規ホールドの既定色
+                    <span className="color-input-row">
+                      <input
+                        type="color"
+                        aria-label="新規ホールドの既定色"
+                        value={defaultHoldColor}
+                        onChange={(event) => setDefaultHoldColor(event.currentTarget.value)}
+                      />
+                      <span>{defaultHoldColor}</span>
+                    </span>
+                  </label>
+                  <button
+                    className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
+                    type="button"
+                    role="switch"
+                    aria-label="ホールド輪郭の自動検出"
+                    aria-checked={autoDetectHolds}
+                    onClick={() => setAutoDetectHolds((enabled) => !enabled)}
+                  >
+                    <span className="auto-detect-control__label">輪郭検出</span>
+                    <span className="auto-detect-control__track" aria-hidden="true">
+                      <span />
+                    </span>
+                    <span className="auto-detect-control__status">
+                      {autoDetectHolds ? "ON" : "OFF"}
+                    </span>
+                  </button>
+                  <button
+                    className={`auto-detect-control ${allowEllipses ? "is-on" : ""}`}
+                    type="button"
+                    role="switch"
+                    aria-label="楕円を許可"
+                    aria-checked={allowEllipses}
+                    onClick={() => setAllowEllipses((enabled) => !enabled)}
+                  >
+                    <span className="auto-detect-control__label">楕円を許可</span>
+                    <span className="auto-detect-control__track" aria-hidden="true">
+                      <span />
+                    </span>
+                    <span className="auto-detect-control__status">
+                      {allowEllipses ? "ON" : "OFF"}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
             <span className="toolbar-separator" />
             <label className="line-toggle">
               <input
@@ -330,48 +440,45 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <span>線</span>
               </span>
             </label>
-            <label className="default-hold-color" title="新規ホールドの既定色">
-              <span>既定色</span>
-              <input
-                type="color"
-                aria-label="新規ホールドの既定色"
-                value={defaultHoldColor}
-                onChange={(event) => setDefaultHoldColor(event.currentTarget.value)}
-              />
-            </label>
+            <div className="hold-default-actions">
+              <label className="default-hold-color" title="選択中ホールドの色">
+                <input
+                  type="color"
+                  aria-label="選択中ホールドの色"
+                  value={selectedHoldColor}
+                  disabled={!selectedHold}
+                  onChange={(event) => {
+                    if (selectedHold)
+                      void updateHold(selectedHold.id, { color: event.currentTarget.value });
+                  }}
+                />
+              </label>
+              <button
+                className="hold-size-step"
+                type="button"
+                title="選択中の円を小さく"
+                aria-label="選択中の円を小さく"
+                disabled={!selectedHold || (selectedHold.markerRadius ?? 48) <= 4}
+                onClick={() => adjustSelectedHoldRadius(-4)}
+              >
+                <Minus size={13} />
+              </button>
+              <button
+                className="hold-size-step"
+                type="button"
+                title="選択中の円を大きく"
+                aria-label="選択中の円を大きく"
+                disabled={!selectedHold || (selectedHold.markerRadius ?? 48) >= 300}
+                onClick={() => adjustSelectedHoldRadius(4)}
+              >
+                <Plus size={13} />
+              </button>
+            </div>
             <button
-              className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
+              className="icon-button danger-text editor-reset"
               type="button"
-              role="switch"
-              aria-label="ホールド輪郭の自動検出"
-              aria-checked={autoDetectHolds}
-              onClick={() => setAutoDetectHolds((enabled) => !enabled)}
-            >
-              <span className="auto-detect-control__label">輪郭検出</span>
-              <span className="auto-detect-control__track" aria-hidden="true">
-                <span />
-              </span>
-              <span className="auto-detect-control__status">{autoDetectHolds ? "ON" : "OFF"}</span>
-            </button>
-            <button
-              className={`auto-detect-control ellipse-mode-control ${allowEllipses ? "is-on" : ""}`}
-              type="button"
-              role="switch"
-              aria-label="自動検出で楕円を許可"
-              aria-checked={allowEllipses}
-              disabled={!autoDetectHolds}
-              onClick={() => setAllowEllipses((enabled) => !enabled)}
-            >
-              <span className="ellipse-mode-control__label">楕円</span>
-              <span className="auto-detect-control__track" aria-hidden="true">
-                <span />
-              </span>
-              <span className="auto-detect-control__status">{allowEllipses ? "ON" : "OFF"}</span>
-            </button>
-            <button
-              className="button button--outline button--small editor-reset"
-              type="button"
-              title="この壁のホールドとルート上のホールド設定をすべてリセット"
+              title="全リセット"
+              aria-label="全リセット"
               disabled={holds.length === 0}
               onClick={() => {
                 if (
@@ -391,7 +498,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                   );
               }}
             >
-              <RotateCcw size={14} /> <span>全リセット</span>
+              <RotateCcw size={16} />
             </button>
             <span className="toolbar-spacer" />
             <button
@@ -432,6 +539,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                   )
               }
               onMoveHold={(id, position) => void moveHold(id, position)}
+              onResizeHold={(id, patch) => void updateHold(id, patch)}
               onRemoveHold={(id) => {
                 void removeHold(id)
                   .then(() => {
@@ -726,7 +834,21 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                   </label>
                   <label className="field-label">
                     円の半径（画像px）
-                    <span className="hold-range-value">
+                    <span className="hold-range-value hold-range-value--steps">
+                      <button
+                        className="hold-size-step"
+                        type="button"
+                        title="円を小さく"
+                        aria-label="円を小さく"
+                        disabled={(selectedHold.markerRadius ?? 48) <= 4}
+                        onClick={() =>
+                          void updateHold(selectedHold.id, {
+                            markerRadius: Math.max(4, (selectedHold.markerRadius ?? 48) - 4),
+                          })
+                        }
+                      >
+                        <Minus size={13} />
+                      </button>
                       <input
                         className="hold-range"
                         type="range"
@@ -741,6 +863,64 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                         }
                       />
                       <output>{Math.round(selectedHold.markerRadius ?? 48)} px</output>
+                      <button
+                        className="hold-size-step"
+                        type="button"
+                        title="円を大きく"
+                        aria-label="円を大きく"
+                        disabled={(selectedHold.markerRadius ?? 48) >= 300}
+                        onClick={() =>
+                          void updateHold(selectedHold.id, {
+                            markerRadius: Math.min(300, (selectedHold.markerRadius ?? 48) + 4),
+                          })
+                        }
+                      >
+                        <Plus size={13} />
+                      </button>
+                    </span>
+                  </label>
+                  <label className="field-label">
+                    横方向（楕円）
+                    <span className="hold-range-value">
+                      <input
+                        className="hold-range"
+                        type="range"
+                        min="0.5"
+                        max="2.5"
+                        step="0.05"
+                        value={allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1}
+                        disabled={!allowEllipses}
+                        onChange={(event) =>
+                          void updateHold(selectedHold.id, {
+                            markerScaleX: Number(event.currentTarget.value),
+                          })
+                        }
+                      />
+                      <output>
+                        {(allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1).toFixed(2)}×
+                      </output>
+                    </span>
+                  </label>
+                  <label className="field-label">
+                    縦方向（楕円）
+                    <span className="hold-range-value">
+                      <input
+                        className="hold-range"
+                        type="range"
+                        min="0.5"
+                        max="2.5"
+                        step="0.05"
+                        value={allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1}
+                        disabled={!allowEllipses}
+                        onChange={(event) =>
+                          void updateHold(selectedHold.id, {
+                            markerScaleY: Number(event.currentTarget.value),
+                          })
+                        }
+                      />
+                      <output>
+                        {(allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1).toFixed(2)}×
+                      </output>
                     </span>
                   </label>
                   <label className="field-label">
