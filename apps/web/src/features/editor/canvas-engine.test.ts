@@ -7,6 +7,7 @@ import {
   hitTestHold,
   normalizedToCanvas,
 } from "./canvas-engine";
+import { estimateHoldBounds, estimateHoldRadius } from "./hold-detection";
 
 const hold: Hold = {
   id: "hold-1",
@@ -43,6 +44,7 @@ function createCanvasContext(): CanvasRenderingContext2D {
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     arc: vi.fn(),
+    ellipse: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
     fillText: vi.fn(),
@@ -62,6 +64,59 @@ describe("canvas coordinate engine", () => {
   it("hit-tests markers in view coordinates", () => {
     expect(hitTestHold({ x: 503, y: 400 }, [hold], rect)?.id).toBe("hold-1");
     expect(hitTestHold({ x: 800, y: 400 }, [hold], rect)).toBeUndefined();
+  });
+
+  it("estimates a hold radius from a clear color boundary", () => {
+    const width = 100;
+    const height = 100;
+    const centerX = 50;
+    const centerY = 50;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = (y * width + x) * 4;
+        const inside = Math.hypot(x - centerX, y - centerY) <= 25;
+        pixels[index] = inside ? 220 : 25;
+        pixels[index + 1] = inside ? 80 : 35;
+        pixels[index + 2] = inside ? 45 : 45;
+        pixels[index + 3] = 255;
+      }
+    }
+
+    const radius = estimateHoldRadius(pixels, width, height, centerX, centerY);
+
+    expect(radius).toBeGreaterThan(20);
+    expect(radius).toBeLessThan(30);
+  });
+
+  it("leaves radius detection empty when the image has no clear boundary", () => {
+    const pixels = new Uint8ClampedArray(100 * 100 * 4).fill(80);
+
+    expect(estimateHoldRadius(pixels, 100, 100, 50, 50)).toBeUndefined();
+  });
+
+  it("finds an off-center hold and returns an expanded ellipse", () => {
+    const width = 120;
+    const height = 100;
+    const pixels = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const index = (y * width + x) * 4;
+        const inside = ((x - 60) / 24) ** 2 + ((y - 50) / 14) ** 2 <= 1;
+        pixels[index] = inside ? 225 : 70;
+        pixels[index + 1] = inside ? 55 : 80;
+        pixels[index + 2] = inside ? 35 : 85;
+        pixels[index + 3] = 255;
+      }
+    }
+
+    const bounds = estimateHoldBounds(pixels, width, height, 68, 50);
+
+    expect(bounds).toBeDefined();
+    expect(bounds?.x).toBeLessThan(36);
+    expect((bounds?.x ?? 0) + (bounds?.width ?? 0)).toBeGreaterThan(84);
+    expect(bounds?.y).toBeLessThan(36);
+    expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeGreaterThan(64);
   });
 
   it("draws route circles as transparent outlines with their sequence number", () => {
@@ -85,6 +140,73 @@ describe("canvas coordinate engine", () => {
     expect(context.stroke).toHaveBeenCalledOnce();
     expect(context.fillText).toHaveBeenCalledWith("1", 50, 50.5);
     expect(context.strokeStyle).toBe("#79c7a2");
+  });
+
+  it("uses each hold's custom marker size, width, and color", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [{ ...hold, markerRadius: 20, markerWidth: 5, color: "#ff0000" }],
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.arc).toHaveBeenCalledWith(50, 50, 5, 0, Math.PI * 2);
+    expect(context.strokeStyle).toBe("#ff0000");
+    expect(context.lineWidth).toBe(5);
+  });
+
+  it("draws detected hold bounds as an ellipse", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [
+          {
+            ...hold,
+            markerRadius: 40,
+            bounds: { x: 0.4, y: 0.45, width: 0.2, height: 0.1 },
+            shape: { type: "ellipse" },
+          },
+        ],
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.ellipse).toHaveBeenCalledWith(50, 50, 10, 5, 0, 0, Math.PI * 2);
+  });
+
+  it("keeps a legacy hold's color stable when selected", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [hold],
+        selectedHoldId: hold.id,
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.strokeStyle).toBe("#49534e");
   });
 
   it("draws a high-contrast line between consecutive route holds", () => {

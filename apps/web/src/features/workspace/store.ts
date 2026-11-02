@@ -21,7 +21,6 @@ import {
   saveWall,
 } from "../../infrastructure/storage/database";
 
-const markerColors = ["#e96d4d", "#2f7a68", "#d2a72c", "#5677a8", "#8e5d92"];
 const pendingNotifications = new Set<string>();
 
 type EditorSnapshot = {
@@ -61,10 +60,16 @@ type WorkspaceState = {
   createWall: (file: File, name: string, inclination?: number) => Promise<Wall>;
   removeWall: (wallId: string) => Promise<void>;
   renameWall: (wallId: string, name: string) => Promise<void>;
-  addHold: (position: Hold["position"]) => Promise<Hold>;
+  addHold: (
+    position: Hold["position"],
+    markerRadius?: number,
+    color?: string,
+    bounds?: Hold["bounds"],
+  ) => Promise<Hold>;
   moveHold: (holdId: string, position: Hold["position"]) => Promise<void>;
   updateHold: (holdId: string, patch: Partial<Hold>) => Promise<void>;
   removeHold: (holdId: string) => Promise<void>;
+  clearHolds: () => Promise<void>;
   createRoute: (draft: RouteDraft) => Promise<ClimbingRoute>;
   updateRoute: (routeId: string, patch: Partial<ClimbingRoute>) => Promise<void>;
   duplicateRoute: (routeId: string) => Promise<ClimbingRoute>;
@@ -255,7 +260,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     await saveWall(updated);
     set({ walls: state.walls.map((item) => (item.id === wallId ? updated : item)) });
   },
-  async addHold(position) {
+  async addHold(position, markerRadius, color, bounds) {
     const state = get();
     const wallId = state.selectedWallId;
     if (!wallId) throw new Error("編集する壁を選択してください。");
@@ -264,8 +269,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       id: crypto.randomUUID(),
       wallId,
       position,
+      ...(markerRadius === undefined ? {} : { markerRadius }),
+      ...(bounds ? { bounds, shape: { type: "ellipse" as const } } : {}),
       detectionSource: "manual",
-      color: markerColors[get().holds.length % markerColors.length],
+      color: color ?? "#e96d4d",
       createdAt: now,
       updatedAt: now,
     };
@@ -340,6 +347,39 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     });
     await deleteHoldRecord(holdId);
     await Promise.all(updatedRoutes.map(saveRoute));
+    updatedRoutes.forEach(
+      (route) => void notifyDiscord(route, "update", (message) => get().notify(message)),
+    );
+  },
+  async clearHolds() {
+    const state = get();
+    const wallId = state.selectedWallId;
+    if (!wallId) return;
+    const holdIds = new Set(state.holds.map((hold) => hold.id));
+    const updatedAt = new Date().toISOString();
+    const routes = state.routes.map((route) => {
+      const holdIdsInRoute = route.holdIds.filter((id) => !holdIds.has(id));
+      if (holdIdsInRoute.length === route.holdIds.length) return route;
+      return {
+        ...route,
+        holdIds: holdIdsInRoute,
+        startHoldIds: route.startHoldIds.filter((id) => !holdIds.has(id)),
+        finishHoldIds: route.finishHoldIds.filter((id) => !holdIds.has(id)),
+        updatedAt,
+      };
+    });
+    const updatedRoutes = routes.filter((route, index) => route !== state.routes[index]);
+    if (holdIds.size === 0 && updatedRoutes.length === 0) return;
+    set({
+      holds: [],
+      routes,
+      past: nextHistory(state.past, snapshot(state)),
+      future: [],
+    });
+    await Promise.all([
+      ...state.holds.map((hold) => deleteHoldRecord(hold.id)),
+      ...updatedRoutes.map(saveRoute),
+    ]);
     updatedRoutes.forEach(
       (route) => void notifyDiscord(route, "update", (message) => get().notify(message)),
     );

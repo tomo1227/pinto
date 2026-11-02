@@ -1,7 +1,14 @@
 import "fake-indexeddb/auto";
 import { heicTo } from "heic-to";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { closeDatabase, getImage, saveHold } from "../../infrastructure/storage/database";
+import {
+  closeDatabase,
+  getImage,
+  listHolds,
+  listRoutes,
+  saveHold,
+  saveRoute,
+} from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "./store";
 
 vi.mock("heic-to", () => ({
@@ -15,6 +22,8 @@ afterEach(async () => {
     routes: [],
     selectedWallId: null,
     selectedRouteId: null,
+    past: [],
+    future: [],
   });
   vi.unstubAllGlobals();
   await closeDatabase();
@@ -80,10 +89,12 @@ describe("wall image uploads", () => {
     });
 
     const route = await useWorkspaceStore.getState().createRoute({ name: "Test route" });
-    const addedHold = await useWorkspaceStore.getState().addHold({ x: 0.5, y: 0.5 });
+    const addedHold = await useWorkspaceStore.getState().addHold({ x: 0.5, y: 0.5 }, 32, "#22aa55");
 
     expect(route.holdIds).toEqual([]);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([]);
+    expect(addedHold.markerRadius).toBe(32);
+    expect(addedHold.color).toBe("#22aa55");
     await useWorkspaceStore.getState().appendHold(addedHold.id);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([addedHold.id]);
 
@@ -114,5 +125,49 @@ describe("wall image uploads", () => {
 
     await useWorkspaceStore.getState().appendHold(hold.id);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([hold.id]);
+  });
+
+  it("clears all wall holds and route references in one undoable action", async () => {
+    const hold = {
+      id: "hold-reset",
+      wallId: "wall-reset",
+      position: { x: 0.4, y: 0.6 },
+      detectionSource: "manual" as const,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const route = {
+      id: "route-reset",
+      wallId: "wall-reset",
+      name: "Test route",
+      holdIds: [hold.id],
+      startHoldIds: [hold.id],
+      finishHoldIds: [],
+      source: "manual" as const,
+      createdAt: hold.createdAt,
+      updatedAt: hold.updatedAt,
+    };
+    await saveHold(hold);
+    await saveRoute(route);
+    useWorkspaceStore.setState({
+      selectedWallId: hold.wallId,
+      holds: [hold],
+      routes: [route],
+      selectedRouteId: route.id,
+    });
+
+    await useWorkspaceStore.getState().clearHolds();
+
+    expect(useWorkspaceStore.getState().holds).toEqual([]);
+    expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([]);
+    expect(useWorkspaceStore.getState().routes[0].startHoldIds).toEqual([]);
+    expect(await listHolds(hold.wallId)).toEqual([]);
+    expect((await listRoutes(hold.wallId))[0].holdIds).toEqual([]);
+
+    await useWorkspaceStore.getState().undo();
+
+    expect(useWorkspaceStore.getState().holds).toEqual([hold]);
+    expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([hold.id]);
+    expect(await listHolds(hold.wallId)).toEqual([hold]);
   });
 });

@@ -13,8 +13,9 @@ import {
   hitTestHold,
   type Viewport,
 } from "./canvas-engine";
+import { detectHoldOutline, detectHoldRadius } from "./hold-detection";
 
-type Tool = "hold" | "route" | "pan";
+type Tool = "hold" | "route" | "pan" | "eraser";
 type Props = {
   wall: Wall;
   imageUrl: string;
@@ -23,8 +24,10 @@ type Props = {
   selectedHoldId: string | null;
   tool: Tool;
   showLines: boolean;
-  onAddHold: (position: Hold["position"]) => void;
+  autoDetectHolds: boolean;
+  onAddHold: (position: Hold["position"], markerRadius: number, bounds?: Hold["bounds"]) => void;
   onMoveHold: (id: string, position: Hold["position"]) => void;
+  onRemoveHold: (id: string) => void;
   onSelectHold: (id: string | null) => void;
   onAppendHold: (id: string) => void;
 };
@@ -71,8 +74,10 @@ export function WallCanvas({
   selectedHoldId,
   tool,
   showLines,
+  autoDetectHolds,
   onAddHold,
   onMoveHold,
+  onRemoveHold,
   onSelectHold,
   onAppendHold,
 }: Props) {
@@ -183,6 +188,10 @@ export function WallCanvas({
       };
       return;
     }
+    if (tool === "eraser") {
+      if (hit) onRemoveHold(hit.id);
+      return;
+    }
     if (hit && tool === "hold") {
       onSelectHold(hit.id);
       dragRef.current = { holdId: hit.id, pointerId: event.pointerId };
@@ -194,7 +203,29 @@ export function WallCanvas({
     }
     if (tool === "hold") {
       const position = normalizedPoint(event);
-      if (position) onAddHold(position);
+      if (position) {
+        const imageRect = getImageRect(
+          canvas.clientWidth,
+          canvas.clientHeight,
+          wall.width,
+          wall.height,
+          viewport,
+        );
+        const outline =
+          autoDetectHolds && imageRef.current
+            ? detectHoldOutline(imageRef.current, position, wall.width, wall.height)
+            : undefined;
+        const detectedRadius =
+          outline?.markerRadius ??
+          (autoDetectHolds && imageRef.current
+            ? detectHoldRadius(imageRef.current, position, wall.width, wall.height)
+            : undefined);
+        onAddHold(
+          outline?.position ?? position,
+          detectedRadius ?? 12 / imageRect.scale,
+          outline?.bounds,
+        );
+      }
     } else {
       onSelectHold(null);
     }

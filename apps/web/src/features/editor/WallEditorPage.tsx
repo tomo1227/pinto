@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Download,
+  Eraser,
   Eye,
   EyeOff,
   Hand,
@@ -14,6 +15,7 @@ import {
   Pencil,
   Plus,
   Redo2,
+  RotateCcw,
   Route as RouteIcon,
   Save,
   Trash2,
@@ -28,7 +30,7 @@ import { getDiscordSettings, getImage, getWall } from "../../infrastructure/stor
 import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
-type Tool = "hold" | "route" | "pan";
+type Tool = "hold" | "route" | "pan" | "eraser";
 type Panel = "holds" | "routes";
 type RouteDraft = {
   name: string;
@@ -58,6 +60,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const moveHold = useWorkspaceStore((state) => state.moveHold);
   const updateHold = useWorkspaceStore((state) => state.updateHold);
   const removeHold = useWorkspaceStore((state) => state.removeHold);
+  const clearHolds = useWorkspaceStore((state) => state.clearHolds);
   const createRoute = useWorkspaceStore((state) => state.createRoute);
   const updateRoute = useWorkspaceStore((state) => state.updateRoute);
   const duplicateRoute = useWorkspaceStore((state) => state.duplicateRoute);
@@ -77,6 +80,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [panel, setPanel] = useState<Panel>("routes");
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
+  const [autoDetectHolds, setAutoDetectHolds] = useState(true);
+  const [defaultHoldColor, setDefaultHoldColor] = useState("#e96d4d");
   const [createOpen, setCreateOpen] = useState(false);
   const [routeName, setRouteName] = useState("");
   const [routeGrade, setRouteGrade] = useState("");
@@ -302,6 +307,15 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               >
                 <RouteIcon size={17} />
               </button>
+              <button
+                className={tool === "eraser" ? "is-active" : ""}
+                type="button"
+                title="ホールドを消去"
+                aria-label="ホールドを消去"
+                onClick={() => setTool("eraser")}
+              >
+                <Eraser size={17} />
+              </button>
             </fieldset>
             <span className="toolbar-separator" />
             <label className="line-toggle">
@@ -315,6 +329,54 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <span>線</span>
               </span>
             </label>
+            <label className="default-hold-color" title="新規ホールドの既定色">
+              <span>既定色</span>
+              <input
+                type="color"
+                aria-label="新規ホールドの既定色"
+                value={defaultHoldColor}
+                onChange={(event) => setDefaultHoldColor(event.currentTarget.value)}
+              />
+            </label>
+            <button
+              className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
+              type="button"
+              role="switch"
+              aria-label="ホールド輪郭の自動検出"
+              aria-checked={autoDetectHolds}
+              onClick={() => setAutoDetectHolds((enabled) => !enabled)}
+            >
+              <span className="auto-detect-control__label">輪郭検出</span>
+              <span className="auto-detect-control__track" aria-hidden="true">
+                <span />
+              </span>
+              <span className="auto-detect-control__status">{autoDetectHolds ? "ON" : "OFF"}</span>
+            </button>
+            <button
+              className="button button--outline button--small editor-reset"
+              type="button"
+              title="この壁のホールドとルート上のホールド設定をすべてリセット"
+              disabled={holds.length === 0}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    "この壁のホールドをすべて削除し、ルートのホールド設定を空にします。ルート自体は残ります。よろしいですか？",
+                  )
+                )
+                  return;
+                void clearHolds()
+                  .then(() => setSelectedHoldId(null))
+                  .catch((reason: unknown) =>
+                    notify(
+                      reason instanceof Error
+                        ? reason.message
+                        : "ホールドをリセットできませんでした。",
+                    ),
+                  );
+              }}
+            >
+              <RotateCcw size={14} /> <span>全リセット</span>
+            </button>
             <span className="toolbar-spacer" />
             <button
               className="button button--outline button--small"
@@ -342,8 +404,9 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               selectedHoldId={selectedHoldId}
               tool={tool}
               showLines={showLines}
-              onAddHold={(position) =>
-                void addHold(position)
+              autoDetectHolds={autoDetectHolds}
+              onAddHold={(position, markerRadius, bounds) =>
+                void addHold(position, markerRadius, defaultHoldColor, bounds)
                   .then((hold) => setSelectedHoldId(hold.id))
                   .catch((reason: unknown) =>
                     notify(
@@ -352,6 +415,17 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                   )
               }
               onMoveHold={(id, position) => void moveHold(id, position)}
+              onRemoveHold={(id) => {
+                void removeHold(id)
+                  .then(() => {
+                    if (selectedHoldId === id) setSelectedHoldId(null);
+                  })
+                  .catch((reason: unknown) =>
+                    notify(
+                      reason instanceof Error ? reason.message : "ホールドを削除できませんでした。",
+                    ),
+                  );
+              }}
               onSelectHold={setSelectedHoldId}
               onAppendHold={(id) => void appendHold(id)}
             />
@@ -632,6 +706,44 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       placeholder="例: crimp"
                       maxLength={40}
                     />
+                  </label>
+                  <label className="field-label">
+                    円の半径（画像px）
+                    <span className="hold-range-value">
+                      <input
+                        className="hold-range"
+                        type="range"
+                        min="4"
+                        max="300"
+                        step="1"
+                        value={selectedHold.markerRadius ?? 48}
+                        onChange={(event) =>
+                          void updateHold(selectedHold.id, {
+                            markerRadius: Number(event.currentTarget.value),
+                          })
+                        }
+                      />
+                      <output>{Math.round(selectedHold.markerRadius ?? 48)} px</output>
+                    </span>
+                  </label>
+                  <label className="field-label">
+                    線幅（画面px）
+                    <span className="hold-range-value">
+                      <input
+                        className="hold-range"
+                        type="range"
+                        min="1"
+                        max="10"
+                        step="0.5"
+                        value={selectedHold.markerWidth ?? 2}
+                        onChange={(event) =>
+                          void updateHold(selectedHold.id, {
+                            markerWidth: Number(event.currentTarget.value),
+                          })
+                        }
+                      />
+                      <output>{selectedHold.markerWidth ?? 2} px</output>
+                    </span>
                   </label>
                   <label className="field-label">
                     色

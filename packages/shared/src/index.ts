@@ -26,6 +26,8 @@ export type Hold = {
   shape?: { type: "point" | "polygon" | "ellipse"; points?: Point[] };
   type?: string;
   color?: string;
+  markerRadius?: number;
+  markerWidth?: number;
   confidence?: number;
   metadata?: Record<string, unknown>;
   detectionSource: "manual" | "ai";

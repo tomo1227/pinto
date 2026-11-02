@@ -112,7 +112,11 @@ export function drawScene(
     const isSelected = selectedHoldId === hold.id;
     const isStart = route?.startHoldIds.includes(hold.id) ?? false;
     const isFinish = route?.finishHoldIds.includes(hold.id) ?? false;
-    const radius = isSelected ? 15 : 12;
+    const radius = hold.markerRadius
+      ? Math.max(1, hold.markerRadius * rect.scale)
+      : isSelected
+        ? 15
+        : 12;
     context.beginPath();
     if (isFinish) {
       context.moveTo(point.x, point.y - radius);
@@ -120,6 +124,19 @@ export function drawScene(
       context.lineTo(point.x, point.y + radius);
       context.lineTo(point.x - radius, point.y);
       context.closePath();
+    } else if (hold.shape?.type === "ellipse" && hold.bounds) {
+      const baseRadius =
+        Math.max(hold.bounds.width * imageWidth, hold.bounds.height * imageHeight) / 2;
+      const markerScale = hold.markerRadius && baseRadius > 0 ? hold.markerRadius / baseRadius : 1;
+      context.ellipse(
+        point.x,
+        point.y,
+        (hold.bounds.width * imageWidth * rect.scale * markerScale) / 2,
+        (hold.bounds.height * imageHeight * rect.scale * markerScale) / 2,
+        0,
+        0,
+        Math.PI * 2,
+      );
     } else {
       context.arc(point.x, point.y, radius, 0, Math.PI * 2);
     }
@@ -127,8 +144,8 @@ export function drawScene(
       context.fillStyle = "#ee795a";
       context.fill();
     }
-    context.strokeStyle = isStart ? "#79c7a2" : isInRoute || isSelected ? "#202522" : "#49534e";
-    context.lineWidth = isSelected ? 3 : 2;
+    context.strokeStyle = hold.color ?? (isStart ? "#79c7a2" : isInRoute ? "#202522" : "#49534e");
+    context.lineWidth = hold.markerWidth ?? (isSelected ? 3 : 2);
     context.stroke();
     if (isInRoute) {
       context.fillStyle = "#202522";

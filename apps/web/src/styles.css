@@ -772,6 +772,69 @@ a {
 .line-toggle input:checked + span {
   color: var(--moss);
 }
+.auto-detect-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  color: #6d776f;
+  background: #f0f1ec;
+  border: 1px solid #d4d6ce;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.auto-detect-control.is-on {
+  color: #21634f;
+  background: #e6f0eb;
+  border-color: #9ab8a9;
+}
+.auto-detect-control__track {
+  width: 26px;
+  height: 15px;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  background: #a4aaa4;
+  border-radius: 99px;
+}
+.auto-detect-control.is-on .auto-detect-control__track {
+  background: #4a8a70;
+}
+.auto-detect-control__track > span {
+  width: 11px;
+  height: 11px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 120ms ease;
+}
+.auto-detect-control.is-on .auto-detect-control__track > span {
+  transform: translateX(11px);
+}
+.auto-detect-control__status {
+  min-width: 21px;
+  font-size: 9px;
+  font-weight: 700;
+}
+.default-hold-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6d776f;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.default-hold-color input {
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  background: #fff;
+  border: 1px solid #d4d6ce;
+  border-radius: 3px;
+  cursor: pointer;
+}
 .canvas-frame {
   position: relative;
   min-height: 0;
@@ -1107,6 +1170,22 @@ a {
   border: 1px solid #cdd1ca;
   border-radius: 3px;
 }
+.hold-range-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font: 10px monospace;
+}
+.hold-range {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--moss);
+}
+.hold-range-value output {
+  text-align: right;
+}
 .editor-loading {
   padding-top: 70px;
   color: var(--muted);
@@ -1291,6 +1370,9 @@ a {
     min-height: 30px;
     padding: 0 7px;
   }
+  .editor-reset > span {
+    display: none;
+  }
   .line-toggle > span {
     gap: 3px;
   }
@@ -1336,6 +1418,12 @@ a {
     gap: 3px;
   }
   .line-toggle > span > span {
+    display: none;
+  }
+  .auto-detect-control__label {
+    display: none;
+  }
+  .default-hold-color > span {
     display: none;
   }
 }
