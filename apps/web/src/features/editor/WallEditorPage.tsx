@@ -12,6 +12,7 @@ import {
   EyeOff,
   Hand,
   MapPin,
+  MessageCircle,
   Minus,
   Pencil,
   Plus,
@@ -20,9 +21,9 @@ import {
   Route as RouteIcon,
   Save,
   Settings2,
+  Share2,
   Trash2,
   Undo2,
-  Upload,
   X,
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
@@ -47,6 +48,35 @@ function roleFor(route: ClimbingRoute, holdId: string): "start" | "normal" | "fi
   if (route.startHoldIds.includes(holdId)) return "start";
   if (route.finishHoldIds.includes(holdId)) return "finish";
   return "normal";
+}
+
+function routePngFileName(name: string) {
+  return `${name.replace(/[\\/:*?"<>|]/g, "-").trim() || "route"}.png`;
+}
+
+function canSharePng(file: File) {
+  if (typeof navigator.share !== "function") return false;
+  try {
+    return typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] });
+  } catch {
+    return false;
+  }
+}
+
+function downloadPng(file: File) {
+  const url = URL.createObjectURL(file);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.name;
+  anchor.style.display = "none";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+function isNamedError(reason: unknown, name: string) {
+  return reason instanceof Error && reason.name === name;
 }
 
 export function WallEditorPage({ wallId }: { wallId: string }) {
@@ -91,7 +121,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [routeGrade, setRouteGrade] = useState("");
   const [draft, setDraft] = useState<RouteDraft>(blankDraft);
   const [busy, setBusy] = useState(false);
-  const [shareBusy, setShareBusy] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const [renaming, setRenaming] = useState(false);
 
   const route = routes.find((item) => item.id === selectedRouteId);
@@ -226,26 +256,69 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     setRenaming(false);
   }
 
+  async function createRouteFile() {
+    if (!wall || !route) throw new Error("ルートが見つかりません。");
+    const image = await getImage(wall.imageId);
+    if (!image) throw new Error("壁画像が見つかりません。");
+    const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, route);
+    return new File([png], routePngFileName(route.name), { type: "image/png" });
+  }
+
   async function exportPng() {
-    if (!wall || !route) return;
+    if (!route || actionBusy) return;
+    setActionBusy(true);
+    let file: File | null = null;
     try {
-      const image = await getImage(wall.imageId);
-      if (!image) throw new Error("壁画像が見つかりません。");
-      const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, route);
-      const url = URL.createObjectURL(png);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `${route.name.replace(/[\\/:*?"<>|]/g, "-")}.png`;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      file = await createRouteFile();
+      if (canSharePng(file)) {
+        await navigator.share({ files: [file], title: route.name });
+      } else {
+        downloadPng(file);
+      }
     } catch (reason) {
+      if (isNamedError(reason, "AbortError")) return;
+      if (file && isNamedError(reason, "NotAllowedError")) {
+        downloadPng(file);
+        return;
+      }
       notify(reason instanceof Error ? reason.message : "PNGを作成できませんでした。");
+    } finally {
+      setActionBusy(false);
     }
   }
 
   async function shareRoute() {
-    if (!wall || !route) return;
-    setShareBusy(true);
+    if (!route || actionBusy) return;
+    setActionBusy(true);
+    let file: File | null = null;
+    try {
+      file = await createRouteFile();
+      if (!canSharePng(file)) {
+        downloadPng(file);
+        notify("この端末は共有メニューに対応していないため、PNGをダウンロードしました。");
+        return;
+      }
+      await navigator.share({
+        files: [file],
+        title: route.name,
+        text: `${route.name}${route.grade ? ` (${route.grade})` : ""}`,
+      });
+    } catch (reason) {
+      if (isNamedError(reason, "AbortError")) return;
+      if (file && isNamedError(reason, "NotAllowedError")) {
+        downloadPng(file);
+        notify("共有メニューを開けなかったため、PNGをダウンロードしました。");
+        return;
+      }
+      notify(reason instanceof Error ? reason.message : "共有できませんでした。");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function shareRouteToDiscord() {
+    if (!wall || !route || actionBusy) return;
+    setActionBusy(true);
     try {
       const image = await getImage(wall.imageId);
       const webhook = await getDiscordSettings();
@@ -267,7 +340,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     } catch (reason) {
       notify(reason instanceof Error ? reason.message : "Discordへの共有に失敗しました。");
     } finally {
-      setShareBusy(false);
+      setActionBusy(false);
     }
   }
 
@@ -495,18 +568,26 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
             <button
               className="button button--outline button--small"
               type="button"
-              disabled={!route}
+              disabled={!route || actionBusy}
               onClick={() => void exportPng()}
             >
-              <Download size={15} /> PNG
+              <Download size={15} /> {actionBusy ? "準備中" : "PNG保存"}
             </button>
             <button
               className="button button--share button--small"
               type="button"
-              disabled={!route || shareBusy}
+              disabled={!route || actionBusy}
               onClick={() => void shareRoute()}
             >
-              <Upload size={15} /> {shareBusy ? "送信中" : "共有"}
+              <Share2 size={15} /> {actionBusy ? "準備中" : "共有"}
+            </button>
+            <button
+              className="button button--outline button--small"
+              type="button"
+              disabled={!route || actionBusy}
+              onClick={() => void shareRouteToDiscord()}
+            >
+              <MessageCircle size={15} /> {actionBusy ? "送信中" : "Discord"}
             </button>
           </div>
           <div className="canvas-frame">

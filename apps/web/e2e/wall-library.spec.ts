@@ -1,6 +1,22 @@
 import { expect, test } from "@playwright/test";
 
 test("deletes holds by keyboard and touch drag", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: () => true,
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async (data: ShareData) => {
+        document.documentElement.dataset.shareCount = String(
+          Number(document.documentElement.dataset.shareCount ?? "0") + 1,
+        );
+        document.documentElement.dataset.sharedFile = data.files?.[0]?.name ?? "";
+        document.documentElement.dataset.sharedType = data.files?.[0]?.type ?? "";
+      },
+    });
+  });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Walls & routes" })).toBeVisible();
   const imageBase64 = await page.evaluate(() => {
@@ -31,6 +47,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   if (!bounds) throw new Error("Wall canvas is unavailable");
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await expect(page.locator(".canvas-caption span").nth(1)).toHaveText("1 HOLDS");
+  await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
   await page.keyboard.press("Delete");
   await expect(page.locator(".canvas-caption span").nth(1)).toHaveText("0 HOLDS");
 
@@ -103,6 +120,16 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
     }
   });
   await expect(page.locator(".canvas-caption span").nth(1)).toHaveText("0 HOLDS");
+
+  await page.getByRole("button", { name: "ルートを作成" }).click();
+  await page.getByLabel("ルート名").fill("E2E route");
+  await page.locator(".modal-panel").getByRole("button", { name: "ルートを作成" }).click();
+  await page.getByRole("button", { name: "PNG保存" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-shared-file", "E2E route.png");
+  await expect(page.locator("html")).toHaveAttribute("data-shared-type", "image/png");
+  await page.getByRole("button", { name: "共有" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-share-count", "2");
+  await expect(page.getByRole("button", { name: "Discord" })).toBeVisible();
 });
 
 test("serves the local Worker API through the development proxy", async ({ request }) => {
