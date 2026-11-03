@@ -7,6 +7,7 @@ import {
   getImageRect,
   getResizeHandleAt,
   hitTestHold,
+  hitTestRouteText,
   normalizedToCanvas,
 } from "./canvas-engine";
 import { estimateHoldBounds, estimateHoldRadius } from "./hold-detection";
@@ -51,6 +52,7 @@ function createCanvasContext(): CanvasRenderingContext2D {
     fill: vi.fn(),
     stroke: vi.fn(),
     fillText: vi.fn(),
+    strokeText: vi.fn(),
     restore: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 }
@@ -71,6 +73,19 @@ describe("canvas coordinate engine", () => {
     expect(hitTestHold({ x: 575, y: 400 }, [enlargedHold], rect, 24, 400, 400)?.id).toBe(
       enlargedHold.id,
     );
+  });
+
+  it("hit-tests route text in view coordinates", () => {
+    const annotation = { id: "text-1", text: "Crux", position: { x: 0.25, y: 0.75 } };
+
+    expect(hitTestRouteText({ x: 302, y: 600 }, [annotation], rect)?.id).toBe("text-1");
+    expect(hitTestRouteText({ x: 95, y: 600 }, [annotation], rect)).toBeUndefined();
+  });
+
+  it("hit-tests the full width of Japanese route text", () => {
+    const annotation = { id: "text-ja", text: "壁", position: { x: 0.25, y: 0.75 } };
+
+    expect(hitTestRouteText({ x: 346, y: 600 }, [annotation], rect)?.id).toBe("text-ja");
   });
 
   it("locates resize handles on the selected marker frame", () => {
@@ -178,6 +193,36 @@ describe("canvas coordinate engine", () => {
     expect(context.strokeStyle).toBe("#79c7a2");
   });
 
+  it("draws text annotations attached to the active route", () => {
+    const context = createCanvasContext();
+    const routeWithText: Route = {
+      ...route,
+      textAnnotations: [
+        { id: "text-1", text: "Crux", position: { x: 0.25, y: 0.75 }, color: "#ff0000" },
+      ],
+    };
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [],
+        route: routeWithText,
+        selectedTextId: "text-1",
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.fillText).toHaveBeenCalledWith("Crux", 25, 75);
+    expect(context.strokeText).toHaveBeenCalledWith("Crux", 25, 75);
+    expect(context.fillStyle).toBe("#ff0000");
+    expect(context.strokeRect).toHaveBeenCalledOnce();
+  });
+
   it("uses each hold's custom marker size, width, and color", () => {
     const context = createCanvasContext();
 
@@ -197,6 +242,27 @@ describe("canvas coordinate engine", () => {
     expect(context.arc).toHaveBeenCalledWith(50, 50, 5, 0, Math.PI * 2);
     expect(context.strokeStyle).toBe("#ff0000");
     expect(context.lineWidth).toBe(5);
+  });
+
+  it("uses a hold's custom color for its route number", () => {
+    const context = createCanvasContext();
+
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [{ ...hold, color: "#ff0000" }],
+        route,
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+
+    expect(context.fillText).toHaveBeenCalledWith("1", 50, 50.5);
+    expect(context.fillStyle).toBe("#ff0000");
   });
 
   it("draws detected hold bounds as an ellipse", () => {

@@ -1,4 +1,4 @@
-import type { Route as ClimbingRoute, Hold, Point } from "@pinto/shared";
+import type { Route as ClimbingRoute, Hold, Point, RouteText } from "@pinto/shared";
 
 export type Viewport = { zoom: number; panX: number; panY: number };
 export type CanvasScene = {
@@ -8,6 +8,7 @@ export type CanvasScene = {
   holds: Hold[];
   route?: ClimbingRoute;
   selectedHoldId?: string | null;
+  selectedTextId?: string | null;
   showLines?: boolean;
   allowEllipses?: boolean;
   viewport: Viewport;
@@ -88,6 +89,30 @@ export function hitTestHold(
     }
     const center = normalizedToCanvas(hold.position, rect);
     return Math.hypot(center.x - point.x, center.y - point.y) <= radius;
+  });
+}
+
+export function hitTestRouteText(
+  point: Point,
+  annotations: RouteText[],
+  rect: ImageRect,
+): RouteText | undefined {
+  return [...annotations].reverse().find((annotation) => {
+    const position = normalizedToCanvas(annotation.position, rect);
+    const fontSize = Math.max(14, 24 * rect.scale);
+    const width = Math.max(
+      fontSize,
+      Array.from(annotation.text).reduce(
+        (total, character) =>
+          total + fontSize * ((character.codePointAt(0) ?? 0) > 0x2e80 ? 1 : 0.7),
+        0,
+      ),
+    );
+    return (
+      point.x >= position.x - 4 &&
+      point.x <= position.x + width + 4 &&
+      Math.abs(point.y - position.y) <= fontSize / 2 + 4
+    );
   });
 }
 
@@ -204,6 +229,7 @@ export function drawScene(
     holds,
     route,
     selectedHoldId,
+    selectedTextId,
     showLines = true,
     allowEllipses = true,
     viewport,
@@ -314,7 +340,7 @@ export function drawScene(
     context.lineWidth = lineWidth;
     context.stroke();
     if (isInRoute) {
-      context.fillStyle = "#202522";
+      context.fillStyle = hold.color ?? "#202522";
       context.font = '700 11px "DM Sans", sans-serif';
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -322,5 +348,24 @@ export function drawScene(
     }
     if (isSelected) drawSelectionFrame(context, geometry);
   });
+  for (const annotation of route?.textAnnotations ?? []) {
+    const point = normalizedToCanvas(annotation.position, rect);
+    const fontSize = Math.max(14, 24 * rect.scale);
+    const textWidth = Math.max(fontSize, annotation.text.length * fontSize * 0.7);
+    context.font = `600 ${fontSize}px sans-serif`;
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.lineJoin = "round";
+    context.lineWidth = 4;
+    context.strokeStyle = "rgba(255, 255, 255, 0.9)";
+    context.strokeText(annotation.text, point.x, point.y);
+    context.fillStyle = annotation.color ?? "#202522";
+    context.fillText(annotation.text, point.x, point.y);
+    if (selectedTextId === annotation.id) {
+      context.strokeStyle = "#1673e6";
+      context.lineWidth = 1;
+      context.strokeRect(point.x - 4, point.y - fontSize / 2 - 3, textWidth + 8, fontSize + 6);
+    }
+  }
   context.restore();
 }

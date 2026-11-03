@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run",
+    "build": "wrangler deploy --dry-run --env production",
     "preview": "wrangler dev --ip 0.0.0.0",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy --env production",
     "typecheck": "tsc --project tsconfig.json"
   },
   "dependencies": {

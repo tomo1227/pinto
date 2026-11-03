@@ -18,6 +18,13 @@ export type Wall = {
 
 export type Point = { x: number; y: number };
 
+export type RouteText = {
+  id: string;
+  text: string;
+  position: Point;
+  color?: string;
+};
+
 export type Hold = {
   id: string;
   wallId: string;
@@ -45,6 +52,7 @@ export type Route = {
   holdIds: string[];
   startHoldIds: string[];
   finishHoldIds: string[];
+  textAnnotations?: RouteText[];
   japaneseGrade?: string;
   vGrade?: string;
   grade?: string;

@@ -3,6 +3,7 @@ import {
   formatRouteGrade,
   type Hold,
   JAPANESE_CLIMBING_LEVELS,
+  type RouteText,
   V_CLIMBING_LEVELS,
   type Wall,
 } from "@pinto/shared";
@@ -30,6 +31,7 @@ import {
   Settings2,
   Share2,
   Trash2,
+  Type,
   Undo2,
   Upload,
   X,
@@ -41,7 +43,7 @@ import { getDiscordSettings, getImage, getWall } from "../../infrastructure/stor
 import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
-type Tool = "hold" | "route" | "pan" | "eraser";
+type Tool = "hold" | "route" | "pan" | "eraser" | "text";
 type Panel = "holds" | "routes";
 type RouteDraft = {
   name: string;
@@ -172,13 +174,14 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [wallName, setWallName] = useState("");
   const [tool, setTool] = useState<Tool>("hold");
+  const [selectedItemColor, setSelectedItemColor] = useState("#202522");
   const [panel, setPanel] = useState<Panel>("routes");
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
+  const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
   const [autoDetectHolds, setAutoDetectHolds] = useState(true);
   const [allowEllipses, setAllowEllipses] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [defaultHoldColor, setDefaultHoldColor] = useState("#000000");
   const [createOpen, setCreateOpen] = useState(false);
   const [routeName, setRouteName] = useState("");
   const [routeJapaneseGrade, setRouteJapaneseGrade] = useState("");
@@ -190,14 +193,12 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
-  const selectedHoldColor = !selectedHold
-    ? "#000000"
-    : (selectedHold.color ??
-      (route?.startHoldIds.includes(selectedHold.id)
-        ? "#79c7a2"
-        : route?.holdIds.includes(selectedHold.id)
-          ? "#202522"
-          : "#49534e"));
+  const selectedText = route?.textAnnotations?.find(({ id }) => id === selectedTextId);
+
+  useEffect(() => {
+    const color = selectedText?.color ?? selectedHold?.color;
+    if (color) setSelectedItemColor(color);
+  }, [selectedHold?.color, selectedText?.color]);
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
@@ -213,6 +214,26 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
       const key = event.key.toLowerCase();
       const deleteFocusedControl = target?.closest("input, textarea, select");
+      const selectedTextRoute = routes.find((item) => item.id === selectedRouteId);
+      if (
+        selectedTextId &&
+        selectedTextRoute &&
+        !deleteFocusedControl &&
+        !event.repeat &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        (key === "delete" || key === "backspace")
+      ) {
+        event.preventDefault();
+        setSelectedTextId(null);
+        void updateRoute(selectedTextRoute.id, {
+          textAnnotations: (selectedTextRoute.textAnnotations ?? []).filter(
+            ({ id }) => id !== selectedTextId,
+          ),
+        });
+        return;
+      }
       if (
         selectedHoldId &&
         !event.repeat &&
@@ -245,7 +266,19 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
     window.addEventListener("keydown", handleHistoryShortcut);
     return () => window.removeEventListener("keydown", handleHistoryShortcut);
-  }, [future.length, past.length, redo, removeHold, selectedHoldId, notify, undo]);
+  }, [
+    future.length,
+    past.length,
+    redo,
+    removeHold,
+    selectedHoldId,
+    selectedRouteId,
+    selectedTextId,
+    routes,
+    updateRoute,
+    notify,
+    undo,
+  ]);
 
   useEffect(() => {
     let imageObjectUrl: string | null = null;
@@ -340,6 +373,61 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     event.preventDefault();
     await renameWall(wallId, wallName);
     setRenaming(false);
+  }
+
+  function addRouteText(position: Hold["position"], text: string) {
+    if (!route || !text.trim()) return;
+    const annotation: RouteText = {
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      position,
+      color: selectedItemColor,
+    };
+    setSelectedHoldId(null);
+    setSelectedTextId(annotation.id);
+    void updateRoute(route.id, {
+      textAnnotations: [...(route.textAnnotations ?? []), annotation],
+    });
+  }
+
+  function removeRouteText(annotationId: string) {
+    if (!route) return;
+    if (selectedTextId === annotationId) setSelectedTextId(null);
+    void updateRoute(route.id, {
+      textAnnotations: (route.textAnnotations ?? []).filter(({ id }) => id !== annotationId),
+    });
+  }
+
+  function editRouteText(annotationId: string, text: string) {
+    if (!route) return;
+    void updateRoute(route.id, {
+      textAnnotations: (route.textAnnotations ?? []).map((annotation) =>
+        annotation.id === annotationId ? { ...annotation, text } : annotation,
+      ),
+    });
+  }
+
+  function moveRouteText(annotationId: string, position: Hold["position"]) {
+    if (!route) return;
+    void updateRoute(route.id, {
+      textAnnotations: (route.textAnnotations ?? []).map((annotation) =>
+        annotation.id === annotationId ? { ...annotation, position } : annotation,
+      ),
+    });
+  }
+
+  function updateSelectedColor(color: string) {
+    setSelectedItemColor(color);
+    if (selectedHold) {
+      void updateHold(selectedHold.id, { color });
+      return;
+    }
+    if (!route || !selectedText) return;
+    void updateRoute(route.id, {
+      textAnnotations: (route.textAnnotations ?? []).map((annotation) =>
+        annotation.id === selectedText.id ? { ...annotation, color } : annotation,
+      ),
+    });
   }
 
   async function createRouteFile(routeToExport: ClimbingRoute) {
@@ -546,6 +634,17 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <RouteIcon size={17} />
               </button>
               <button
+                className={tool === "text" ? "is-active" : ""}
+                type="button"
+                title="文字を入力して配置"
+                aria-label="文字を入力して配置"
+                aria-pressed={tool === "text"}
+                disabled={!route}
+                onClick={() => setTool("text")}
+              >
+                <Type size={17} />
+              </button>
+              <button
                 className={tool === "eraser" ? "is-active" : ""}
                 type="button"
                 title="ホールドを消去"
@@ -568,18 +667,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               </button>
               {settingsOpen && (
                 <div className="editor-settings-popover" role="dialog" aria-label="ホールド設定">
-                  <label className="field-label">
-                    新規ホールドの既定色
-                    <span className="color-input-row">
-                      <input
-                        type="color"
-                        aria-label="新規ホールドの既定色"
-                        value={defaultHoldColor}
-                        onChange={(event) => setDefaultHoldColor(event.currentTarget.value)}
-                      />
-                      <span>{defaultHoldColor}</span>
-                    </span>
-                  </label>
                   <button
                     className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
                     type="button"
@@ -627,35 +714,35 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <span>線</span>
               </span>
             </label>
-            <div className="hold-default-actions">
-              <label className="default-hold-color" title="選択中ホールドの色">
-                <input
-                  type="color"
-                  aria-label="選択中ホールドの色"
-                  value={selectedHoldColor}
-                  disabled={!selectedHold}
-                  onChange={(event) => {
-                    if (selectedHold)
-                      void updateHold(selectedHold.id, { color: event.currentTarget.value });
-                  }}
-                />
-              </label>
-            </div>
+            <label className="selected-object-color" title="選択中の色、または次に配置する文字の色">
+              <input
+                type="color"
+                aria-label="選択中の色、または次に配置する文字の色"
+                value={selectedItemColor}
+                onChange={(event) => updateSelectedColor(event.currentTarget.value)}
+              />
+            </label>
             <button
               className="icon-button danger-text editor-reset"
               type="button"
               title="全リセット"
               aria-label="全リセット"
-              disabled={holds.length === 0}
+              disabled={
+                holds.length === 0 &&
+                !routes.some((item) => (item.textAnnotations?.length ?? 0) > 0)
+              }
               onClick={() => {
                 if (
                   !window.confirm(
-                    "この壁のホールドをすべて削除し、ルートのホールド設定を空にします。ルート自体は残ります。よろしいですか？",
+                    "この壁のホールドと配置した文字をすべて削除し、ルートのホールド設定を空にします。ルート自体は残ります。よろしいですか？",
                   )
                 )
                   return;
                 void clearHolds()
-                  .then(() => setSelectedHoldId(null))
+                  .then(() => {
+                    setSelectedHoldId(null);
+                    setSelectedTextId(null);
+                  })
                   .catch((reason: unknown) =>
                     notify(
                       reason instanceof Error
@@ -676,13 +763,18 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               holds={holds}
               route={route}
               selectedHoldId={selectedHoldId}
+              selectedTextId={selectedTextId}
               tool={tool}
+              textColor={selectedItemColor}
               showLines={showLines}
               autoDetectHolds={autoDetectHolds}
               allowEllipses={allowEllipses}
               onAddHold={(position, markerRadius, bounds, shape) =>
-                void addHold(position, markerRadius, defaultHoldColor, bounds, shape)
-                  .then((hold) => setSelectedHoldId(hold.id))
+                void addHold(position, markerRadius, undefined, bounds, shape)
+                  .then((hold) => {
+                    setSelectedTextId(null);
+                    setSelectedHoldId(hold.id);
+                  })
                   .catch((reason: unknown) =>
                     notify(
                       reason instanceof Error ? reason.message : "ホールドを追加できませんでした。",
@@ -702,8 +794,16 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                     ),
                   );
               }}
-              onSelectHold={setSelectedHoldId}
+              onSelectHold={(id) => {
+                setSelectedTextId(null);
+                setSelectedHoldId(id);
+              }}
               onAppendHold={(id) => void appendHold(id)}
+              onAddText={addRouteText}
+              onEditText={editRouteText}
+              onMoveText={moveRouteText}
+              onSelectText={setSelectedTextId}
+              onRemoveText={removeRouteText}
             />
             <div className="canvas-caption">
               <span>
@@ -757,7 +857,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       <button
                         className="route-card__select"
                         type="button"
-                        onClick={() => selectRoute(item.id)}
+                        onClick={() => {
+                          setSelectedTextId(null);
+                          selectRoute(item.id);
+                        }}
                       >
                         <span
                           className="route-swatch"
@@ -821,8 +924,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                           title={`${item.name}を削除`}
                           aria-label={`${item.name}を削除`}
                           onClick={() => {
-                            if (window.confirm(`「${item.name}」を削除しますか？`))
+                            if (window.confirm(`「${item.name}」を削除しますか？`)) {
+                              setSelectedTextId(null);
                               void removeRoute(item.id);
+                            }
                           }}
                         >
                           <Trash2 size={14} />
@@ -956,7 +1061,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       key={hold.id}
                       type="button"
                       className={`hold-list-item ${selectedHoldId === hold.id ? "is-selected" : ""}`}
-                      onClick={() => setSelectedHoldId(hold.id)}
+                      onClick={() => {
+                        setSelectedTextId(null);
+                        setSelectedHoldId(hold.id);
+                      }}
                     >
                       <span
                         className="hold-list-marker"

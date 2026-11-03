@@ -280,7 +280,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       ...(bounds ? { bounds } : {}),
       ...(shape ? { shape } : {}),
       detectionSource: "manual",
-      color: color ?? "#000000",
+      ...(color === undefined ? {} : { color }),
       createdAt: now,
       updatedAt: now,
     };
@@ -363,21 +363,27 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const state = get();
     const wallId = state.selectedWallId;
     if (!wallId) return;
-    const holdIds = new Set(state.holds.map((hold) => hold.id));
     const updatedAt = new Date().toISOString();
     const routes = state.routes.map((route) => {
-      const holdIdsInRoute = route.holdIds.filter((id) => !holdIds.has(id));
-      if (holdIdsInRoute.length === route.holdIds.length) return route;
+      if (
+        route.holdIds.length === 0 &&
+        route.startHoldIds.length === 0 &&
+        route.finishHoldIds.length === 0 &&
+        (route.textAnnotations?.length ?? 0) === 0
+      ) {
+        return route;
+      }
       return {
         ...route,
-        holdIds: holdIdsInRoute,
-        startHoldIds: route.startHoldIds.filter((id) => !holdIds.has(id)),
-        finishHoldIds: route.finishHoldIds.filter((id) => !holdIds.has(id)),
+        holdIds: [],
+        startHoldIds: [],
+        finishHoldIds: [],
+        textAnnotations: [],
         updatedAt,
       };
     });
     const updatedRoutes = routes.filter((route, index) => route !== state.routes[index]);
-    if (holdIds.size === 0 && updatedRoutes.length === 0) return;
+    if (state.holds.length === 0 && updatedRoutes.length === 0) return;
     set({
       holds: [],
       routes,
