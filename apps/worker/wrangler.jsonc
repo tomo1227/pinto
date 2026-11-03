@@ -15,7 +15,7 @@
     {
       "binding": "DB",
       "database_name": "pinto-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "e45211fc-950a-43d0-97b9-d7634771f5a3",
       "migrations_dir": "migrations"
     }
   ],
