@@ -5,6 +5,8 @@ import {
   drawScene,
   getHoldMarkerGeometry,
   getImageRect,
+  getRouteTextGeometry,
+  getRouteTextResizeHandleAt,
   getResizeHandleAt,
   hitTestHold,
   hitTestRouteText,
@@ -80,6 +82,24 @@ describe("canvas coordinate engine", () => {
 
     expect(hitTestRouteText({ x: 302, y: 600 }, [annotation], rect)?.id).toBe("text-1");
     expect(hitTestRouteText({ x: 95, y: 600 }, [annotation], rect)).toBeUndefined();
+  });
+
+  it("scales route text and locates its resize handles", () => {
+    const annotation = {
+      id: "text-1",
+      text: "Crux",
+      position: { x: 0.25, y: 0.75 },
+      fontScale: 2,
+    };
+    const geometry = getRouteTextGeometry(annotation, rect);
+    const bottomRight = {
+      x: geometry.frame.x + geometry.frame.width,
+      y: geometry.frame.y + geometry.frame.height,
+    };
+
+    expect(geometry.fontSize).toBe(96);
+    expect(hitTestRouteText({ x: 500, y: 600 }, [annotation], rect)?.id).toBe(annotation.id);
+    expect(getRouteTextResizeHandleAt(bottomRight, geometry)).toBe("se");
   });
 
   it("hit-tests the full width of Japanese route text", () => {
@@ -218,9 +238,9 @@ describe("canvas coordinate engine", () => {
     );
 
     expect(context.fillText).toHaveBeenCalledWith("Crux", 25, 75);
-    expect(context.strokeText).toHaveBeenCalledWith("Crux", 25, 75);
-    expect(context.fillStyle).toBe("#ff0000");
-    expect(context.strokeRect).toHaveBeenCalledOnce();
+    expect(context.strokeText).not.toHaveBeenCalled();
+    expect(context.fillRect).toHaveBeenCalledTimes(5);
+    expect(context.strokeRect).toHaveBeenCalledTimes(5);
   });
 
   it("uses each hold's custom marker size, width, and color", () => {

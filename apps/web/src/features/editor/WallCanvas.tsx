@@ -9,14 +9,19 @@ import {
 } from "react";
 import {
   canvasToNormalized,
+  clampRouteTextScale,
   drawScene,
   getHoldMarkerGeometry,
   getImageRect,
+  getRouteTextGeometry,
+  getRouteTextResizeHandleAt,
   getResizeHandleAt,
   type HoldResizeHandle,
+  type RouteTextResizeHandle,
   hitTestHold,
   hitTestRouteText,
   isInsideHoldMarker,
+  normalizedToCanvas,
   type Viewport,
 } from "./canvas-engine";
 import { detectHoldOutline, detectHoldRadius } from "./hold-detection";
@@ -37,7 +42,7 @@ type ResizeGesture = {
   patch: Partial<Hold>;
 };
 type PinchGesture = {
-  mode: "viewport" | "hold";
+  mode: "viewport" | "hold" | "text";
   distance: number;
   zoom: number;
   centerX: number;
@@ -47,6 +52,18 @@ type PinchGesture = {
   holdId?: string;
   initialRadius?: number;
   currentRadius?: number;
+  textId?: string;
+  initialFontScale?: number;
+  currentFontScale?: number;
+};
+type TextResizeGesture = {
+  id: string;
+  pointerId: number;
+  handle: RouteTextResizeHandle;
+  start: { x: number; y: number };
+  fontScale: number;
+  fontSize: number;
+  currentFontScale: number;
 };
 type Props = {
   wall: Wall;
@@ -74,6 +91,7 @@ type Props = {
   onAddText: (position: Hold["position"], text: string) => void;
   onEditText: (id: string, text: string) => void;
   onMoveText: (id: string, position: Hold["position"]) => void;
+  onResizeText: (id: string, fontScale: number) => void;
   onSelectText: (id: string | null) => void;
   onRemoveText: (id: string) => void;
 };
@@ -161,6 +179,7 @@ export function WallCanvas({
   onAddText,
   onEditText,
   onMoveText,
+  onResizeText,
   onSelectText,
   onRemoveText,
 }: Props) {
@@ -168,6 +187,7 @@ export function WallCanvas({
   const imageRef = useRef<HTMLImageElement | null>(null);
   const dragRef = useRef<{ holdId: string; pointerId: number; pointerType: string } | null>(null);
   const textDragRef = useRef<TextDragGesture | null>(null);
+  const textResizeRef = useRef<TextResizeGesture | null>(null);
   const resizeRef = useRef<ResizeGesture | null>(null);
   const panRef = useRef<{
     x: number;
@@ -207,13 +227,22 @@ export function WallCanvas({
     const canvas = canvasRef.current;
     const image = imageRef.current;
     if (!canvas || !image || !imageReady) return;
+    const visibleRoute =
+      route && textInputDraft?.id
+        ? {
+            ...route,
+            textAnnotations: route.textAnnotations?.filter(
+              (annotation) => annotation.id !== textInputDraft.id,
+            ),
+          }
+        : route;
     const render = () =>
       renderCanvasScene(
         canvas,
         image,
         wall,
         holds,
-        route,
+        visibleRoute,
         selectedHoldId,
         selectedTextId,
         showLines,
@@ -231,6 +260,7 @@ export function WallCanvas({
     route,
     selectedHoldId,
     selectedTextId,
+    textInputDraft?.id,
     showLines,
     allowEllipses,
     viewport,
@@ -257,9 +287,11 @@ export function WallCanvas({
   function commitTextInput() {
     if (!textInputDraft) return;
     const text = textInputDraft.text.trim();
-    if (text) {
-      if (textInputDraft.id) onEditText(textInputDraft.id, text);
-      else onAddText(textInputDraft.position, text);
+    if (textInputDraft.id) {
+      if (text) onEditText(textInputDraft.id, text);
+      else onRemoveText(textInputDraft.id);
+    } else if (text) {
+      onAddText(textInputDraft.position, text);
     }
     setTextInputDraft(null);
   }
@@ -287,11 +319,35 @@ export function WallCanvas({
     );
   }
 
+  function previewTextScale(id: string, fontScale: number) {
+    const canvas = canvasRef.current;
+    if (!canvas || !imageRef.current || !route) return;
+    const previewRoute: ClimbingRoute = {
+      ...route,
+      textAnnotations: route.textAnnotations?.map((annotation) =>
+        annotation.id === id ? { ...annotation, fontScale } : annotation,
+      ),
+    };
+    renderCanvasScene(
+      canvas,
+      imageRef.current,
+      wall,
+      holds,
+      previewRoute,
+      selectedHoldId,
+      selectedTextId,
+      showLines,
+      allowEllipses,
+      viewport,
+    );
+  }
+
   function onPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
     const canvas = event.currentTarget;
     canvas.setPointerCapture(event.pointerId);
     pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointersRef.current.size === 2) {
+      if (textInputDraft) commitTextInput();
       const points = [...pointersRef.current.values()];
       const [first, second] = points;
       const bounds = canvas.getBoundingClientRect();
@@ -303,9 +359,29 @@ export function WallCanvas({
         viewport,
       );
       const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
+      const selectedText = route?.textAnnotations?.find(({ id }) => id === selectedTextId);
       const geometry = selectedHold
         ? getHoldMarkerGeometry(selectedHold, wall.width, wall.height, rect, true, allowEllipses)
         : undefined;
+      const textHitFirst = route?.textAnnotations
+        ? hitTestRouteText(
+            { x: first.x - bounds.left, y: first.y - bounds.top },
+            route.textAnnotations,
+            rect,
+          )
+        : undefined;
+      const textHitSecond = route?.textAnnotations
+        ? hitTestRouteText(
+            { x: second.x - bounds.left, y: second.y - bounds.top },
+            route.textAnnotations,
+            rect,
+          )
+        : undefined;
+      const isTextPinch =
+        tool === "text" &&
+        selectedText !== undefined &&
+        textHitFirst?.id === selectedText.id &&
+        textHitSecond?.id === selectedText.id;
       const isHoldPinch =
         tool === "hold" &&
         selectedHold &&
@@ -313,7 +389,7 @@ export function WallCanvas({
         isInsideHoldMarker({ x: first.x - bounds.left, y: first.y - bounds.top }, geometry) &&
         isInsideHoldMarker({ x: second.x - bounds.left, y: second.y - bounds.top }, geometry);
       pinchRef.current = {
-        mode: isHoldPinch ? "hold" : "viewport",
+        mode: isTextPinch ? "text" : isHoldPinch ? "hold" : "viewport",
         distance: Math.hypot(second.x - first.x, second.y - first.y),
         zoom: viewport.zoom,
         centerX: (first.x + second.x) / 2,
@@ -325,6 +401,13 @@ export function WallCanvas({
               holdId: selectedHold.id,
               initialRadius: selectedHold.markerRadius ?? 48,
               currentRadius: selectedHold.markerRadius ?? 48,
+            }
+          : {}),
+        ...(isTextPinch && selectedText
+          ? {
+              textId: selectedText.id,
+              initialFontScale: selectedText.fontScale ?? 1,
+              currentFontScale: selectedText.fontScale ?? 1,
             }
           : {}),
       };
@@ -348,6 +431,25 @@ export function WallCanvas({
       wall.height,
       viewport,
     );
+    const selectedText = route?.textAnnotations?.find(({ id }) => id === selectedTextId);
+    const selectedTextGeometry = selectedText ? getRouteTextGeometry(selectedText, rect) : undefined;
+    const textResizeHandle =
+      tool === "text" && selectedTextGeometry
+        ? getRouteTextResizeHandleAt(point, selectedTextGeometry)
+        : undefined;
+    if (selectedText && selectedTextGeometry && textResizeHandle) {
+      textResizeRef.current = {
+        id: selectedText.id,
+        pointerId: event.pointerId,
+        handle: textResizeHandle,
+        start: point,
+        fontScale: selectedText.fontScale ?? 1,
+        fontSize: selectedTextGeometry.fontSize,
+        currentFontScale: selectedText.fontScale ?? 1,
+      };
+      textDragRef.current = null;
+      return;
+    }
     const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
     if (tool === "hold" && selectedHold) {
       const geometry = getHoldMarkerGeometry(
@@ -394,7 +496,8 @@ export function WallCanvas({
         : undefined;
       onSelectHold(null);
       if (textHit) {
-        const editOnClick = selectedTextId === textHit.id || event.detail > 1;
+        const editOnClick =
+          (event.pointerType !== "touch" && selectedTextId === textHit.id) || event.detail > 1;
         onSelectText(textHit.id);
         setHoveredTextId(textHit.id);
         if (editOnClick) {
@@ -403,8 +506,7 @@ export function WallCanvas({
             key: crypto.randomUUID(),
             id: textHit.id,
             position: textHit.position,
-            x: point.x,
-            y: point.y,
+            ...normalizedToCanvas(textHit.position, rect),
             text: textHit.text,
           });
           return;
@@ -527,8 +629,7 @@ export function WallCanvas({
       key: crypto.randomUUID(),
       id: annotation.id,
       position: annotation.position,
-      x: point.x,
-      y: point.y,
+      ...normalizedToCanvas(annotation.position, rect),
       text: annotation.text,
     });
   }
@@ -556,6 +657,14 @@ export function WallCanvas({
       const [first, second] = points;
       const pinch = pinchRef.current;
       const distance = Math.hypot(second.x - first.x, second.y - first.y);
+      if (pinch.mode === "text" && pinch.textId && pinch.initialFontScale !== undefined) {
+        const fontScale = clampRouteTextScale(
+          pinch.initialFontScale * (distance / Math.max(1, pinch.distance)),
+        );
+        pinch.currentFontScale = fontScale;
+        previewTextScale(pinch.textId, fontScale);
+        return;
+      }
       if (pinch.mode === "hold" && pinch.holdId && pinch.initialRadius !== undefined) {
         const markerRadius = Math.min(
           300,
@@ -606,6 +715,21 @@ export function WallCanvas({
           previewTextPosition(textDrag.id, position);
         }
       }
+      return;
+    }
+    if (textResizeRef.current?.pointerId === event.pointerId) {
+      const gesture = textResizeRef.current;
+      const point = canvasPoint(event);
+      const horizontalDirection = gesture.handle.endsWith("e") ? 1 : -1;
+      const verticalDirection = gesture.handle.startsWith("s") ? 1 : -1;
+      const sizeDelta =
+        ((point.x - gesture.start.x) * horizontalDirection +
+          (point.y - gesture.start.y) * verticalDirection) /
+        2;
+      gesture.currentFontScale = clampRouteTextScale(
+        gesture.fontScale * (1 + sizeDelta / gesture.fontSize),
+      );
+      previewTextScale(gesture.id, gesture.currentFontScale);
       return;
     }
     if (resizeRef.current?.pointerId === event.pointerId) {
@@ -738,14 +862,22 @@ export function WallCanvas({
 
   function onPointerUp(event: ReactPointerEvent<HTMLCanvasElement>) {
     pointersRef.current.delete(event.pointerId);
-    if (pinchRef.current?.mode === "hold" && pointersRef.current.size < 2) {
+    if (pinchRef.current && pointersRef.current.size < 2) {
       const pinch = pinchRef.current;
       if (
+        pinch.mode === "hold" &&
         pinch.holdId &&
         pinch.currentRadius !== undefined &&
         pinch.currentRadius !== pinch.initialRadius
       ) {
         onResizeHold(pinch.holdId, { markerRadius: pinch.currentRadius });
+      } else if (
+        pinch.mode === "text" &&
+        pinch.textId &&
+        pinch.currentFontScale !== undefined &&
+        pinch.currentFontScale !== pinch.initialFontScale
+      ) {
+        onResizeText(pinch.textId, pinch.currentFontScale);
       }
       pinchRef.current = null;
     } else if (pointersRef.current.size < 2) {
@@ -755,6 +887,12 @@ export function WallCanvas({
       const resize = resizeRef.current;
       if (Object.keys(resize.patch).length > 0) onResizeHold(resize.holdId, resize.patch);
       resizeRef.current = null;
+    }
+    if (textResizeRef.current?.pointerId === event.pointerId) {
+      const resize = textResizeRef.current;
+      if (event.type === "pointerup") onResizeText(resize.id, resize.currentFontScale);
+      else previewTextScale(resize.id, resize.fontScale);
+      textResizeRef.current = null;
     }
     if (dragRef.current?.pointerId === event.pointerId) {
       const drag = dragRef.current;
@@ -798,6 +936,18 @@ export function WallCanvas({
     }));
   }
 
+  const canvas = canvasRef.current;
+  const activeTextScale =
+    route?.textAnnotations?.find(({ id }) => id === textInputDraft?.id)?.fontScale ?? 1;
+  const textFontSize = canvas
+    ? Math.max(
+        14,
+        24 *
+          getImageRect(canvas.clientWidth, canvas.clientHeight, wall.width, wall.height, viewport)
+            .scale,
+      ) * activeTextScale
+    : 24;
+
   return (
     <div className="canvas-stage">
       <canvas
@@ -825,6 +975,7 @@ export function WallCanvas({
             left: textInputDraft.x,
             top: textInputDraft.y,
             color: textColor,
+            fontSize: textFontSize,
             width: Math.min(
               240,
               Math.max(100, (canvasRef.current?.clientWidth ?? 240) - textInputDraft.x - 16),

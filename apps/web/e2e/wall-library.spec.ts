@@ -176,8 +176,8 @@ test("reopens selected route text for editing instead of duplicating it", async 
   await page.goto("/");
   const imageBase64 = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 2;
-    canvas.height = 2;
+    canvas.width = 400;
+    canvas.height = 400;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas is unavailable");
     context.fillStyle = "#2f7a68";
@@ -203,9 +203,39 @@ test("reopens selected route text for editing instead of duplicating it", async 
   const textPoint = { x: bounds.x + bounds.width * 0.3, y: bounds.y + bounds.height * 0.3 };
   const otherPoint = { x: bounds.x + bounds.width * 0.7, y: bounds.y + bounds.height * 0.7 };
   const textInput = page.getByLabel("壁面に配置する文字");
+  const readTextAnnotations = () =>
+    page.evaluate(
+      () =>
+        new Promise<{ fontScale?: number }[]>((resolve, reject) => {
+          const request = indexedDB.open("pinto-local", 1);
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const database = request.result;
+            const transaction = database.transaction("routes", "readonly");
+            const routesRequest = transaction.objectStore("routes").getAll();
+            routesRequest.onerror = () => reject(routesRequest.error);
+            routesRequest.onsuccess = () => {
+              const route = routesRequest.result.find(
+                (item) => item.name === "Text editing route",
+              );
+              resolve(route?.textAnnotations ?? []);
+              database.close();
+            };
+          };
+        }),
+    );
 
   await page.mouse.click(textPoint.x, textPoint.y);
   await expect(textInput).toBeFocused();
+  const expectedFontSize = await canvas.evaluate((element) => {
+    const scale = Math.min(element.clientWidth / 400, element.clientHeight / 400);
+    return Math.max(14, 24 * scale);
+  });
+  const actualFontSize = await textInput.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(actualFontSize).toBeCloseTo(expectedFontSize, 2);
+  await expect(textInput).toHaveCSS("-webkit-text-stroke-width", "0px");
   await textInput.fill("Original");
   await page.mouse.click(otherPoint.x, otherPoint.y);
   await expect(textInput).toBeFocused();
@@ -253,4 +283,98 @@ test("reopens selected route text for editing instead of duplicating it", async 
       ),
     )
     .toBe(1);
+
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await expect(textInput).toHaveValue("Updated");
+  await page.keyboard.press("Escape");
+  const resizeStart = await canvas.evaluate(
+    (element, anchor) => {
+      const fontSize = Math.max(
+        14,
+        24 * Math.min(element.clientWidth / 400, element.clientHeight / 400),
+      );
+      const textWidth = Math.max(fontSize, Array.from("Updated").length * fontSize * 0.7);
+      return { x: anchor.x + textWidth + 4, y: anchor.y + fontSize / 2 + 3 };
+    },
+    textPoint,
+  );
+  await page.mouse.move(resizeStart.x, resizeStart.y);
+  await page.mouse.down();
+  await page.mouse.move(resizeStart.x + 30, resizeStart.y + 30, { steps: 3 });
+  await page.mouse.up();
+  await expect.poll(async () => (await readTextAnnotations())[0]?.fontScale ?? 1).toBeGreaterThan(1);
+  const desktopFontScale = (await readTextAnnotations())[0]?.fontScale ?? 1;
+
+  const pinchPoints = await canvas.evaluate(
+    (element, { anchor, fontScale }) => {
+      const fontSize =
+        Math.max(14, 24 * Math.min(element.clientWidth / 400, element.clientHeight / 400)) *
+        fontScale;
+      const textWidth = Math.max(fontSize, Array.from("Updated").length * fontSize * 0.7);
+      return [
+        { x: anchor.x + 5, y: anchor.y },
+        { x: anchor.x + textWidth * 0.7, y: anchor.y },
+        { x: anchor.x + textWidth * 1.05, y: anchor.y },
+      ];
+    },
+    { anchor: textPoint, fontScale: desktopFontScale },
+  );
+  await page.evaluate((points) => {
+    const canvas = document.querySelector("canvas.wall-canvas");
+    if (!(canvas instanceof HTMLCanvasElement)) throw new Error("Wall canvas is unavailable");
+    canvas.setPointerCapture = () => {};
+    const dispatch = (type: string, pointerId: number, point: { x: number; y: number }) =>
+      canvas.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          pointerId,
+          pointerType: "touch",
+          clientX: point.x,
+          clientY: point.y,
+          button: 0,
+        }),
+      );
+    dispatch("pointerdown", 51, points[0]);
+    dispatch("pointerdown", 52, points[1]);
+    dispatch("pointermove", 52, points[2]);
+    dispatch("pointerup", 52, points[2]);
+    dispatch("pointerup", 51, points[0]);
+  }, pinchPoints);
+  await expect
+    .poll(async () => (await readTextAnnotations())[0]?.fontScale ?? 1)
+    .toBeGreaterThan(desktopFontScale);
+
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await expect(textInput).toHaveValue("Updated");
+  await textInput.press("Control+A");
+  await textInput.press("Backspace");
+  await expect(textInput).toHaveValue("");
+  await textInput.press("Enter");
+  await expect(textInput).toHaveCount(0);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve, reject) => {
+            const request = indexedDB.open("pinto-local", 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+              const database = request.result;
+              const transaction = database.transaction("routes", "readonly");
+              const routesRequest = transaction.objectStore("routes").getAll();
+              routesRequest.onerror = () => reject(routesRequest.error);
+              routesRequest.onsuccess = () => {
+                const route = routesRequest.result.find(
+                  (item) => item.name === "Text editing route",
+                );
+                resolve(route?.textAnnotations?.length ?? 0);
+                database.close();
+              };
+            };
+          }),
+      ),
+    )
+    .toBe(0);
 });

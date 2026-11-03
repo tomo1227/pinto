@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none" role="img" aria-labelledby="ogp-title ogp-description">
+  <title id="ogp-title">Pinto | 壁の写真から、次の一本を。</title>
+  <desc id="ogp-description">壁の写真にホールドを置いて、自分だけの課題を記録・共有するクライミングアプリ。</desc>
+  <rect width="1200" height="630" fill="#F6F5F0" />
+
+  <g>
+    <rect x="82" y="72" width="42" height="42" rx="10" fill="#202522" />
+    <path d="M93 99.5 102.5 84l6 9 4.5-6 7 12.5H93Z" fill="#fffefa" />
+    <circle cx="116" cy="84" r="2.5" fill="#E96D4D" />
+    <text x="137" y="103" fill="#202522" font-family="Noto Sans CJK JP, sans-serif" font-size="32" font-weight="700">Pinto<tspan fill="#E96D4D">.</tspan></text>
+    <rect x="82" y="156" width="200" height="34" rx="17" fill="#E4EEE8" />
+    <circle cx="101" cy="173" r="5" fill="#2F7A68" />
+    <text x="116" y="179" fill="#2F7A68" font-family="Noto Sans CJK JP, sans-serif" font-size="15" font-weight="700">壁とルートの記録アプリ</text>
+
+    <text x="82" y="275" fill="#202522" stroke="#202522" stroke-width="1.5" paint-order="stroke" font-family="Noto Sans CJK JP, sans-serif" font-size="58" font-weight="700" letter-spacing="0">壁の写真から、</text>
+    <text x="82" y="355" fill="#202522" stroke="#202522" stroke-width="1.5" paint-order="stroke" font-family="Noto Sans CJK JP, sans-serif" font-size="58" font-weight="700">次の</text>
+    <text x="198" y="355" fill="#2F7A68" stroke="#2F7A68" stroke-width="1.5" paint-order="stroke" font-family="Noto Sans CJK JP, sans-serif" font-size="58" font-weight="700">一本</text>
+    <text x="314" y="355" fill="#202522" stroke="#202522" stroke-width="1.5" paint-order="stroke" font-family="Noto Sans CJK JP, sans-serif" font-size="58" font-weight="700">を。</text>
+    <text x="84" y="421" fill="#555F58" font-family="Noto Sans CJK JP, sans-serif" font-size="23" font-weight="400">ホールドを置いて、自分だけの課題をつくろう。</text>
+    <text x="84" y="459" fill="#788079" font-family="Noto Sans CJK JP, sans-serif" font-size="18" font-weight="400">記録して、仲間とシェア。</text>
+
+    <path d="M84 532H436" stroke="#D8DCD5" stroke-width="2" stroke-linecap="round" />
+    <circle cx="88" cy="566" r="7" fill="#E96D4D" />
+    <circle cx="112" cy="566" r="7" fill="#F2D13D" />
+    <circle cx="136" cy="566" r="7" fill="#2F7A68" />
+    <text x="158" y="572" fill="#788079" font-family="Noto Sans CJK JP, sans-serif" font-size="16" font-weight="500">クライミングの楽しさを、もっと自由に。</text>
+  </g>
+
+  <g>
+    <rect x="725" y="95" width="407" height="464" rx="28" fill="#E4E2D9" />
+    <rect x="713" y="83" width="407" height="464" rx="28" fill="#FFFEFA" />
+    <rect x="737" y="107" width="359" height="416" rx="20" fill="#E8ECE5" />
+    <g fill="#C5CEC6">
+      <circle cx="769" cy="139" r="3" /><circle cx="803" cy="139" r="3" /><circle cx="837" cy="139" r="3" /><circle cx="871" cy="139" r="3" /><circle cx="905" cy="139" r="3" /><circle cx="939" cy="139" r="3" /><circle cx="973" cy="139" r="3" /><circle cx="1007" cy="139" r="3" /><circle cx="1041" cy="139" r="3" /><circle cx="1075" cy="139" r="3" />
+      <circle cx="769" cy="173" r="3" /><circle cx="803" cy="173" r="3" /><circle cx="837" cy="173" r="3" /><circle cx="871" cy="173" r="3" /><circle cx="905" cy="173" r="3" /><circle cx="939" cy="173" r="3" /><circle cx="973" cy="173" r="3" /><circle cx="1007" cy="173" r="3" /><circle cx="1041" cy="173" r="3" /><circle cx="1075" cy="173" r="3" />
+      <circle cx="769" cy="207" r="3" /><circle cx="803" cy="207" r="3" /><circle cx="837" cy="207" r="3" /><circle cx="871" cy="207" r="3" /><circle cx="905" cy="207" r="3" /><circle cx="939" cy="207" r="3" /><circle cx="973" cy="207" r="3" /><circle cx="1007" cy="207" r="3" /><circle cx="1041" cy="207" r="3" /><circle cx="1075" cy="207" r="3" />
+      <circle cx="769" cy="241" r="3" /><circle cx="803" cy="241" r="3" /><circle cx="837" cy="241" r="3" /><circle cx="871" cy="241" r="3" /><circle cx="905" cy="241" r="3" /><circle cx="939" cy="241" r="3" /><circle cx="973" cy="241" r="3" /><circle cx="1007" cy="241" r="3" /><circle cx="1041" cy="241" r="3" /><circle cx="1075" cy="241" r="3" />
+      <circle cx="769" cy="275" r="3" /><circle cx="803" cy="275" r="3" /><circle cx="837" cy="275" r="3" /><circle cx="871" cy="275" r="3" /><circle cx="905" cy="275" r="3" /><circle cx="939" cy="275" r="3" /><circle cx="973" cy="275" r="3" /><circle cx="1007" cy="275" r="3" /><circle cx="1041" cy="275" r="3" /><circle cx="1075" cy="275" r="3" />
+      <circle cx="769" cy="309" r="3" /><circle cx="803" cy="309" r="3" /><circle cx="837" cy="309" r="3" /><circle cx="871" cy="309" r="3" /><circle cx="905" cy="309" r="3" /><circle cx="939" cy="309" r="3" /><circle cx="973" cy="309" r="3" /><circle cx="1007" cy="309" r="3" /><circle cx="1041" cy="309" r="3" /><circle cx="1075" cy="309" r="3" />
+      <circle cx="769" cy="343" r="3" /><circle cx="803" cy="343" r="3" /><circle cx="837" cy="343" r="3" /><circle cx="871" cy="343" r="3" /><circle cx="905" cy="343" r="3" /><circle cx="939" cy="343" r="3" /><circle cx="973" cy="343" r="3" /><circle cx="1007" cy="343" r="3" /><circle cx="1041" cy="343" r="3" /><circle cx="1075" cy="343" r="3" />
+      <circle cx="769" cy="377" r="3" /><circle cx="803" cy="377" r="3" /><circle cx="837" cy="377" r="3" /><circle cx="871" cy="377" r="3" /><circle cx="905" cy="377" r="3" /><circle cx="939" cy="377" r="3" /><circle cx="973" cy="377" r="3" /><circle cx="1007" cy="377" r="3" /><circle cx="1041" cy="377" r="3" /><circle cx="1075" cy="377" r="3" />
+      <circle cx="769" cy="411" r="3" /><circle cx="803" cy="411" r="3" /><circle cx="837" cy="411" r="3" /><circle cx="871" cy="411" r="3" /><circle cx="905" cy="411" r="3" /><circle cx="939" cy="411" r="3" /><circle cx="973" cy="411" r="3" /><circle cx="1007" cy="411" r="3" /><circle cx="1041" cy="411" r="3" /><circle cx="1075" cy="411" r="3" />
+      <circle cx="769" cy="445" r="3" /><circle cx="803" cy="445" r="3" /><circle cx="837" cy="445" r="3" /><circle cx="871" cy="445" r="3" /><circle cx="905" cy="445" r="3" /><circle cx="939" cy="445" r="3" /><circle cx="973" cy="445" r="3" /><circle cx="1007" cy="445" r="3" /><circle cx="1041" cy="445" r="3" /><circle cx="1075" cy="445" r="3" />
+      <circle cx="769" cy="479" r="3" /><circle cx="803" cy="479" r="3" /><circle cx="837" cy="479" r="3" /><circle cx="871" cy="479" r="3" /><circle cx="905" cy="479" r="3" /><circle cx="939" cy="479" r="3" /><circle cx="973" cy="479" r="3" /><circle cx="1007" cy="479" r="3" /><circle cx="1041" cy="479" r="3" /><circle cx="1075" cy="479" r="3" />
+    </g>
+    <path d="M785 448C822 408 840 394 876 367C910 341 936 327 949 285C961 247 979 223 1030 198" stroke="#202522" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+
+    <g>
+      <path d="M763 439C765 427 779 419 793 421L808 424C817 426 820 435 816 443L804 460C798 468 787 469 779 463L768 455C764 452 762 446 763 439Z" fill="#2F7A68" />
+      <ellipse cx="790" cy="440" rx="5" ry="4" fill="#1F5E50" />
+      <path d="M843 355C844 345 854 339 865 342L883 347C893 350 896 360 890 368L879 382C872 390 860 389 854 381L847 372C844 367 842 361 843 355Z" fill="#F2D13D" />
+      <ellipse cx="867" cy="362" rx="5" ry="4" fill="#B79610" />
+      <path d="M918 271C919 259 931 253 943 256L958 260C968 263 971 273 965 281L953 296C946 304 934 303 928 295L922 286C919 282 917 276 918 271Z" fill="#E96D4D" />
+      <ellipse cx="942" cy="275" rx="5" ry="4" fill="#B64C33" />
+      <path d="M1000 183C1001 171 1013 165 1025 168L1040 172C1050 175 1053 185 1047 193L1035 208C1028 216 1016 215 1010 207L1004 198C1001 194 999 188 1000 183Z" fill="#2589C7" />
+      <ellipse cx="1024" cy="187" rx="5" ry="4" fill="#176496" />
+    </g>
+  </g>
+
+  <g>
+    <rect x="682" y="474" width="102" height="42" rx="21" fill="#FFFEFA" />
+    <circle cx="704" cy="495" r="6" fill="#2F7A68" />
+    <text x="718" y="501" fill="#202522" font-family="Noto Sans CJK JP, sans-serif" font-size="15" font-weight="700">スタート</text>
+    <path d="m1095 129 5 10 11 2-8 7 2 11-10-5-10 5 2-11-8-7 11-2 5-10Z" fill="#F2D13D" />
+    <circle cx="1094" cy="431" r="5" fill="#E96D4D" />
+    <circle cx="1108" cy="449" r="3" fill="#2F7A68" />
+  </g>
+</svg>

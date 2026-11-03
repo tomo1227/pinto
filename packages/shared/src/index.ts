@@ -23,6 +23,7 @@ export type RouteText = {
   text: string;
   position: Point;
   color?: string;
+  fontScale?: number;
 };
 
 export type Hold = {

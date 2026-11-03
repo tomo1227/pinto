@@ -423,6 +423,15 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     });
   }
 
+  function resizeRouteText(annotationId: string, fontScale: number) {
+    if (!route) return;
+    void updateRoute(route.id, {
+      textAnnotations: (route.textAnnotations ?? []).map((annotation) =>
+        annotation.id === annotationId ? { ...annotation, fontScale } : annotation,
+      ),
+    });
+  }
+
   function updateSelectedColor(color: string) {
     setSelectedItemColor(color);
     if (selectedHold) {
@@ -809,6 +818,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               onAddText={addRouteText}
               onEditText={editRouteText}
               onMoveText={moveRouteText}
+              onResizeText={resizeRouteText}
               onSelectText={setSelectedTextId}
               onRemoveText={removeRouteText}
             />
