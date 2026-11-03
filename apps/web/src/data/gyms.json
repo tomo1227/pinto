@@ -1,0 +1,57 @@
+[
+  {
+    "id": "bouldering-gym-mushrooming",
+    "name": "ボルダリングジム マッシュルーミング",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "gravity-research-umeda",
+    "name": "グラビティリサーチ梅田",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "bouldering-gym-cal-colo-umeda",
+    "name": "BOULDERING GYM CAL-COLO UMEDA",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "urban-climbing-club-kawasemi",
+    "name": "アーバンクライミングクラブ カワセミ",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "crux-osaka",
+    "name": "CRUX クラックス大阪",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "bouldering-gym-roca",
+    "name": "ボルダリングジム roca",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "soleil-nakagai-climbing-gym",
+    "name": "Soleilナカガイクライミングジム",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "climbing-gym-higurashi",
+    "name": "Climbing Gym Higurashi",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "d-bouldering-plus-lead-namba",
+    "name": "Dボルダリング プラスリード なんば",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "mahoroba-forest",
+    "name": "マホロバフォレスト",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "climbing-gym-galera",
+    "name": "クライミングジム ガレーラ",
+    "prefectureCode": "JP-27"
+  }
+]

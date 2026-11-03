@@ -1,4 +1,11 @@
-import type { Route as ClimbingRoute, Hold, Wall } from "@pinto/shared";
+import {
+  type Route as ClimbingRoute,
+  formatRouteGrade,
+  type Hold,
+  JAPANESE_CLIMBING_LEVELS,
+  V_CLIMBING_LEVELS,
+  type Wall,
+} from "@pinto/shared";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -24,6 +31,7 @@ import {
   Share2,
   Trash2,
   Undo2,
+  Upload,
   X,
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
@@ -37,12 +45,67 @@ type Tool = "hold" | "route" | "pan" | "eraser";
 type Panel = "holds" | "routes";
 type RouteDraft = {
   name: string;
-  grade: string;
+  japaneseGrade: string;
+  vGrade: string;
   description: string;
   author: string;
   gymName: string;
 };
-const blankDraft: RouteDraft = { name: "", grade: "", description: "", author: "", gymName: "" };
+const blankDraft: RouteDraft = {
+  name: "",
+  japaneseGrade: "",
+  vGrade: "",
+  description: "",
+  author: "",
+  gymName: "",
+};
+
+function RouteGradeFields({
+  japaneseGrade,
+  vGrade,
+  onJapaneseChange,
+  onVChange,
+}: {
+  japaneseGrade: string;
+  vGrade: string;
+  onJapaneseChange: (grade: string) => void;
+  onVChange: (grade: string) => void;
+}) {
+  return (
+    <div className="route-grade-fields">
+      <label className="field-label">
+        日本式グレード
+        <select
+          className="text-input text-input--compact"
+          value={japaneseGrade}
+          onChange={(event) => onJapaneseChange(event.currentTarget.value)}
+        >
+          <option value="">未設定</option>
+          {JAPANESE_CLIMBING_LEVELS.map((level) => (
+            <option key={level} value={level}>
+              {level}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field-label">
+        Vグレード
+        <select
+          className="text-input text-input--compact"
+          value={vGrade}
+          onChange={(event) => onVChange(event.currentTarget.value)}
+        >
+          <option value="">未設定</option>
+          {V_CLIMBING_LEVELS.map((level) => (
+            <option key={level} value={level}>
+              {level}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
 
 function roleFor(route: ClimbingRoute, holdId: string): "start" | "normal" | "finish" {
   if (route.startHoldIds.includes(holdId)) return "start";
@@ -118,7 +181,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [defaultHoldColor, setDefaultHoldColor] = useState("#000000");
   const [createOpen, setCreateOpen] = useState(false);
   const [routeName, setRouteName] = useState("");
-  const [routeGrade, setRouteGrade] = useState("");
+  const [routeJapaneseGrade, setRouteJapaneseGrade] = useState("");
+  const [routeVGrade, setRouteVGrade] = useState("");
   const [draft, setDraft] = useState<RouteDraft>(blankDraft);
   const [busy, setBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
@@ -210,7 +274,18 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     }
     setDraft({
       name: selected.name,
-      grade: selected.grade ?? "",
+      japaneseGrade:
+        selected.japaneseGrade ??
+        (JAPANESE_CLIMBING_LEVELS.includes(
+          selected.grade as (typeof JAPANESE_CLIMBING_LEVELS)[number],
+        )
+          ? (selected.grade ?? "")
+          : ""),
+      vGrade:
+        selected.vGrade ??
+        (V_CLIMBING_LEVELS.includes(selected.grade as (typeof V_CLIMBING_LEVELS)[number])
+          ? (selected.grade ?? "")
+          : ""),
       description: selected.description ?? "",
       author: selected.author ?? "",
       gymName: selected.gymName ?? "",
@@ -223,11 +298,13 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     try {
       await createRoute({
         name: routeName,
-        ...(routeGrade.trim() ? { grade: routeGrade.trim() } : {}),
+        ...(routeJapaneseGrade.trim() ? { japaneseGrade: routeJapaneseGrade.trim() } : {}),
+        ...(routeVGrade.trim() ? { vGrade: routeVGrade.trim() } : {}),
       });
       setTool("hold");
       setRouteName("");
-      setRouteGrade("");
+      setRouteJapaneseGrade("");
+      setRouteVGrade("");
       setCreateOpen(false);
       setPanel("routes");
     } catch (reason) {
@@ -239,10 +316,19 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
   async function saveRouteDetails() {
     if (!route) return;
-    const { name, grade, description, author, gymName } = draft;
+    const { name, japaneseGrade, vGrade, description, author, gymName } = draft;
+    const hasUnknownLegacyGrade =
+      route.grade &&
+      !JAPANESE_CLIMBING_LEVELS.includes(
+        route.grade as (typeof JAPANESE_CLIMBING_LEVELS)[number],
+      ) &&
+      !V_CLIMBING_LEVELS.includes(route.grade as (typeof V_CLIMBING_LEVELS)[number]);
     await updateRoute(route.id, {
       name: name.trim() || "新しいルート",
-      grade: grade.trim() || undefined,
+      japaneseGrade: japaneseGrade.trim() || undefined,
+      vGrade: vGrade.trim() || undefined,
+      grade:
+        hasUnknownLegacyGrade && !japaneseGrade.trim() && !vGrade.trim() ? route.grade : undefined,
       description: description.trim() || undefined,
       author: author.trim() || undefined,
       gymName: gymName.trim() || undefined,
@@ -256,43 +342,33 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     setRenaming(false);
   }
 
-  async function createRouteFile() {
-    if (!wall || !route) throw new Error("ルートが見つかりません。");
+  async function createRouteFile(routeToExport: ClimbingRoute) {
+    if (!wall) throw new Error("壁が見つかりません。");
     const image = await getImage(wall.imageId);
     if (!image) throw new Error("壁画像が見つかりません。");
-    const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, route);
-    return new File([png], routePngFileName(route.name), { type: "image/png" });
+    const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, routeToExport);
+    return new File([png], routePngFileName(routeToExport.name), { type: "image/png" });
   }
 
-  async function exportPng() {
-    if (!route || actionBusy) return;
+  async function exportPng(routeToExport: ClimbingRoute) {
+    if (actionBusy) return;
     setActionBusy(true);
-    let file: File | null = null;
     try {
-      file = await createRouteFile();
-      if (canSharePng(file)) {
-        await navigator.share({ files: [file], title: route.name });
-      } else {
-        downloadPng(file);
-      }
+      const file = await createRouteFile(routeToExport);
+      downloadPng(file);
     } catch (reason) {
-      if (isNamedError(reason, "AbortError")) return;
-      if (file && isNamedError(reason, "NotAllowedError")) {
-        downloadPng(file);
-        return;
-      }
       notify(reason instanceof Error ? reason.message : "PNGを作成できませんでした。");
     } finally {
       setActionBusy(false);
     }
   }
 
-  async function shareRoute() {
-    if (!route || actionBusy) return;
+  async function shareRoute(routeToShare: ClimbingRoute) {
+    if (actionBusy) return;
     setActionBusy(true);
     let file: File | null = null;
     try {
-      file = await createRouteFile();
+      file = await createRouteFile(routeToShare);
       if (!canSharePng(file)) {
         downloadPng(file);
         notify("この端末は共有メニューに対応していないため、PNGをダウンロードしました。");
@@ -300,8 +376,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       }
       await navigator.share({
         files: [file],
-        title: route.name,
-        text: `${route.name}${route.grade ? ` (${route.grade})` : ""}`,
+        title: routeToShare.name,
+        text: `${routeToShare.name}${formatRouteGrade(routeToShare) ? ` (${formatRouteGrade(routeToShare)})` : ""}`,
       });
     } catch (reason) {
       if (isNamedError(reason, "AbortError")) return;
@@ -316,23 +392,23 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     }
   }
 
-  async function shareRouteToDiscord() {
-    if (!wall || !route || actionBusy) return;
+  async function shareRouteToDiscord(routeToShare: ClimbingRoute) {
+    if (!wall || actionBusy) return;
     setActionBusy(true);
     try {
       const image = await getImage(wall.imageId);
       const webhook = await getDiscordSettings();
       if (!image || !webhook?.webhookUrl)
         throw new Error("SettingsでDiscord Webhookを設定してください。");
-      const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, route);
+      const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, routeToShare);
       const message = await shareRoutePng(
         webhook.webhookUrl,
         {
-          name: route.name,
-          grade: route.grade,
-          holdCount: route.holdIds.length,
-          author: route.author,
-          gymName: route.gymName,
+          name: routeToShare.name,
+          grade: formatRouteGrade(routeToShare),
+          holdCount: routeToShare.holdIds.length,
+          author: routeToShare.author,
+          gymName: routeToShare.gymName,
         },
         png,
       );
@@ -341,6 +417,24 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       notify(reason instanceof Error ? reason.message : "Discordへの共有に失敗しました。");
     } finally {
       setActionBusy(false);
+    }
+  }
+
+  async function shareWallLink() {
+    if (!wall) return;
+    const url = new URL(`/walls/${encodeURIComponent(wallId)}`, window.location.origin).toString();
+    const shareText = `${wallName || wall.name}（壁データは同じ端末に保存されています）`;
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: wallName || wall.name, text: shareText, url });
+        return;
+      }
+      if (!navigator.clipboard?.writeText) throw new Error("リンクをコピーできませんでした。");
+      await navigator.clipboard.writeText(url);
+      notify("壁のリンクをコピーしました。同じ端末の壁データが必要です。");
+    } catch (reason) {
+      if (isNamedError(reason, "AbortError")) return;
+      notify(reason instanceof Error ? reason.message : "リンクを共有できませんでした。");
     }
   }
 
@@ -377,6 +471,15 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
             <Pencil size={13} />
           </button>
         )}
+        <button
+          className="icon-button wall-link-share"
+          type="button"
+          title="壁のリンクを共有"
+          aria-label="壁のリンクを共有"
+          onClick={() => void shareWallLink()}
+        >
+          <Upload size={15} /> <span>リンク共有</span>
+        </button>
         <span className="header-spacer" />
         <button
           className="button button--outline button--small editor-history-button"
@@ -565,30 +668,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               <RotateCcw size={16} />
             </button>
             <span className="toolbar-spacer" />
-            <button
-              className="button button--outline button--small"
-              type="button"
-              disabled={!route || actionBusy}
-              onClick={() => void exportPng()}
-            >
-              <Download size={15} /> {actionBusy ? "準備中" : "PNG保存"}
-            </button>
-            <button
-              className="button button--share button--small"
-              type="button"
-              disabled={!route || actionBusy}
-              onClick={() => void shareRoute()}
-            >
-              <Share2 size={15} /> {actionBusy ? "準備中" : "共有"}
-            </button>
-            <button
-              className="button button--outline button--small"
-              type="button"
-              disabled={!route || actionBusy}
-              onClick={() => void shareRouteToDiscord()}
-            >
-              <MessageCircle size={15} /> {actionBusy ? "送信中" : "Discord"}
-            </button>
           </div>
           <div className="canvas-frame">
             <WallCanvas
@@ -691,35 +770,64 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                         <span className="route-card__name">
                           {item.name}
                           <small>
-                            {item.grade || "Grade not set"} · {item.holdIds.length} holds
+                            {formatRouteGrade(item) || "Grade not set"} · {item.holdIds.length}{" "}
+                            holds
                           </small>
                         </span>
                       </button>
-                      {item.id === selectedRouteId && (
-                        <div className="route-card__actions">
-                          <button
-                            className="icon-button"
-                            type="button"
-                            title="複製"
-                            aria-label="ルートを複製"
-                            onClick={() => void duplicateRoute(item.id)}
-                          >
-                            <Copy size={14} />
-                          </button>
-                          <button
-                            className="icon-button"
-                            type="button"
-                            title="削除"
-                            aria-label="ルートを削除"
-                            onClick={() => {
-                              if (window.confirm(`「${item.name}」を削除しますか？`))
-                                void removeRoute(item.id);
-                            }}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
+                      <div className="route-card__actions">
+                        <button
+                          className="icon-button route-card__tool"
+                          type="button"
+                          title={`${item.name}のPNGを保存`}
+                          aria-label={`${item.name}のPNGを保存`}
+                          disabled={actionBusy}
+                          onClick={() => void exportPng(item)}
+                        >
+                          <Download size={14} /> <span>PNG保存</span>
+                        </button>
+                        <button
+                          className="icon-button route-card__tool route-card__tool--share"
+                          type="button"
+                          title={`${item.name}を共有`}
+                          aria-label={`${item.name}を共有`}
+                          disabled={actionBusy}
+                          onClick={() => void shareRoute(item)}
+                        >
+                          <Share2 size={14} /> <span>共有</span>
+                        </button>
+                        <button
+                          className="icon-button route-card__tool"
+                          type="button"
+                          title={`${item.name}をDiscordに共有`}
+                          aria-label={`${item.name}をDiscordに共有`}
+                          disabled={actionBusy}
+                          onClick={() => void shareRouteToDiscord(item)}
+                        >
+                          <MessageCircle size={14} /> <span>Discord</span>
+                        </button>
+                        <button
+                          className="icon-button"
+                          type="button"
+                          title={`${item.name}を複製`}
+                          aria-label={`${item.name}を複製`}
+                          onClick={() => void duplicateRoute(item.id)}
+                        >
+                          <Copy size={14} />
+                        </button>
+                        <button
+                          className="icon-button"
+                          type="button"
+                          title={`${item.name}を削除`}
+                          aria-label={`${item.name}を削除`}
+                          onClick={() => {
+                            if (window.confirm(`「${item.name}」を削除しますか？`))
+                              void removeRoute(item.id);
+                          }}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -742,37 +850,32 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       <input
                         className="text-input text-input--compact"
                         value={draft.name}
-                        onChange={(event) =>
-                          setDraft((current) => ({ ...current, name: event.currentTarget.value }))
-                        }
+                        onChange={(event) => {
+                          const name = event.currentTarget.value;
+                          setDraft((current) => ({ ...current, name }));
+                        }}
                         maxLength={80}
                         required
                       />
                     </label>
-                    <label className="field-label">
-                      グレード
-                      <input
-                        className="text-input text-input--compact"
-                        value={draft.grade}
-                        onChange={(event) =>
-                          setDraft((current) => ({ ...current, grade: event.currentTarget.value }))
-                        }
-                        placeholder="例: V4"
-                        maxLength={20}
-                      />
-                    </label>
+                    <RouteGradeFields
+                      japaneseGrade={draft.japaneseGrade}
+                      vGrade={draft.vGrade}
+                      onJapaneseChange={(japaneseGrade) =>
+                        setDraft((current) => ({ ...current, japaneseGrade }))
+                      }
+                      onVChange={(vGrade) => setDraft((current) => ({ ...current, vGrade }))}
+                    />
                     <div className="field-grid">
                       <label className="field-label">
                         作成者
                         <input
                           className="text-input text-input--compact"
                           value={draft.author}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              author: event.currentTarget.value,
-                            }))
-                          }
+                          onChange={(event) => {
+                            const author = event.currentTarget.value;
+                            setDraft((current) => ({ ...current, author }));
+                          }}
                           maxLength={80}
                         />
                       </label>
@@ -781,12 +884,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                         <input
                           className="text-input text-input--compact"
                           value={draft.gymName}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              gymName: event.currentTarget.value,
-                            }))
-                          }
+                          onChange={(event) => {
+                            const gymName = event.currentTarget.value;
+                            setDraft((current) => ({ ...current, gymName }));
+                          }}
                           maxLength={80}
                         />
                       </label>
@@ -796,12 +897,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       <textarea
                         className="text-input text-input--compact textarea-input"
                         value={draft.description}
-                        onChange={(event) =>
-                          setDraft((current) => ({
-                            ...current,
-                            description: event.currentTarget.value,
-                          }))
-                        }
+                        onChange={(event) => {
+                          const description = event.currentTarget.value;
+                          setDraft((current) => ({ ...current, description }));
+                        }}
                         rows={2}
                         maxLength={500}
                       />
@@ -1065,16 +1164,12 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 required
               />
             </label>
-            <label className="field-label">
-              グレード
-              <input
-                className="text-input"
-                value={routeGrade}
-                onChange={(event) => setRouteGrade(event.currentTarget.value)}
-                placeholder="例: V4"
-                maxLength={20}
-              />
-            </label>
+            <RouteGradeFields
+              japaneseGrade={routeJapaneseGrade}
+              vGrade={routeVGrade}
+              onJapaneseChange={setRouteJapaneseGrade}
+              onVChange={setRouteVGrade}
+            />
             <div className="modal-actions">
               <button
                 className="button button--quiet"

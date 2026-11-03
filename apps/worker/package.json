@@ -7,9 +7,13 @@
     "build": "wrangler deploy --dry-run",
     "preview": "wrangler dev --ip 0.0.0.0",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict --skipLibCheck --types @cloudflare/workers-types src/index.ts"
+    "typecheck": "tsc --project tsconfig.json"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.7.15",
+    "@pinto/shared": "workspace:*",
+    "better-auth": "^1.7.15",
+    "drizzle-orm": "^0.45.4",
     "hono": "^4.13.14"
   },
   "devDependencies": {

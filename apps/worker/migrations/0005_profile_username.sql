@@ -1,0 +1,1 @@
+ALTER TABLE "community_profile" ADD COLUMN "username" TEXT NOT NULL DEFAULT '';

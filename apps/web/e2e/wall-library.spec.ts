@@ -12,6 +12,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
         document.documentElement.dataset.shareCount = String(
           Number(document.documentElement.dataset.shareCount ?? "0") + 1,
         );
+        document.documentElement.dataset.sharedUrl = data.url ?? "";
         document.documentElement.dataset.sharedFile = data.files?.[0]?.name ?? "";
         document.documentElement.dataset.sharedType = data.files?.[0]?.type ?? "";
       },
@@ -19,6 +20,12 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Walls & routes" })).toBeVisible();
+  await page.getByRole("button", { name: "リスト表示" }).click();
+  await expect(page.getByRole("button", { name: "リスト表示" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.getByRole("button", { name: "グリッド表示" }).click();
   const imageBase64 = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 2;
@@ -39,6 +46,8 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
   await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
+  await page.getByRole("button", { name: "壁のリンクを共有" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-shared-url", /\/walls\//);
   await page.reload();
   await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
 
@@ -122,14 +131,40 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   await expect(page.locator(".canvas-caption span").nth(1)).toHaveText("0 HOLDS");
 
   await page.getByRole("button", { name: "ルートを作成" }).click();
-  await page.getByLabel("ルート名").fill("E2E route");
+  await page.locator(".modal-panel").getByLabel("ルート名").fill("E2E route");
+  await page.locator(".modal-panel").getByLabel("日本式グレード").selectOption("3級");
+  await page.locator(".modal-panel").getByLabel("Vグレード").selectOption("V4");
   await page.locator(".modal-panel").getByRole("button", { name: "ルートを作成" }).click();
-  await page.getByRole("button", { name: "PNG保存" }).click();
+  await expect(
+    page.locator(".route-card__name small").filter({ hasText: "3級 · V4" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "ルートを作成" }).click();
+  await page.locator(".modal-panel").getByLabel("ルート名").fill("E2E route 2");
+  await page.locator(".modal-panel").getByRole("button", { name: "ルートを作成" }).click();
+  await page.getByLabel("作成者").fill("E2E setter");
+  await page.getByRole("button", { name: "変更を保存" }).click();
+  await expect(page.getByLabel("作成者")).toHaveValue("E2E setter");
+
+  await expect(page.getByRole("button", { name: "E2E routeを複製" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "E2E routeを削除" })).toBeVisible();
+
+  const pngDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "E2E routeのPNGを保存" }).click();
+  expect((await pngDownload).suggestedFilename()).toBe("E2E route.png");
+  await page.getByRole("button", { name: "E2E routeを共有" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-share-count", "1");
   await expect(page.locator("html")).toHaveAttribute("data-shared-file", "E2E route.png");
-  await expect(page.locator("html")).toHaveAttribute("data-shared-type", "image/png");
-  await page.getByRole("button", { name: "共有" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-share-count", "2");
-  await expect(page.getByRole("button", { name: "Discord" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "E2E routeをDiscordに共有" })).toBeVisible();
+
+  const routeActionLabels = page.locator(".route-card__tool span");
+  await expect(routeActionLabels).toHaveCount(6);
+  for (const label of await routeActionLabels.all()) await expect(label).toBeHidden();
+  await expect(page.locator(".wall-link-share span")).toBeHidden();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator(".wall-link-share span")).toBeHidden();
+  for (const label of await routeActionLabels.all()) await expect(label).toBeHidden();
 });
 
 test("serves the local Worker API through the development proxy", async ({ request }) => {

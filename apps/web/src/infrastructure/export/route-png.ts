@@ -1,4 +1,4 @@
-import type { Route as ClimbingRoute, Hold } from "@pinto/shared";
+import { type Route as ClimbingRoute, formatRouteGrade, type Hold } from "@pinto/shared";
 import { drawScene } from "../../features/editor/canvas-engine";
 
 export async function exportRoutePng(
@@ -32,7 +32,8 @@ export async function exportRoutePng(
   context.fillStyle = "#fff";
   context.font = '700 32px "DM Sans", sans-serif';
   context.textBaseline = "middle";
-  context.fillText(`${route.name}${route.grade ? `  ·  ${route.grade}` : ""}`, 32, height - 45);
+  const grade = formatRouteGrade(route);
+  context.fillText(`${route.name}${grade ? `  ·  ${grade}` : ""}`, 32, height - 45);
   image.close();
   return new Promise((resolve, reject) => {
     canvas.toBlob(

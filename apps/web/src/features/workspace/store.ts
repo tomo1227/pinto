@@ -1,4 +1,10 @@
-import type { Route as ClimbingRoute, Hold, ImageAsset, Wall } from "@pinto/shared";
+import {
+  type Route as ClimbingRoute,
+  formatRouteGrade,
+  type Hold,
+  type ImageAsset,
+  type Wall,
+} from "@pinto/shared";
 import { create } from "zustand";
 import { assertRouteIntegrity } from "../../domain/route-invariants";
 import { shareRoutePng } from "../../infrastructure/api/discord";
@@ -167,7 +173,7 @@ async function notifyDiscord(
       settings.webhookUrl,
       {
         name: route.name,
-        grade: route.grade,
+        grade: formatRouteGrade(route),
         author: route.author,
         gymName: route.gymName,
         holdCount: route.holdIds.length,
