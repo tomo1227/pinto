@@ -79,6 +79,7 @@ type Props = {
 };
 
 type TextInputDraft = {
+  key: string;
   id?: string;
   position: Hold["position"];
   x: number;
@@ -95,7 +96,10 @@ type TextDragGesture = {
 };
 
 function focusTextInput(element: HTMLInputElement | null) {
-  element?.focus();
+  if (!element) return;
+  requestAnimationFrame(() => {
+    if (element.isConnected) element.focus();
+  });
 }
 
 function renderCanvasScene(
@@ -396,6 +400,7 @@ export function WallCanvas({
         if (editOnClick) {
           textDragRef.current = null;
           setTextInputDraft({
+            key: crypto.randomUUID(),
             id: textHit.id,
             position: textHit.position,
             x: point.x,
@@ -416,7 +421,14 @@ export function WallCanvas({
       }
       onSelectText(null);
       const position = normalizedPoint(event);
-      if (position) setTextInputDraft({ position, x: point.x, y: point.y, text: "" });
+      if (position)
+        setTextInputDraft({
+          key: crypto.randomUUID(),
+          position,
+          x: point.x,
+          y: point.y,
+          text: "",
+        });
       return;
     }
     if (tool === "eraser") {
@@ -495,6 +507,32 @@ export function WallCanvas({
     }
   }
 
+  function onDoubleClick(event: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool !== "text") return;
+    const point = canvasPoint(event as ReactPointerEvent<HTMLCanvasElement>);
+    const rect = getImageRect(
+      event.currentTarget.clientWidth,
+      event.currentTarget.clientHeight,
+      wall.width,
+      wall.height,
+      viewport,
+    );
+    const annotation = route?.textAnnotations
+      ? hitTestRouteText(point, route.textAnnotations, rect)
+      : undefined;
+    if (!annotation || textInputDraft?.id === annotation.id) return;
+    onSelectHold(null);
+    onSelectText(annotation.id);
+    setTextInputDraft({
+      key: crypto.randomUUID(),
+      id: annotation.id,
+      position: annotation.position,
+      x: point.x,
+      y: point.y,
+      text: annotation.text,
+    });
+  }
+
   function onPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (pointersRef.current.has(event.pointerId)) {
       pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -543,7 +581,7 @@ export function WallCanvas({
         Math.hypot(
           event.clientX - textDrag.pointerStart.x,
           event.clientY - textDrag.pointerStart.y,
-        ) > 3
+        ) > 8
       ) {
         textDrag.moved = true;
       }
@@ -767,6 +805,7 @@ export function WallCanvas({
         className={`wall-canvas h-full w-full touch-none${tool === "text" ? (hoveredTextId ? " wall-canvas--text-target" : " wall-canvas--text") : ""}`}
         aria-label={`${wall.name}のホールド編集キャンバス`}
         onPointerDown={onPointerDown}
+        onDoubleClick={onDoubleClick}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
@@ -775,6 +814,7 @@ export function WallCanvas({
       />
       {textInputDraft && (
         <input
+          key={textInputDraft.key}
           className="canvas-text-input"
           type="text"
           aria-label="壁面に配置する文字"

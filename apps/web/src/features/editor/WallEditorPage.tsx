@@ -371,7 +371,14 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
   async function saveWallName(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await renameWall(wallId, wallName);
+    const name = wallName.trim();
+    if (!name) {
+      notify("壁の名前を入力してください。");
+      return;
+    }
+    await renameWall(wallId, name);
+    setWall((current) => (current ? { ...current, name } : current));
+    setWallName(name);
     setRenaming(false);
   }
 

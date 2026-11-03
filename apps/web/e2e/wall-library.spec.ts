@@ -171,3 +171,86 @@ test("serves the local Worker API through the development proxy", async ({ reque
   const response = await request.get("http://127.0.0.1:5173/api/hello");
   expect(response.ok()).toBeTruthy();
 });
+
+test("reopens selected route text for editing instead of duplicating it", async ({ page }) => {
+  await page.goto("/");
+  const imageBase64 = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is unavailable");
+    context.fillStyle = "#2f7a68";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.getByRole("button", { name: "壁を追加" }).click();
+  await page.getByLabel("壁の写真").setInputFiles({
+    name: "text-wall.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(imageBase64, "base64"),
+  });
+  await page.getByLabel("壁の名前").fill("Text editing wall");
+  await page.getByRole("button", { name: "壁を作成" }).click();
+  await page.getByRole("button", { name: "ルートを作成" }).click();
+  await page.locator(".modal-panel").getByLabel("ルート名").fill("Text editing route");
+  await page.locator(".modal-panel").getByRole("button", { name: "ルートを作成" }).click();
+  await page.getByRole("button", { name: "文字を入力して配置" }).click();
+
+  const canvas = page.locator("canvas.wall-canvas");
+  const bounds = await canvas.boundingBox();
+  if (!bounds) throw new Error("Wall canvas is unavailable");
+  const textPoint = { x: bounds.x + bounds.width * 0.3, y: bounds.y + bounds.height * 0.3 };
+  const otherPoint = { x: bounds.x + bounds.width * 0.7, y: bounds.y + bounds.height * 0.7 };
+  const textInput = page.getByLabel("壁面に配置する文字");
+
+  await page.mouse.click(textPoint.x, textPoint.y);
+  await expect(textInput).toBeFocused();
+  await textInput.fill("Original");
+  await page.mouse.click(otherPoint.x, otherPoint.y);
+  await expect(textInput).toBeFocused();
+  await page.keyboard.type("Next");
+  await expect(textInput).toHaveValue("Next");
+  await page.keyboard.press("Escape");
+
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await expect(textInput).toHaveValue("Original");
+  await textInput.press("End");
+  await page.keyboard.type("!");
+  await expect(textInput).toHaveValue("Original!");
+  await page.keyboard.press("Backspace");
+  await expect(textInput).toHaveValue("Original");
+  await textInput.fill("Updated");
+  await page.mouse.click(otherPoint.x, otherPoint.y);
+  await page.keyboard.press("Escape");
+
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await page.mouse.click(textPoint.x + 2, textPoint.y);
+  await expect(textInput).toHaveValue("Updated");
+  await textInput.press("Escape");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve, reject) => {
+            const request = indexedDB.open("pinto-local", 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+              const database = request.result;
+              const transaction = database.transaction("routes", "readonly");
+              const routesRequest = transaction.objectStore("routes").getAll();
+              routesRequest.onerror = () => reject(routesRequest.error);
+              routesRequest.onsuccess = () => {
+                const route = routesRequest.result.find(
+                  (item) => item.name === "Text editing route",
+                );
+                resolve(route?.textAnnotations?.length ?? 0);
+                database.close();
+              };
+            };
+          }),
+      ),
+    )
+    .toBe(1);
+});
