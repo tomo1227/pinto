@@ -10,7 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CommunityRouteImport } from './routes/community'
+import { Route as GymRequestsRouteImport } from './routes/gym-requests'
+import { Route as GymsRouteImport } from './routes/gyms'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as CommunityHandleRouteImport } from './routes/community.$handle'
 import { Route as WallsWallIdRouteImport } from './routes/walls.$wallId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -18,10 +22,30 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommunityRoute = CommunityRouteImport.update({
+  id: '/community',
+  path: '/community',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GymRequestsRoute = GymRequestsRouteImport.update({
+  id: '/gym-requests',
+  path: '/gym-requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GymsRoute = GymsRouteImport.update({
+  id: '/gyms',
+  path: '/gyms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CommunityHandleRoute = CommunityHandleRouteImport.update({
+  id: '/$handle',
+  path: '/$handle',
+  getParentRoute: () => CommunityRoute,
 } as any)
 const WallsWallIdRoute = WallsWallIdRouteImport.update({
   id: '/walls/$wallId',
@@ -31,30 +55,67 @@ const WallsWallIdRoute = WallsWallIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/community': typeof CommunityRouteWithChildren
+  '/gym-requests': typeof GymRequestsRoute
+  '/gyms': typeof GymsRoute
   '/settings': typeof SettingsRoute
+  '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/community': typeof CommunityRouteWithChildren
+  '/gym-requests': typeof GymRequestsRoute
+  '/gyms': typeof GymsRoute
   '/settings': typeof SettingsRoute
+  '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/community': typeof CommunityRouteWithChildren
+  '/gym-requests': typeof GymRequestsRoute
+  '/gyms': typeof GymsRoute
   '/settings': typeof SettingsRoute
+  '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings' | '/walls/$wallId'
+  fullPaths:
+    | '/'
+    | '/community'
+    | '/gym-requests'
+    | '/gyms'
+    | '/settings'
+    | '/community/$handle'
+    | '/walls/$wallId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings' | '/walls/$wallId'
-  id: '__root__' | '/' | '/settings' | '/walls/$wallId'
+  to:
+    | '/'
+    | '/community'
+    | '/gym-requests'
+    | '/gyms'
+    | '/settings'
+    | '/community/$handle'
+    | '/walls/$wallId'
+  id:
+    | '__root__'
+    | '/'
+    | '/community'
+    | '/gym-requests'
+    | '/gyms'
+    | '/settings'
+    | '/community/$handle'
+    | '/walls/$wallId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CommunityRoute: typeof CommunityRouteWithChildren
+  GymRequestsRoute: typeof GymRequestsRoute
+  GymsRoute: typeof GymsRoute
   SettingsRoute: typeof SettingsRoute
   WallsWallIdRoute: typeof WallsWallIdRoute
 }
@@ -68,12 +129,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/community': {
+      id: '/community'
+      path: '/community'
+      fullPath: '/community'
+      preLoaderRoute: typeof CommunityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gym-requests': {
+      id: '/gym-requests'
+      path: '/gym-requests'
+      fullPath: '/gym-requests'
+      preLoaderRoute: typeof GymRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gyms': {
+      id: '/gyms'
+      path: '/gyms'
+      fullPath: '/gyms'
+      preLoaderRoute: typeof GymsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/community/$handle': {
+      id: '/community/$handle'
+      path: '/$handle'
+      fullPath: '/community/$handle'
+      preLoaderRoute: typeof CommunityHandleRouteImport
+      parentRoute: typeof CommunityRoute
     }
     '/walls/$wallId': {
       id: '/walls/$wallId'
@@ -85,8 +174,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CommunityRouteChildren {
+  CommunityHandleRoute: typeof CommunityHandleRoute
+}
+
+const CommunityRouteChildren: CommunityRouteChildren = {
+  CommunityHandleRoute: CommunityHandleRoute,
+}
+
+const CommunityRouteWithChildren = CommunityRoute._addFileChildren(
+  CommunityRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CommunityRoute: CommunityRouteWithChildren,
+  GymRequestsRoute: GymRequestsRoute,
+  GymsRoute: GymsRoute,
   SettingsRoute: SettingsRoute,
   WallsWallIdRoute: WallsWallIdRoute,
 }

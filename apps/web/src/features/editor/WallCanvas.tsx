@@ -15,12 +15,13 @@ import {
   getResizeHandleAt,
   type HoldResizeHandle,
   hitTestHold,
+  hitTestRouteText,
   isInsideHoldMarker,
   type Viewport,
 } from "./canvas-engine";
 import { detectHoldOutline, detectHoldRadius } from "./hold-detection";
 
-type Tool = "hold" | "route" | "pan" | "eraser";
+type Tool = "hold" | "route" | "pan" | "eraser" | "text";
 type ResizeGesture = {
   holdId: string;
   pointerId: number;
@@ -53,7 +54,9 @@ type Props = {
   holds: Hold[];
   route?: ClimbingRoute;
   selectedHoldId: string | null;
+  selectedTextId: string | null;
   tool: Tool;
+  textColor: string;
   showLines: boolean;
   autoDetectHolds: boolean;
   allowEllipses: boolean;
@@ -68,7 +71,36 @@ type Props = {
   onRemoveHold: (id: string) => void;
   onSelectHold: (id: string | null) => void;
   onAppendHold: (id: string) => void;
+  onAddText: (position: Hold["position"], text: string) => void;
+  onEditText: (id: string, text: string) => void;
+  onMoveText: (id: string, position: Hold["position"]) => void;
+  onSelectText: (id: string | null) => void;
+  onRemoveText: (id: string) => void;
 };
+
+type TextInputDraft = {
+  key: string;
+  id?: string;
+  position: Hold["position"];
+  x: number;
+  y: number;
+  text: string;
+};
+type TextDragGesture = {
+  id: string;
+  pointerId: number;
+  pointerStart: { x: number; y: number };
+  start: Hold["position"];
+  position: Hold["position"];
+  moved: boolean;
+};
+
+function focusTextInput(element: HTMLInputElement | null) {
+  if (!element) return;
+  requestAnimationFrame(() => {
+    if (element.isConnected) element.focus();
+  });
+}
 
 function renderCanvasScene(
   canvas: HTMLCanvasElement,
@@ -77,6 +109,7 @@ function renderCanvasScene(
   holds: Hold[],
   route: ClimbingRoute | undefined,
   selectedHoldId: string | null,
+  selectedTextId: string | null,
   showLines: boolean,
   allowEllipses: boolean,
   viewport: Viewport,
@@ -97,6 +130,7 @@ function renderCanvasScene(
       holds,
       route,
       selectedHoldId,
+      selectedTextId,
       showLines,
       allowEllipses,
       viewport,
@@ -112,7 +146,9 @@ export function WallCanvas({
   holds,
   route,
   selectedHoldId,
+  selectedTextId,
   tool,
+  textColor,
   showLines,
   autoDetectHolds,
   allowEllipses,
@@ -122,10 +158,16 @@ export function WallCanvas({
   onRemoveHold,
   onSelectHold,
   onAppendHold,
+  onAddText,
+  onEditText,
+  onMoveText,
+  onSelectText,
+  onRemoveText,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const dragRef = useRef<{ holdId: string; pointerId: number; pointerType: string } | null>(null);
+  const textDragRef = useRef<TextDragGesture | null>(null);
   const resizeRef = useRef<ResizeGesture | null>(null);
   const panRef = useRef<{
     x: number;
@@ -138,6 +180,8 @@ export function WallCanvas({
   const [imageReady, setImageReady] = useState(false);
   const [touchDragging, setTouchDragging] = useState(false);
   const [dragOverTrash, setDragOverTrash] = useState(false);
+  const [textInputDraft, setTextInputDraft] = useState<TextInputDraft | null>(null);
+  const [hoveredTextId, setHoveredTextId] = useState<string | null>(null);
   const trashTargetRef = useRef<HTMLDivElement>(null);
   const pointersRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchRef = useRef<PinchGesture | null>(null);
@@ -171,6 +215,7 @@ export function WallCanvas({
         holds,
         route,
         selectedHoldId,
+        selectedTextId,
         showLines,
         allowEllipses,
         viewport,
@@ -179,7 +224,17 @@ export function WallCanvas({
     const observer = new ResizeObserver(render);
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [imageReady, wall, holds, route, selectedHoldId, showLines, allowEllipses, viewport]);
+  }, [
+    imageReady,
+    wall,
+    holds,
+    route,
+    selectedHoldId,
+    selectedTextId,
+    showLines,
+    allowEllipses,
+    viewport,
+  ]);
 
   function canvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -197,6 +252,39 @@ export function WallCanvas({
       viewport,
     );
     return canvasToNormalized(point, rect);
+  }
+
+  function commitTextInput() {
+    if (!textInputDraft) return;
+    const text = textInputDraft.text.trim();
+    if (text) {
+      if (textInputDraft.id) onEditText(textInputDraft.id, text);
+      else onAddText(textInputDraft.position, text);
+    }
+    setTextInputDraft(null);
+  }
+
+  function previewTextPosition(id: string, position: Hold["position"]) {
+    const canvas = canvasRef.current;
+    if (!canvas || !imageRef.current || !route) return;
+    const previewRoute: ClimbingRoute = {
+      ...route,
+      textAnnotations: route.textAnnotations?.map((annotation) =>
+        annotation.id === id ? { ...annotation, position } : annotation,
+      ),
+    };
+    renderCanvasScene(
+      canvas,
+      imageRef.current,
+      wall,
+      holds,
+      previewRoute,
+      selectedHoldId,
+      selectedTextId,
+      showLines,
+      allowEllipses,
+      viewport,
+    );
   }
 
   function onPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
@@ -241,11 +329,16 @@ export function WallCanvas({
           : {}),
       };
       dragRef.current = null;
+      textDragRef.current = null;
       setTouchDragging(false);
       setDragOverTrash(false);
       resizeRef.current = null;
       panRef.current = null;
       return;
+    }
+    if (textInputDraft) {
+      commitTextInput();
+      if (tool !== "text") return;
     }
     const point = canvasPoint(event);
     const rect = getImageRect(
@@ -295,7 +388,57 @@ export function WallCanvas({
       };
       return;
     }
+    if (tool === "text") {
+      const textHit = route?.textAnnotations
+        ? hitTestRouteText(point, route.textAnnotations, rect)
+        : undefined;
+      onSelectHold(null);
+      if (textHit) {
+        const editOnClick = selectedTextId === textHit.id || event.detail > 1;
+        onSelectText(textHit.id);
+        setHoveredTextId(textHit.id);
+        if (editOnClick) {
+          textDragRef.current = null;
+          setTextInputDraft({
+            key: crypto.randomUUID(),
+            id: textHit.id,
+            position: textHit.position,
+            x: point.x,
+            y: point.y,
+            text: textHit.text,
+          });
+          return;
+        }
+        textDragRef.current = {
+          id: textHit.id,
+          pointerId: event.pointerId,
+          pointerStart: { x: event.clientX, y: event.clientY },
+          start: textHit.position,
+          position: textHit.position,
+          moved: false,
+        };
+        return;
+      }
+      onSelectText(null);
+      const position = normalizedPoint(event);
+      if (position)
+        setTextInputDraft({
+          key: crypto.randomUUID(),
+          position,
+          x: point.x,
+          y: point.y,
+          text: "",
+        });
+      return;
+    }
     if (tool === "eraser") {
+      const textHit = route?.textAnnotations
+        ? hitTestRouteText(point, route.textAnnotations, rect)
+        : undefined;
+      if (textHit) {
+        onRemoveText(textHit.id);
+        return;
+      }
       if (hit) onRemoveHold(hit.id);
       return;
     }
@@ -364,9 +507,49 @@ export function WallCanvas({
     }
   }
 
+  function onDoubleClick(event: React.MouseEvent<HTMLCanvasElement>) {
+    if (tool !== "text") return;
+    const point = canvasPoint(event as ReactPointerEvent<HTMLCanvasElement>);
+    const rect = getImageRect(
+      event.currentTarget.clientWidth,
+      event.currentTarget.clientHeight,
+      wall.width,
+      wall.height,
+      viewport,
+    );
+    const annotation = route?.textAnnotations
+      ? hitTestRouteText(point, route.textAnnotations, rect)
+      : undefined;
+    if (!annotation || textInputDraft?.id === annotation.id) return;
+    onSelectHold(null);
+    onSelectText(annotation.id);
+    setTextInputDraft({
+      key: crypto.randomUUID(),
+      id: annotation.id,
+      position: annotation.position,
+      x: point.x,
+      y: point.y,
+      text: annotation.text,
+    });
+  }
+
   function onPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (pointersRef.current.has(event.pointerId)) {
       pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    if (tool === "text" && pointersRef.current.size === 0) {
+      const point = canvasPoint(event);
+      const rect = getImageRect(
+        event.currentTarget.clientWidth,
+        event.currentTarget.clientHeight,
+        wall.width,
+        wall.height,
+        viewport,
+      );
+      const textHit = route?.textAnnotations
+        ? hitTestRouteText(point, route.textAnnotations, rect)
+        : undefined;
+      setHoveredTextId(textHit?.id ?? null);
     }
     if (pinchRef.current && pointersRef.current.size >= 2) {
       const points = [...pointersRef.current.values()];
@@ -389,6 +572,40 @@ export function WallCanvas({
         panX: pinch.panX + centerX - pinch.centerX,
         panY: pinch.panY + centerY - pinch.centerY,
       });
+      return;
+    }
+    const textDrag = textDragRef.current;
+    if (textDrag?.pointerId === event.pointerId) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (
+        Math.hypot(
+          event.clientX - textDrag.pointerStart.x,
+          event.clientY - textDrag.pointerStart.y,
+        ) > 8
+      ) {
+        textDrag.moved = true;
+      }
+      if (textDrag.moved) {
+        const canvas = event.currentTarget;
+        const rect = getImageRect(
+          canvas.clientWidth,
+          canvas.clientHeight,
+          wall.width,
+          wall.height,
+          viewport,
+        );
+        const position = canvasToNormalized(
+          {
+            x: Math.min(rect.x + rect.width, Math.max(rect.x, event.clientX - bounds.left)),
+            y: Math.min(rect.y + rect.height, Math.max(rect.y, event.clientY - bounds.top)),
+          },
+          rect,
+        );
+        if (position) {
+          textDrag.position = position;
+          previewTextPosition(textDrag.id, position);
+        }
+      }
       return;
     }
     if (resizeRef.current?.pointerId === event.pointerId) {
@@ -493,6 +710,7 @@ export function WallCanvas({
           holds.map((item) => (item.id === id ? { ...item, position } : item)),
           route,
           selectedHoldId,
+          selectedTextId,
           showLines,
           allowEllipses,
           viewport,
@@ -511,6 +729,7 @@ export function WallCanvas({
       holds.map((hold) => (hold.id === holdId ? { ...hold, ...patch } : hold)),
       route,
       selectedHoldId,
+      selectedTextId,
       showLines,
       allowEllipses,
       viewport,
@@ -560,6 +779,15 @@ export function WallCanvas({
       setDragOverTrash(false);
     }
     if (panRef.current?.pointerId === event.pointerId) panRef.current = null;
+    if (textDragRef.current?.pointerId === event.pointerId) {
+      const textDrag = textDragRef.current;
+      textDragRef.current = null;
+      if (event.type === "pointerup" && textDrag.moved) {
+        onMoveText(textDrag.id, textDrag.position);
+      } else if (event.type !== "pointerup") {
+        previewTextPosition(textDrag.id, textDrag.start);
+      }
+    }
   }
 
   function onWheel(event: ReactWheelEvent<HTMLCanvasElement>) {
@@ -574,14 +802,54 @@ export function WallCanvas({
     <div className="canvas-stage">
       <canvas
         ref={canvasRef}
-        className="wall-canvas h-full w-full touch-none"
+        className={`wall-canvas h-full w-full touch-none${tool === "text" ? (hoveredTextId ? " wall-canvas--text-target" : " wall-canvas--text") : ""}`}
         aria-label={`${wall.name}のホールド編集キャンバス`}
         onPointerDown={onPointerDown}
+        onDoubleClick={onDoubleClick}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
+        onPointerLeave={() => setHoveredTextId(null)}
         onWheel={onWheel}
       />
+      {textInputDraft && (
+        <input
+          key={textInputDraft.key}
+          className="canvas-text-input"
+          type="text"
+          aria-label="壁面に配置する文字"
+          ref={focusTextInput}
+          maxLength={100}
+          value={textInputDraft.text}
+          style={{
+            left: textInputDraft.x,
+            top: textInputDraft.y,
+            color: textColor,
+            width: Math.min(
+              240,
+              Math.max(100, (canvasRef.current?.clientWidth ?? 240) - textInputDraft.x - 16),
+            ),
+          }}
+          onPointerDown={(event) => event.stopPropagation()}
+          onChange={(event) => {
+            const text = event.currentTarget.value;
+            setTextInputDraft((draft) => (draft ? { ...draft, text } : draft));
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Delete" && textInputDraft.id) {
+              event.preventDefault();
+              onRemoveText(textInputDraft.id);
+              setTextInputDraft(null);
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              commitTextInput();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setTextInputDraft(null);
+            }
+          }}
+        />
+      )}
       {touchDragging && (
         <div
           ref={trashTargetRef}
