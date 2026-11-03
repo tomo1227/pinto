@@ -15,6 +15,13 @@ export type CanvasScene = {
 };
 export type ImageRect = { x: number; y: number; width: number; height: number; scale: number };
 export type HoldResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+export type RouteTextResizeHandle = "nw" | "ne" | "se" | "sw";
+export type RouteTextGeometry = {
+  position: Point;
+  fontSize: number;
+  textWidth: number;
+  frame: { x: number; y: number; width: number; height: number };
+};
 export type HoldMarkerGeometry = {
   center: Point;
   radiusX: number;
@@ -33,6 +40,12 @@ const resizeHandleDirections: Record<HoldResizeHandle, Point> = {
   sw: { x: -1, y: 1 },
   w: { x: -1, y: 0 },
 };
+
+const routeTextResizeHandles: RouteTextResizeHandle[] = ["nw", "ne", "se", "sw"];
+
+export function clampRouteTextScale(scale: number): number {
+  return Math.min(5, Math.max(0.25, scale));
+}
 
 export function getImageRect(
   canvasWidth: number,
@@ -98,21 +111,59 @@ export function hitTestRouteText(
   rect: ImageRect,
 ): RouteText | undefined {
   return [...annotations].reverse().find((annotation) => {
-    const position = normalizedToCanvas(annotation.position, rect);
-    const fontSize = Math.max(14, 24 * rect.scale);
-    const width = Math.max(
-      fontSize,
-      Array.from(annotation.text).reduce(
-        (total, character) =>
-          total + fontSize * ((character.codePointAt(0) ?? 0) > 0x2e80 ? 1 : 0.7),
-        0,
-      ),
-    );
+    const { frame } = getRouteTextGeometry(annotation, rect);
     return (
-      point.x >= position.x - 4 &&
-      point.x <= position.x + width + 4 &&
-      Math.abs(point.y - position.y) <= fontSize / 2 + 4
+      point.x >= frame.x &&
+      point.x <= frame.x + frame.width &&
+      point.y >= frame.y &&
+      point.y <= frame.y + frame.height
     );
+  });
+}
+
+export function getRouteTextGeometry(annotation: RouteText, rect: ImageRect): RouteTextGeometry {
+  const position = normalizedToCanvas(annotation.position, rect);
+  const fontSize =
+    Math.max(14, 24 * rect.scale) * clampRouteTextScale(annotation.fontScale ?? 1);
+  const textWidth = Math.max(
+    fontSize,
+    Array.from(annotation.text).reduce(
+      (total, character) =>
+        total + fontSize * ((character.codePointAt(0) ?? 0) > 0x2e80 ? 1 : 0.7),
+      0,
+    ),
+  );
+  return {
+    position,
+    fontSize,
+    textWidth,
+    frame: {
+      x: position.x - 4,
+      y: position.y - fontSize / 2 - 3,
+      width: textWidth + 8,
+      height: fontSize + 6,
+    },
+  };
+}
+
+export function getRouteTextResizeHandlePosition(
+  geometry: RouteTextGeometry,
+  handle: RouteTextResizeHandle,
+): Point {
+  return {
+    x: handle.endsWith("e") ? geometry.frame.x + geometry.frame.width : geometry.frame.x,
+    y: handle.startsWith("s") ? geometry.frame.y + geometry.frame.height : geometry.frame.y,
+  };
+}
+
+export function getRouteTextResizeHandleAt(
+  point: Point,
+  geometry: RouteTextGeometry,
+  tolerance = 12,
+): RouteTextResizeHandle | undefined {
+  return routeTextResizeHandles.find((handle) => {
+    const position = getRouteTextResizeHandlePosition(geometry, handle);
+    return Math.hypot(position.x - point.x, position.y - point.y) <= tolerance;
   });
 }
 
@@ -349,22 +400,23 @@ export function drawScene(
     if (isSelected) drawSelectionFrame(context, geometry);
   });
   for (const annotation of route?.textAnnotations ?? []) {
-    const point = normalizedToCanvas(annotation.position, rect);
-    const fontSize = Math.max(14, 24 * rect.scale);
-    const textWidth = Math.max(fontSize, annotation.text.length * fontSize * 0.7);
+    const geometry = getRouteTextGeometry(annotation, rect);
+    const { position, fontSize, frame } = geometry;
     context.font = `600 ${fontSize}px sans-serif`;
     context.textAlign = "left";
     context.textBaseline = "middle";
-    context.lineJoin = "round";
-    context.lineWidth = 4;
-    context.strokeStyle = "rgba(255, 255, 255, 0.9)";
-    context.strokeText(annotation.text, point.x, point.y);
     context.fillStyle = annotation.color ?? "#202522";
-    context.fillText(annotation.text, point.x, point.y);
+    context.fillText(annotation.text, position.x, position.y);
     if (selectedTextId === annotation.id) {
       context.strokeStyle = "#1673e6";
       context.lineWidth = 1;
-      context.strokeRect(point.x - 4, point.y - fontSize / 2 - 3, textWidth + 8, fontSize + 6);
+      context.strokeRect(frame.x, frame.y, frame.width, frame.height);
+      for (const handle of routeTextResizeHandles) {
+        const handlePosition = getRouteTextResizeHandlePosition(geometry, handle);
+        context.fillStyle = "#ffffff";
+        context.fillRect(handlePosition.x - 4, handlePosition.y - 4, 8, 8);
+        context.strokeRect(handlePosition.x - 4, handlePosition.y - 4, 8, 8);
+      }
     }
   }
   context.restore();
