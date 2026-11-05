@@ -21,6 +21,9 @@
   ],
   "env": {
     "production": {
+      "vars": {
+        "BETTER_AUTH_URL": "https://pintoclimb.com"
+      },
       "d1_databases": [
         {
           "binding": "DB",
