@@ -730,7 +730,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <span>線</span>
               </span>
             </label>
-            <label className="selected-object-color" title="選択中の色、または次に配置する文字の色">
+            <label className="selected-object-color" title="選択中の色、または次に配置するホールド・文字の色">
               <input
                 type="color"
                 aria-label="選択中の色、または次に配置する文字の色"
@@ -786,7 +786,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               autoDetectHolds={autoDetectHolds}
               allowEllipses={allowEllipses}
               onAddHold={(position, markerRadius, bounds, shape) =>
-                void addHold(position, markerRadius, undefined, bounds, shape)
+                void addHold(position, markerRadius, selectedItemColor, bounds, shape)
                   .then((hold) => {
                     setSelectedTextId(null);
                     setSelectedHoldId(hold.id);
