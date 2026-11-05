@@ -1876,7 +1876,7 @@ a {
 :root[data-theme="dark"] .button--primary,
 :root[data-theme="dark"] .tool-settings-button:hover,
 :root[data-theme="dark"] .tool-settings-button.is-active,
-:root[data-theme="dark"] .tool-segment button.is-active {
+:root[data-theme="dark"] .tool-segment > button.is-active {
   color: #fff;
   background: var(--accent-strong);
 }
@@ -1887,7 +1887,7 @@ a {
 :root[data-theme="dark"] .button--quiet,
 :root[data-theme="dark"] .icon-button,
 :root[data-theme="dark"] .tool-settings-button,
-:root[data-theme="dark"] .tool-segment button,
+:root[data-theme="dark"] .tool-segment > button,
 :root[data-theme="dark"] .line-toggle,
 :root[data-theme="dark"] .selected-object-color,
 :root[data-theme="dark"] .route-list-heading {
@@ -1904,7 +1904,12 @@ a {
 :root[data-theme="dark"] .canvas-frame {
   background: var(--soft-surface);
 }
-:root[data-theme="dark"] .tool-segment button:hover,
+:root[data-theme="dark"] .route-post__action:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--soft-raised);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .tool-segment > button:hover,
 :root[data-theme="dark"] .auto-detect-control.is-on,
 :root[data-theme="dark"] .wall-tag-option:has(input:checked) {
   color: var(--moss);
@@ -2135,7 +2140,7 @@ a {
   white-space: nowrap;
   clip-path: inset(50%);
 }
-.tool-segment button {
+.tool-segment > button {
   width: 33px;
   height: 30px;
   display: grid;
@@ -2145,11 +2150,11 @@ a {
   border: 0;
   border-radius: 3px;
 }
-.tool-segment button:hover {
+.tool-segment > button:hover {
   color: var(--ink);
   background: #f6f5f0;
 }
-.tool-segment button.is-active {
+.tool-segment > button.is-active {
   color: #fff;
   background: var(--ink);
 }
@@ -3026,7 +3031,7 @@ a {
     gap: 0;
     padding: 2px;
   }
-  .tool-segment button {
+  .tool-segment > button {
     width: auto;
     height: 36px;
     flex: 1 1 0;
