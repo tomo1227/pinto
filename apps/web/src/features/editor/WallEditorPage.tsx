@@ -1,11 +1,14 @@
 import {
   type Route as ClimbingRoute,
-  formatRouteGrade,
   type Hold,
   JAPANESE_CLIMBING_LEVELS,
   type RouteText,
   V_CLIMBING_LEVELS,
+  WALL_POST_TAG_CATEGORIES,
+  WALL_POST_TAG_LABELS,
+  WALL_POST_TAGS,
   type Wall,
+  type WallPostTags,
 } from "@pinto/shared";
 import { Link } from "@tanstack/react-router";
 import {
@@ -13,7 +16,6 @@ import {
   ArrowLeft,
   ArrowUp,
   Check,
-  Copy,
   Download,
   Eraser,
   Eye,
@@ -44,23 +46,22 @@ import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
 type Tool = "hold" | "route" | "pan" | "eraser" | "text";
-type Panel = "holds" | "routes";
 type RouteDraft = {
+  description: string;
+  author: string;
+};
+const blankDraft: RouteDraft = {
+  description: "",
+  author: "",
+};
+type WallSettingsDraft = {
   name: string;
   japaneseGrade: string;
   vGrade: string;
-  description: string;
-  author: string;
   gymName: string;
+  tags: WallPostTags;
 };
-const blankDraft: RouteDraft = {
-  name: "",
-  japaneseGrade: "",
-  vGrade: "",
-  description: "",
-  author: "",
-  gymName: "",
-};
+const emptyWallTags: WallPostTags = { hold: [], move: [], type: [] };
 const editorColors = [
   { name: "黒", value: "#202522" },
   { name: "白", value: "#FFFEFA" },
@@ -99,53 +100,6 @@ function ColorPalette({
         />
       ))}
     </fieldset>
-  );
-}
-
-function RouteGradeFields({
-  japaneseGrade,
-  vGrade,
-  onJapaneseChange,
-  onVChange,
-}: {
-  japaneseGrade: string;
-  vGrade: string;
-  onJapaneseChange: (grade: string) => void;
-  onVChange: (grade: string) => void;
-}) {
-  return (
-    <div className="route-grade-fields">
-      <label className="field-label">
-        日本式グレード
-        <select
-          className="text-input text-input--compact"
-          value={japaneseGrade}
-          onChange={(event) => onJapaneseChange(event.currentTarget.value)}
-        >
-          <option value="">未設定</option>
-          {JAPANESE_CLIMBING_LEVELS.map((level) => (
-            <option key={level} value={level}>
-              {level}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="field-label">
-        Vグレード
-        <select
-          className="text-input text-input--compact"
-          value={vGrade}
-          onChange={(event) => onVChange(event.currentTarget.value)}
-        >
-          <option value="">未設定</option>
-          {V_CLIMBING_LEVELS.map((level) => (
-            <option key={level} value={level}>
-              {level}
-            </option>
-          ))}
-        </select>
-      </label>
-    </div>
   );
 }
 
@@ -198,11 +152,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const updateHold = useWorkspaceStore((state) => state.updateHold);
   const removeHold = useWorkspaceStore((state) => state.removeHold);
   const clearHolds = useWorkspaceStore((state) => state.clearHolds);
-  const createRoute = useWorkspaceStore((state) => state.createRoute);
+  const updateWall = useWorkspaceStore((state) => state.updateWall);
   const updateRoute = useWorkspaceStore((state) => state.updateRoute);
-  const duplicateRoute = useWorkspaceStore((state) => state.duplicateRoute);
-  const removeRoute = useWorkspaceStore((state) => state.removeRoute);
-  const selectRoute = useWorkspaceStore((state) => state.selectRoute);
   const appendHold = useWorkspaceStore((state) => state.appendHold);
   const removeRouteHold = useWorkspaceStore((state) => state.removeRouteHold);
   const moveRouteHold = useWorkspaceStore((state) => state.moveRouteHold);
@@ -215,19 +166,21 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wallName, setWallName] = useState("");
   const [tool, setTool] = useState<Tool>("hold");
   const [selectedItemColor, setSelectedItemColor] = useState("#202522");
-  const [panel, setPanel] = useState<Panel>("routes");
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
   const [autoDetectHolds, setAutoDetectHolds] = useState(true);
   const [allowEllipses, setAllowEllipses] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [routeName, setRouteName] = useState("");
-  const [routeJapaneseGrade, setRouteJapaneseGrade] = useState("");
-  const [routeVGrade, setRouteVGrade] = useState("");
   const [draft, setDraft] = useState<RouteDraft>(blankDraft);
-  const [busy, setBusy] = useState(false);
+  const [wallSettingsDraft, setWallSettingsDraft] = useState<WallSettingsDraft>({
+    name: "",
+    japaneseGrade: "",
+    vGrade: "",
+    gymName: "",
+    tags: emptyWallTags,
+  });
+  const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [renaming, setRenaming] = useState(false);
 
@@ -325,8 +278,29 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     let active = true;
     void Promise.all([getWall(wallId), loadWall(wallId), loadWalls()]).then(async ([record]) => {
       if (!active || !record) return;
+      const legacyRoute = useWorkspaceStore.getState().routes[0];
+      const legacyGrade = legacyRoute?.grade;
       setWall(record);
       setWallName(record.name);
+      setWallSettingsDraft({
+        name: record.name,
+        japaneseGrade:
+          record.japaneseGrade ??
+          legacyRoute?.japaneseGrade ??
+          (JAPANESE_CLIMBING_LEVELS.includes(
+            legacyGrade as (typeof JAPANESE_CLIMBING_LEVELS)[number],
+          )
+            ? (legacyGrade ?? "")
+            : ""),
+        vGrade:
+          record.vGrade ??
+          legacyRoute?.vGrade ??
+          (V_CLIMBING_LEVELS.includes(legacyGrade as (typeof V_CLIMBING_LEVELS)[number])
+            ? (legacyGrade ?? "")
+            : ""),
+        gymName: record.gymName ?? legacyRoute?.gymName ?? "",
+        tags: record.tags ?? emptyWallTags,
+      });
       const image = await getImage(record.imageId);
       if (active && image) {
         imageObjectUrl = URL.createObjectURL(image.blob);
@@ -346,67 +320,34 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       return;
     }
     setDraft({
-      name: selected.name,
-      japaneseGrade:
-        selected.japaneseGrade ??
-        (JAPANESE_CLIMBING_LEVELS.includes(
-          selected.grade as (typeof JAPANESE_CLIMBING_LEVELS)[number],
-        )
-          ? (selected.grade ?? "")
-          : ""),
-      vGrade:
-        selected.vGrade ??
-        (V_CLIMBING_LEVELS.includes(selected.grade as (typeof V_CLIMBING_LEVELS)[number])
-          ? (selected.grade ?? "")
-          : ""),
       description: selected.description ?? "",
       author: selected.author ?? "",
-      gymName: selected.gymName ?? "",
     });
   }, [selectedRouteId, routes]);
 
-  async function submitRoute(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      await createRoute({
-        name: routeName,
-        ...(routeJapaneseGrade.trim() ? { japaneseGrade: routeJapaneseGrade.trim() } : {}),
-        ...(routeVGrade.trim() ? { vGrade: routeVGrade.trim() } : {}),
-      });
-      setTool("hold");
-      setRouteName("");
-      setRouteJapaneseGrade("");
-      setRouteVGrade("");
-      setCreateOpen(false);
-      setPanel("routes");
-    } catch (reason) {
-      notify(reason instanceof Error ? reason.message : "ルートを作成できませんでした。");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function saveRouteDetails() {
     if (!route) return;
-    const { name, japaneseGrade, vGrade, description, author, gymName } = draft;
-    const hasUnknownLegacyGrade =
-      route.grade &&
-      !JAPANESE_CLIMBING_LEVELS.includes(
-        route.grade as (typeof JAPANESE_CLIMBING_LEVELS)[number],
-      ) &&
-      !V_CLIMBING_LEVELS.includes(route.grade as (typeof V_CLIMBING_LEVELS)[number]);
+    const { description, author } = draft;
     await updateRoute(route.id, {
-      name: name.trim() || "新しいルート",
-      japaneseGrade: japaneseGrade.trim() || undefined,
-      vGrade: vGrade.trim() || undefined,
-      grade:
-        hasUnknownLegacyGrade && !japaneseGrade.trim() && !vGrade.trim() ? route.grade : undefined,
       description: description.trim() || undefined,
       author: author.trim() || undefined,
-      gymName: gymName.trim() || undefined,
     });
     notify("ルートを保存しました");
+  }
+
+  async function saveWallSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const updated = await updateWall(wallId, {
+      name: wallSettingsDraft.name.trim() || "名前のない壁",
+      japaneseGrade: wallSettingsDraft.japaneseGrade || undefined,
+      vGrade: wallSettingsDraft.vGrade || undefined,
+      gymName: wallSettingsDraft.gymName.trim() || undefined,
+      tags: wallSettingsDraft.tags,
+    });
+    setWall(updated);
+    setWallName(updated.name);
+    setWallSettingsOpen(false);
+    notify("壁の設定を保存しました");
   }
 
   async function saveWallName(event: FormEvent<HTMLFormElement>) {
@@ -419,6 +360,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     await renameWall(wallId, name);
     setWall((current) => (current ? { ...current, name } : current));
     setWallName(name);
+    setWallSettingsDraft((current) => ({ ...current, name }));
     setRenaming(false);
   }
 
@@ -491,7 +433,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     const image = await getImage(wall.imageId);
     if (!image) throw new Error("壁画像が見つかりません。");
     const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, routeToExport);
-    return new File([png], routePngFileName(routeToExport.name), { type: "image/png" });
+    return new File([png], routePngFileName(wall.name), { type: "image/png" });
   }
 
   async function exportPng(routeToExport: ClimbingRoute) {
@@ -520,8 +462,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       }
       await navigator.share({
         files: [file],
-        title: routeToShare.name,
-        text: `${routeToShare.name}${formatRouteGrade(routeToShare) ? ` (${formatRouteGrade(routeToShare)})` : ""}`,
+        title: wall?.name ?? "壁",
+        text: `${wall?.name ?? "壁"}${wallGrade ? ` (${wallGrade})` : ""}`,
       });
     } catch (reason) {
       if (isNamedError(reason, "AbortError")) return;
@@ -548,11 +490,11 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       const message = await shareRoutePng(
         webhook.webhookUrl,
         {
-          name: routeToShare.name,
-          grade: formatRouteGrade(routeToShare),
+          name: wall.name,
+          grade: wallGrade,
           holdCount: routeToShare.holdIds.length,
           author: routeToShare.author,
-          gymName: routeToShare.gymName,
+          gymName: wall.gymName,
         },
         png,
       );
@@ -563,6 +505,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       setActionBusy(false);
     }
   }
+
+  const wallGrade = [wall?.japaneseGrade, wall?.vGrade].filter(Boolean).join(" · ");
 
   async function shareWallLink() {
     if (!wall) return;
@@ -616,6 +560,15 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           </button>
         )}
         <button
+          className="icon-button"
+          type="button"
+          title="壁の設定"
+          aria-label="壁の設定"
+          onClick={() => setWallSettingsOpen(true)}
+        >
+          <Settings2 size={16} />
+        </button>
+        <button
           className="icon-button wall-link-share"
           type="button"
           title="壁のリンクを共有"
@@ -624,6 +577,40 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         >
           <Upload size={15} /> <span>リンク共有</span>
         </button>
+        {route && (
+          <div className="editor-route-actions">
+            <button
+              className="icon-button route-card__tool"
+              type="button"
+              title={`${wall.name}のPNGを保存`}
+              aria-label={`${wall.name}のPNGを保存`}
+              disabled={actionBusy}
+              onClick={() => void exportPng(route)}
+            >
+              <Download size={14} />
+            </button>
+            <button
+              className="icon-button route-card__tool route-card__tool--share"
+              type="button"
+              title={`${wall.name}を共有`}
+              aria-label={`${wall.name}を共有`}
+              disabled={actionBusy}
+              onClick={() => void shareRoute(route)}
+            >
+              <Share2 size={14} />
+            </button>
+            <button
+              className="icon-button route-card__tool"
+              type="button"
+              title={`${wall.name}をDiscordに共有`}
+              aria-label={`${wall.name}をDiscordに共有`}
+              disabled={actionBusy}
+              onClick={() => void shareRouteToDiscord(route)}
+            >
+              <MessageCircle size={14} />
+            </button>
+          </div>
+        )}
         <span className="header-spacer" />
         <button
           className="button button--outline button--small editor-history-button"
@@ -874,478 +861,407 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         </section>
 
         <aside className="editor-sidebar">
-          <div className="sidebar-tabs">
-            <button
-              className={panel === "routes" ? "is-active" : ""}
-              type="button"
-              onClick={() => setPanel("routes")}
-            >
-              Routes <span>{routes.length}</span>
-            </button>
-            <button
-              className={panel === "holds" ? "is-active" : ""}
-              type="button"
-              onClick={() => setPanel("holds")}
-            >
-              Holds <span>{holds.length}</span>
-            </button>
-          </div>
-          {panel === "routes" ? (
-            <div className="sidebar-content">
-              <div className="route-list-heading">
-                <span>この壁のルート</span>
-                <button
-                  className="icon-button icon-button--accent"
-                  type="button"
-                  title="ルートを作成"
-                  aria-label="ルートを作成"
-                  onClick={() => setCreateOpen(true)}
-                >
-                  <Plus size={17} />
-                </button>
-              </div>
-              {routes.length === 0 ? (
-                <p className="sidebar-empty">ルートはまだありません。</p>
-              ) : (
-                <div className="route-list">
-                  {routes.map((item, index) => (
-                    <div
-                      key={item.id}
-                      className={`route-card ${item.id === selectedRouteId ? "is-selected" : ""}`}
-                    >
-                      <button
-                        className="route-card__select"
-                        type="button"
-                        onClick={() => {
-                          setSelectedTextId(null);
-                          selectRoute(item.id);
-                        }}
-                      >
-                        <span
-                          className="route-swatch"
-                          style={{
-                            backgroundColor: ["#e96d4d", "#2f7a68", "#5677a8", "#8e5d92"][
-                              index % 4
-                            ],
-                          }}
-                        />
-                        <span className="route-card__name">
-                          {item.name}
-                          <small>
-                            {formatRouteGrade(item) || "Grade not set"} · {item.holdIds.length}{" "}
-                            holds
-                          </small>
-                        </span>
-                      </button>
-                      <div className="route-card__actions">
-                        <button
-                          className="icon-button route-card__tool"
-                          type="button"
-                          title={`${item.name}のPNGを保存`}
-                          aria-label={`${item.name}のPNGを保存`}
-                          disabled={actionBusy}
-                          onClick={() => void exportPng(item)}
-                        >
-                          <Download size={14} /> <span>PNG保存</span>
-                        </button>
-                        <button
-                          className="icon-button route-card__tool route-card__tool--share"
-                          type="button"
-                          title={`${item.name}を共有`}
-                          aria-label={`${item.name}を共有`}
-                          disabled={actionBusy}
-                          onClick={() => void shareRoute(item)}
-                        >
-                          <Share2 size={14} /> <span>共有</span>
-                        </button>
-                        <button
-                          className="icon-button route-card__tool"
-                          type="button"
-                          title={`${item.name}をDiscordに共有`}
-                          aria-label={`${item.name}をDiscordに共有`}
-                          disabled={actionBusy}
-                          onClick={() => void shareRouteToDiscord(item)}
-                        >
-                          <MessageCircle size={14} /> <span>Discord</span>
-                        </button>
-                        <button
-                          className="icon-button"
-                          type="button"
-                          title={`${item.name}を複製`}
-                          aria-label={`${item.name}を複製`}
-                          onClick={() => void duplicateRoute(item.id)}
-                        >
-                          <Copy size={14} />
-                        </button>
-                        <button
-                          className="icon-button"
-                          type="button"
-                          title={`${item.name}を削除`}
-                          aria-label={`${item.name}を削除`}
-                          onClick={() => {
-                            if (window.confirm(`「${item.name}」を削除しますか？`)) {
-                              setSelectedTextId(null);
-                              void removeRoute(item.id);
-                            }
-                          }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+          <div className="sidebar-content">
+            {!route && <p className="sidebar-empty">ルートを読み込んでいます。</p>}
+            {route && (
+              <div className="route-sequence">
+                <div className="panel-section-heading">
+                  <span>ORDER</span>
+                  <span>{route.holdIds.length} MOVES</span>
                 </div>
-              )}
-              {route && (
-                <>
-                  <form
-                    className="route-details-form"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      void saveRouteDetails();
+                {route.holdIds.length === 0 ? (
+                  <p className="sidebar-empty">キャンバスからホールドを選択</p>
+                ) : (
+                  route.holdIds.map((id, index) => {
+                    const hold = holds.find((item) => item.id === id);
+                    if (!hold) return null;
+                    return (
+                      <RouteHoldRow
+                        key={id}
+                        hold={hold}
+                        route={route}
+                        index={index}
+                        count={route.holdIds.length}
+                        onRole={(role) => void setRouteRole(id, role)}
+                        onMove={(delta) => void moveRouteHold(id, delta)}
+                        onRemove={() => void removeRouteHold(id)}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            )}
+            <div className="route-list-heading">
+              <span>登録済みホールド</span>
+              <span className="tool-hint">{tool === "hold" ? "編集" : "選択"}</span>
+            </div>
+            {holds.length === 0 ? (
+              <p className="sidebar-empty">ホールドはまだありません。</p>
+            ) : (
+              <div className="hold-list">
+                {holds.map((hold, index) => (
+                  <button
+                    key={hold.id}
+                    type="button"
+                    className={`hold-list-item ${selectedHoldId === hold.id ? "is-selected" : ""}`}
+                    onClick={() => {
+                      setSelectedTextId(null);
+                      setSelectedHoldId(hold.id);
                     }}
                   >
-                    <div className="panel-section-heading">
-                      <span>DETAILS</span>
-                      <span className="route-source">MANUAL</span>
-                    </div>
-                    <label className="field-label">
-                      ルート名
-                      <input
-                        className="text-input text-input--compact"
-                        value={draft.name}
-                        onChange={(event) => {
-                          const name = event.currentTarget.value;
-                          setDraft((current) => ({ ...current, name }));
-                        }}
-                        maxLength={80}
-                        required
-                      />
-                    </label>
-                    <RouteGradeFields
-                      japaneseGrade={draft.japaneseGrade}
-                      vGrade={draft.vGrade}
-                      onJapaneseChange={(japaneseGrade) =>
-                        setDraft((current) => ({ ...current, japaneseGrade }))
-                      }
-                      onVChange={(vGrade) => setDraft((current) => ({ ...current, vGrade }))}
+                    <span
+                      className="hold-list-marker"
+                      style={{ background: hold.color ?? "#f2d13d" }}
                     />
-                    <div className="field-grid">
-                      <label className="field-label">
-                        作成者
-                        <input
-                          className="text-input text-input--compact"
-                          value={draft.author}
-                          onChange={(event) => {
-                            const author = event.currentTarget.value;
-                            setDraft((current) => ({ ...current, author }));
-                          }}
-                          maxLength={80}
-                        />
-                      </label>
-                      <label className="field-label">
-                        ジム名
-                        <input
-                          className="text-input text-input--compact"
-                          value={draft.gymName}
-                          onChange={(event) => {
-                            const gymName = event.currentTarget.value;
-                            setDraft((current) => ({ ...current, gymName }));
-                          }}
-                          maxLength={80}
-                        />
-                      </label>
-                    </div>
-                    <label className="field-label">
-                      説明
-                      <textarea
-                        className="text-input text-input--compact textarea-input"
-                        value={draft.description}
-                        onChange={(event) => {
-                          const description = event.currentTarget.value;
-                          setDraft((current) => ({ ...current, description }));
-                        }}
-                        rows={2}
-                        maxLength={500}
-                      />
-                    </label>
-                    <button
-                      className="button button--outline button--full button--small"
-                      type="submit"
-                    >
-                      <Save size={14} /> 変更を保存
-                    </button>
-                  </form>
-                  <div className="route-sequence">
-                    <div className="panel-section-heading">
-                      <span>ORDER</span>
-                      <span>{route.holdIds.length} MOVES</span>
-                    </div>
-                    {route.holdIds.length === 0 ? (
-                      <p className="sidebar-empty">キャンバスからホールドを選択</p>
-                    ) : (
-                      route.holdIds.map((id, index) => {
-                        const hold = holds.find((item) => item.id === id);
-                        if (!hold) return null;
-                        return (
-                          <RouteHoldRow
-                            key={id}
-                            hold={hold}
-                            route={route}
-                            index={index}
-                            count={route.holdIds.length}
-                            onRole={(role) => void setRouteRole(id, role)}
-                            onMove={(delta) => void moveRouteHold(id, delta)}
-                            onRemove={() => void removeRouteHold(id)}
-                          />
-                        );
-                      })
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="sidebar-content">
-              <div className="route-list-heading">
-                <span>登録済みホールド</span>
-                <span className="tool-hint">{tool === "hold" ? "編集" : "選択"}</span>
+                    <span>Hold {String(index + 1).padStart(2, "0")}</span>
+                    <span className="hold-list-coordinate">
+                      {Math.round(hold.position.x * 100)}%, {Math.round(hold.position.y * 100)}%
+                    </span>
+                  </button>
+                ))}
               </div>
-              {holds.length === 0 ? (
-                <p className="sidebar-empty">ホールドはまだありません。</p>
-              ) : (
-                <div className="hold-list">
-                  {holds.map((hold, index) => (
-                    <button
-                      key={hold.id}
-                      type="button"
-                      className={`hold-list-item ${selectedHoldId === hold.id ? "is-selected" : ""}`}
-                      onClick={() => {
-                        setSelectedTextId(null);
-                        setSelectedHoldId(hold.id);
-                      }}
-                    >
-                      <span
-                        className="hold-list-marker"
-                        style={{ background: hold.color ?? "#f2d13d" }}
-                      />
-                      <span>Hold {String(index + 1).padStart(2, "0")}</span>
-                      <span className="hold-list-coordinate">
-                        {Math.round(hold.position.x * 100)}%, {Math.round(hold.position.y * 100)}%
-                      </span>
-                    </button>
-                  ))}
+            )}
+            {selectedHold && (
+              <div className="hold-properties">
+                <div className="panel-section-heading">
+                  <span>HOLD ATTRIBUTES</span>
+                  <button
+                    className="icon-button danger-text"
+                    type="button"
+                    aria-label="ホールドを削除"
+                    title="ホールドを削除"
+                    onClick={() => {
+                      if (window.confirm("このホールドを削除しますか？")) {
+                        void removeHold(selectedHold.id);
+                        setSelectedHoldId(null);
+                      }
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-              )}
-              {selectedHold && (
-                <div className="hold-properties">
-                  <div className="panel-section-heading">
-                    <span>HOLD ATTRIBUTES</span>
+                <label className="field-label">
+                  種類
+                  <input
+                    className="text-input text-input--compact"
+                    value={selectedHold.type ?? ""}
+                    onChange={(event) =>
+                      void updateHold(selectedHold.id, {
+                        type: event.currentTarget.value || undefined,
+                      })
+                    }
+                    placeholder="例: crimp"
+                    maxLength={40}
+                  />
+                </label>
+                <label className="field-label">
+                  円の半径（画像px）
+                  <span className="hold-range-value hold-range-value--steps">
                     <button
-                      className="icon-button danger-text"
+                      className="hold-size-step"
                       type="button"
-                      aria-label="ホールドを削除"
-                      title="ホールドを削除"
-                      onClick={() => {
-                        if (window.confirm("このホールドを削除しますか？")) {
-                          void removeHold(selectedHold.id);
-                          setSelectedHoldId(null);
-                        }
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <label className="field-label">
-                    種類
-                    <input
-                      className="text-input text-input--compact"
-                      value={selectedHold.type ?? ""}
-                      onChange={(event) =>
+                      title="円を小さく"
+                      aria-label="円を小さく"
+                      disabled={(selectedHold.markerRadius ?? 48) <= 4}
+                      onClick={() =>
                         void updateHold(selectedHold.id, {
-                          type: event.currentTarget.value || undefined,
+                          markerRadius: Math.max(4, (selectedHold.markerRadius ?? 48) - 4),
                         })
                       }
-                      placeholder="例: crimp"
-                      maxLength={40}
+                    >
+                      <Minus size={13} />
+                    </button>
+                    <input
+                      className="hold-range"
+                      type="range"
+                      min="4"
+                      max="300"
+                      step="1"
+                      value={selectedHold.markerRadius ?? 48}
+                      onChange={(event) =>
+                        void updateHold(selectedHold.id, {
+                          markerRadius: Number(event.currentTarget.value),
+                        })
+                      }
                     />
-                  </label>
-                  <label className="field-label">
-                    円の半径（画像px）
-                    <span className="hold-range-value hold-range-value--steps">
-                      <button
-                        className="hold-size-step"
-                        type="button"
-                        title="円を小さく"
-                        aria-label="円を小さく"
-                        disabled={(selectedHold.markerRadius ?? 48) <= 4}
-                        onClick={() =>
-                          void updateHold(selectedHold.id, {
-                            markerRadius: Math.max(4, (selectedHold.markerRadius ?? 48) - 4),
-                          })
-                        }
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <input
-                        className="hold-range"
-                        type="range"
-                        min="4"
-                        max="300"
-                        step="1"
-                        value={selectedHold.markerRadius ?? 48}
-                        onChange={(event) =>
-                          void updateHold(selectedHold.id, {
-                            markerRadius: Number(event.currentTarget.value),
-                          })
-                        }
-                      />
-                      <output>{Math.round(selectedHold.markerRadius ?? 48)} px</output>
-                      <button
-                        className="hold-size-step"
-                        type="button"
-                        title="円を大きく"
-                        aria-label="円を大きく"
-                        disabled={(selectedHold.markerRadius ?? 48) >= 300}
-                        onClick={() =>
-                          void updateHold(selectedHold.id, {
-                            markerRadius: Math.min(300, (selectedHold.markerRadius ?? 48) + 4),
-                          })
-                        }
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </span>
-                  </label>
-                  <label className="field-label">
-                    横方向（楕円）
-                    <span className="hold-range-value">
-                      <input
-                        className="hold-range"
-                        type="range"
-                        min="0.5"
-                        max="2.5"
-                        step="0.05"
-                        value={allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1}
-                        disabled={!allowEllipses}
-                        onChange={(event) =>
-                          void updateHold(selectedHold.id, {
-                            markerScaleX: Number(event.currentTarget.value),
-                          })
-                        }
-                      />
-                      <output>
-                        {(allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1).toFixed(2)}×
-                      </output>
-                    </span>
-                  </label>
-                  <label className="field-label">
-                    縦方向（楕円）
-                    <span className="hold-range-value">
-                      <input
-                        className="hold-range"
-                        type="range"
-                        min="0.5"
-                        max="2.5"
-                        step="0.05"
-                        value={allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1}
-                        disabled={!allowEllipses}
-                        onChange={(event) =>
-                          void updateHold(selectedHold.id, {
-                            markerScaleY: Number(event.currentTarget.value),
-                          })
-                        }
-                      />
-                      <output>
-                        {(allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1).toFixed(2)}×
-                      </output>
-                    </span>
-                  </label>
-                  <label className="field-label">
-                    線幅（画面px）
-                    <span className="hold-range-value">
-                      <input
-                        className="hold-range"
-                        type="range"
-                        min="1"
-                        max="10"
-                        step="0.5"
-                        value={selectedHold.markerWidth ?? 2}
-                        onChange={(event) =>
-                          void updateHold(selectedHold.id, {
-                            markerWidth: Number(event.currentTarget.value),
-                          })
-                        }
-                      />
-                      <output>{selectedHold.markerWidth ?? 2} px</output>
-                    </span>
-                  </label>
-                  <div className="field-label">
-                    <span>色</span>
-                    <div className="color-input-row">
-                      <ColorPalette
-                        value={selectedHold.color ?? "#f2d13d"}
-                        label="ホールドの色"
-                        compact
-                        onChange={(color) => void updateHold(selectedHold.id, { color })}
-                      />
-                      <span>{selectedHold.color ?? "#f2d13d"}</span>
-                    </div>
+                    <output>{Math.round(selectedHold.markerRadius ?? 48)} px</output>
+                    <button
+                      className="hold-size-step"
+                      type="button"
+                      title="円を大きく"
+                      aria-label="円を大きく"
+                      disabled={(selectedHold.markerRadius ?? 48) >= 300}
+                      onClick={() =>
+                        void updateHold(selectedHold.id, {
+                          markerRadius: Math.min(300, (selectedHold.markerRadius ?? 48) + 4),
+                        })
+                      }
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </span>
+                </label>
+                <label className="field-label">
+                  横方向（楕円）
+                  <span className="hold-range-value">
+                    <input
+                      className="hold-range"
+                      type="range"
+                      min="0.5"
+                      max="2.5"
+                      step="0.05"
+                      value={allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1}
+                      disabled={!allowEllipses}
+                      onChange={(event) =>
+                        void updateHold(selectedHold.id, {
+                          markerScaleX: Number(event.currentTarget.value),
+                        })
+                      }
+                    />
+                    <output>
+                      {(allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1).toFixed(2)}×
+                    </output>
+                  </span>
+                </label>
+                <label className="field-label">
+                  縦方向（楕円）
+                  <span className="hold-range-value">
+                    <input
+                      className="hold-range"
+                      type="range"
+                      min="0.5"
+                      max="2.5"
+                      step="0.05"
+                      value={allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1}
+                      disabled={!allowEllipses}
+                      onChange={(event) =>
+                        void updateHold(selectedHold.id, {
+                          markerScaleY: Number(event.currentTarget.value),
+                        })
+                      }
+                    />
+                    <output>
+                      {(allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1).toFixed(2)}×
+                    </output>
+                  </span>
+                </label>
+                <label className="field-label">
+                  線幅（画面px）
+                  <span className="hold-range-value">
+                    <input
+                      className="hold-range"
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="0.5"
+                      value={selectedHold.markerWidth ?? 2}
+                      onChange={(event) =>
+                        void updateHold(selectedHold.id, {
+                          markerWidth: Number(event.currentTarget.value),
+                        })
+                      }
+                    />
+                    <output>{selectedHold.markerWidth ?? 2} px</output>
+                  </span>
+                </label>
+                <div className="field-label">
+                  <span>色</span>
+                  <div className="color-input-row">
+                    <ColorPalette
+                      value={selectedHold.color ?? "#f2d13d"}
+                      label="ホールドの色"
+                      compact
+                      onChange={(color) => void updateHold(selectedHold.id, { color })}
+                    />
+                    <span>{selectedHold.color ?? "#f2d13d"}</span>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+            {route && (
+              <div className="route-details-form">
+                <label className="field-label">
+                  作成者
+                  <input
+                    className="text-input text-input--compact"
+                    value={draft.author}
+                    onChange={(event) => {
+                      const author = event.currentTarget.value;
+                      setDraft((current) => ({ ...current, author }));
+                    }}
+                    maxLength={80}
+                  />
+                </label>
+                <label className="field-label">
+                  説明
+                  <textarea
+                    className="text-input text-input--compact textarea-input"
+                    value={draft.description}
+                    onChange={(event) => {
+                      const description = event.currentTarget.value;
+                      setDraft((current) => ({ ...current, description }));
+                    }}
+                    rows={2}
+                    maxLength={500}
+                  />
+                </label>
+              </div>
+            )}
+          </div>
         </aside>
       </div>
 
-      {createOpen && (
+      {wallSettingsOpen && (
         <div className="modal-backdrop" role="presentation">
           <form
-            className="modal-panel modal-panel--compact"
-            onSubmit={(event) => void submitRoute(event)}
+            className="modal-panel"
+            aria-label="壁の設定"
+            onSubmit={(event) => void saveWallSettings(event)}
           >
             <div className="modal-heading">
               <div>
-                <p className="eyebrow">NEW ROUTE</p>
-                <h2>ルートを作成</h2>
+                <p className="eyebrow">WALL SETTINGS</p>
+                <h2>壁の設定</h2>
               </div>
               <button
                 className="icon-button"
                 type="button"
                 aria-label="閉じる"
-                onClick={() => setCreateOpen(false)}
+                onClick={() => setWallSettingsOpen(false)}
               >
                 <X size={18} />
               </button>
             </div>
             <label className="field-label">
-              ルート名
+              壁の名前
               <input
                 className="text-input"
-                value={routeName}
-                onChange={(event) => setRouteName(event.currentTarget.value)}
-                placeholder="例: Green corner"
+                value={wallSettingsDraft.name}
+                onChange={(event) =>
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    name: event.currentTarget.value,
+                  }))
+                }
                 maxLength={80}
                 required
               />
             </label>
-            <RouteGradeFields
-              japaneseGrade={routeJapaneseGrade}
-              vGrade={routeVGrade}
-              onJapaneseChange={setRouteJapaneseGrade}
-              onVChange={setRouteVGrade}
-            />
+            <div className="route-grade-fields">
+              <label className="field-label">
+                日本式グレード
+                <select
+                  className="text-input text-input--compact"
+                  value={wallSettingsDraft.japaneseGrade}
+                  onChange={(event) =>
+                    setWallSettingsDraft((current) => ({
+                      ...current,
+                      japaneseGrade: event.currentTarget.value,
+                    }))
+                  }
+                >
+                  <option value="">未設定</option>
+                  {JAPANESE_CLIMBING_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label">
+                Vグレード
+                <select
+                  className="text-input text-input--compact"
+                  value={wallSettingsDraft.vGrade}
+                  onChange={(event) =>
+                    setWallSettingsDraft((current) => ({
+                      ...current,
+                      vGrade: event.currentTarget.value,
+                    }))
+                  }
+                >
+                  <option value="">未設定</option>
+                  {V_CLIMBING_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="field-label">
+              ジム名
+              <input
+                className="text-input"
+                value={wallSettingsDraft.gymName}
+                onChange={(event) =>
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    gymName: event.currentTarget.value,
+                  }))
+                }
+                maxLength={80}
+              />
+            </label>
+            <div className="field-label wall-tag-field">
+              <span>タイプ・タグ</span>
+              <div className="wall-tag-groups">
+                {WALL_POST_TAG_CATEGORIES.map((category) => (
+                  <fieldset className="wall-tag-group" key={category}>
+                    <legend>{WALL_POST_TAG_LABELS[category]}</legend>
+                    <div className="wall-tag-options">
+                      {WALL_POST_TAGS[category].map((tag) => {
+                        const selected: readonly string[] = wallSettingsDraft.tags[category];
+                        return (
+                          <label className="wall-tag-option" key={tag}>
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(tag)}
+                              onChange={(event) => {
+                                const next = event.currentTarget.checked
+                                  ? [...selected, tag]
+                                  : selected.filter((item) => item !== tag);
+                                setWallSettingsDraft((current) => ({
+                                  ...current,
+                                  tags: { ...current.tags, [category]: next } as WallPostTags,
+                                }));
+                              }}
+                            />
+                            <span>{tag}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                ))}
+              </div>
+            </div>
+            <div className="field-label">
+              <span>ホールド</span>
+              <div className="selected-file">
+                <span>{holds.length} 個</span>
+                <button
+                  className="button button--outline button--small"
+                  type="button"
+                  onClick={() => {
+                    setTool("hold");
+                    setWallSettingsOpen(false);
+                  }}
+                >
+                  <MapPin size={14} /> 編集
+                </button>
+              </div>
+            </div>
             <div className="modal-actions">
               <button
                 className="button button--quiet"
                 type="button"
-                onClick={() => setCreateOpen(false)}
+                onClick={() => setWallSettingsOpen(false)}
               >
                 キャンセル
               </button>
-              <button className="button button--primary" type="submit" disabled={busy}>
-                {busy ? "作成中..." : "ルートを作成"}
+              <button className="button button--primary" type="submit">
+                <Save size={15} /> 設定を保存
               </button>
             </div>
           </form>

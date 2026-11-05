@@ -8,7 +8,7 @@ import type {
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 
 const DATABASE_NAME = "pinto-local";
-export const DATABASE_VERSION = 1;
+export const DATABASE_VERSION = 2;
 
 type SettingRecord = { key: string; value: unknown };
 
@@ -50,6 +50,12 @@ export function getDatabase(): Promise<IDBPDatabase<PintoDatabase>> {
         const meta = database.createObjectStore("meta");
         void transaction.objectStore("meta").put(DATABASE_VERSION, "schemaVersion");
         void meta;
+      }
+      if (oldVersion < 2) {
+        const routes = transaction.objectStore("routes");
+        routes.clear();
+        routes.deleteIndex("by-wall");
+        routes.createIndex("by-wall", "wallId", { unique: true });
       }
     },
   });
@@ -137,7 +143,16 @@ export async function saveRoute(route: ClimbingRoute): Promise<void> {
   ) {
     throw new Error("Start and finish holds must be included in the route.");
   }
-  await database.put("routes", route);
+  const transaction = database.transaction("routes", "readwrite");
+  const routes = transaction.store;
+  const existingRouteIds = await routes.index("by-wall").getAllKeys(route.wallId);
+  await Promise.all([
+    ...existingRouteIds
+      .filter((id) => id !== route.id)
+      .map((id) => routes.delete(id)),
+    routes.put(route),
+  ]);
+  await transaction.done;
 }
 
 export async function deleteRoute(id: string): Promise<void> {

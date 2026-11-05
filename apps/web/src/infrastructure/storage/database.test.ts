@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import type { Hold, ImageAsset, Route, Wall } from "@pinto/shared";
+import { openDB } from "idb";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   closeDatabase,
@@ -66,6 +67,30 @@ describe("IndexedDB repository", () => {
     expect(await listHolds(wall.id)).toEqual([hold]);
     expect(await listRoutes(wall.id)).toEqual([route]);
     expect(await getDiscordSettings()).toBeUndefined();
+  });
+
+  it("replaces a wall's existing route when saving another route", async () => {
+    const replacement = { ...route, id: "route-2", name: "Replacement" };
+    await saveHold(hold);
+    await saveRoute(route);
+    await saveRoute(replacement);
+
+    expect(await listRoutes(wall.id)).toEqual([replacement]);
+  });
+
+  it("deletes existing routes when upgrading the local database", async () => {
+    const legacyDatabase = await openDB("pinto-local", 1, {
+      upgrade(database) {
+        const routes = database.createObjectStore("routes", { keyPath: "id" });
+        routes.createIndex("by-wall", "wallId");
+        routes.createIndex("by-updated", "updatedAt");
+      },
+    });
+    await legacyDatabase.put("routes", route);
+    await legacyDatabase.put("routes", { ...route, id: "route-2" });
+    legacyDatabase.close();
+
+    expect(await listRoutes(wall.id)).toEqual([]);
   });
 
   it("cascades wall deletion to its holds and routes", async () => {

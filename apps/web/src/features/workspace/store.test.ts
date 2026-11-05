@@ -4,10 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   closeDatabase,
   getImage,
+  getWall,
   listHolds,
   listRoutes,
   saveHold,
+  saveImage,
   saveRoute,
+  saveWall,
 } from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "./store";
 
@@ -47,6 +50,23 @@ describe("wall image uploads", () => {
     expect(wall.width).toBe(640);
     expect(wall.height).toBe(480);
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("persists wall-level grade, gym and tags and updates them", async () => {
+    vi.stubGlobal("createImageBitmap", async () => ({ width: 640, height: 480, close: vi.fn() }));
+    const wall = await useWorkspaceStore
+      .getState()
+      .createWall(new File(["image"], "wall.png", { type: "image/png" }), "Test wall", undefined, {
+        japaneseGrade: "5級",
+        gymName: "Test Gym",
+        tags: { hold: ["カチ"], move: [], type: ["ルーフ"] },
+      });
+
+    const updated = await useWorkspaceStore.getState().updateWall(wall.id, { vGrade: "V2" });
+
+    expect(updated).toMatchObject({ japaneseGrade: "5級", vGrade: "V2", gymName: "Test Gym" });
+    expect(updated.tags).toEqual({ hold: ["カチ"], move: [], type: ["ルーフ"] });
+    expect(await getWall(wall.id)).toEqual(updated);
   });
 
   it("starts a new route empty and does not auto-connect subsequently added holds", async () => {
@@ -107,10 +127,14 @@ describe("wall image uploads", () => {
     expect(uncoloredHold.color).toBeUndefined();
   });
 
-  it("creates the first route when a hold is added while there are no routes", async () => {
+  it("creates a route with the wall and uses it when holds are added", async () => {
+    vi.stubGlobal("createImageBitmap", async () => ({ width: 640, height: 480, close: vi.fn() }));
+    const wall = await useWorkspaceStore
+      .getState()
+      .createWall(new File(["image"], "wall.png", { type: "image/png" }), "Test wall");
     const hold = {
       id: "hold-first",
-      wallId: "wall-1",
+      wallId: wall.id,
       position: { x: 0.4, y: 0.6 },
       detectionSource: "manual" as const,
       createdAt: "2026-01-01T00:00:00.000Z",
@@ -123,7 +147,8 @@ describe("wall image uploads", () => {
     };
     await saveHold(hold);
     await saveHold(nextHold);
-    useWorkspaceStore.setState({ selectedWallId: "wall-1", holds: [hold, nextHold] });
+    await useWorkspaceStore.getState().loadWall(wall.id);
+    expect(await listRoutes(wall.id)).toHaveLength(1);
 
     await useWorkspaceStore.getState().appendHold(hold.id);
 
@@ -134,6 +159,57 @@ describe("wall image uploads", () => {
 
     await useWorkspaceStore.getState().appendHold(nextHold.id);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([hold.id, nextHold.id]);
+  });
+
+  it("creates a default route when loading an existing wall without one", async () => {
+    const now = "2026-01-01T00:00:00.000Z";
+    await saveImage({
+      id: "image-legacy",
+      blob: new Blob(["image"]),
+      mimeType: "image/png",
+      width: 640,
+      height: 480,
+      size: 5,
+      createdAt: now,
+    });
+    await saveWall({
+      id: "wall-legacy",
+      name: "Legacy wall",
+      imageId: "image-legacy",
+      width: 640,
+      height: 480,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await useWorkspaceStore.getState().loadWall("wall-legacy");
+
+    expect(useWorkspaceStore.getState().routes).toMatchObject([
+      { wallId: "wall-legacy", name: "Legacy wall", holdIds: [] },
+    ]);
+  });
+
+  it("does not create another route for a wall that already has one", async () => {
+    useWorkspaceStore.setState({
+      selectedWallId: "wall-1",
+      routes: [
+        {
+          id: "route-1",
+          wallId: "wall-1",
+          name: "Existing route",
+          holdIds: [],
+          startHoldIds: [],
+          finishHoldIds: [],
+          source: "manual",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    await expect(useWorkspaceStore.getState().createRoute({ name: "Another route" })).rejects.toThrow(
+      /already has|すでにルートがあります/,
+    );
   });
 
   it("clears all wall holds and route references in one undoable action", async () => {

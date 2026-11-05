@@ -1891,7 +1891,6 @@ a {
 :root[data-theme="dark"] .line-toggle,
 :root[data-theme="dark"] .selected-object-color,
 :root[data-theme="dark"] .route-list-heading,
-:root[data-theme="dark"] .sidebar-tabs button,
 :root[data-theme="dark"] .panel-section-heading {
   color: var(--muted);
 }
@@ -1900,7 +1899,6 @@ a {
 :root[data-theme="dark"] .icon-button:hover:not(:disabled),
 :root[data-theme="dark"] .tool-settings-button,
 :root[data-theme="dark"] .tool-segment,
-:root[data-theme="dark"] .sidebar-tabs button span,
 :root[data-theme="dark"] .route-card,
 :root[data-theme="dark"] .route-card.is-selected,
 :root[data-theme="dark"] .auto-detect-control,
@@ -2347,45 +2345,6 @@ a {
   background: #fffefa;
   border-left: 1px solid var(--line);
 }
-.sidebar-tabs {
-  height: 47px;
-  display: grid;
-  flex: 0 0 auto;
-  grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--line);
-}
-.sidebar-tabs button {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #7a837c;
-  background: transparent;
-  border: 0;
-  font-size: 11px;
-  font-weight: 700;
-}
-.sidebar-tabs button span {
-  min-width: 18px;
-  padding: 2px 5px;
-  color: #758078;
-  background: #edefea;
-  border-radius: 10px;
-  font-size: 9px;
-}
-.sidebar-tabs button.is-active {
-  color: var(--ink);
-}
-.sidebar-tabs button.is-active::after {
-  position: absolute;
-  right: 18px;
-  bottom: -1px;
-  left: 18px;
-  height: 2px;
-  background: var(--moss);
-  content: "";
-}
 .sidebar-content {
   min-height: 0;
   flex: 1;
@@ -2404,6 +2363,16 @@ a {
 .route-list-heading .icon-button {
   width: 29px;
   height: 29px;
+}
+.editor-route-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0;
+}
+.editor-route-actions .icon-button {
+  width: 28px;
+  height: 28px;
 }
 .route-list {
   display: grid;
@@ -2946,9 +2915,11 @@ a {
     min-height: 0;
   }
   .editor-header {
-    height: 48px;
-    gap: 7px;
-    padding: 0 9px;
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 5px 9px;
   }
   .back-link {
     gap: 4px;
@@ -3031,12 +3002,6 @@ a {
   }
   .sidebar-content {
     overflow: visible;
-  }
-  .sidebar-tabs {
-    position: sticky;
-    z-index: 2;
-    top: 0;
-    background: var(--surface);
   }
 }
 @media (max-width: 390px) {

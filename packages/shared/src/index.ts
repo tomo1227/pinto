@@ -10,6 +10,10 @@ export type Wall = {
   imageId: string;
   width: number;
   height: number;
+  japaneseGrade?: string;
+  vGrade?: string;
+  gymName?: string;
+  tags?: WallPostTags;
   physicalDimensions?: PhysicalDimensions;
   inclination?: number;
   createdAt: string;

@@ -63,9 +63,15 @@ type WorkspaceState = {
   error: string | null;
   loadWalls: () => Promise<void>;
   loadWall: (wallId: string) => Promise<void>;
-  createWall: (file: File, name: string, inclination?: number) => Promise<Wall>;
+  createWall: (
+    file: File,
+    name: string,
+    inclination?: number,
+    metadata?: Pick<Wall, "japaneseGrade" | "vGrade" | "gymName" | "tags">,
+  ) => Promise<Wall>;
   removeWall: (wallId: string) => Promise<void>;
   renameWall: (wallId: string, name: string) => Promise<void>;
+  updateWall: (wallId: string, patch: Partial<Wall>) => Promise<Wall>;
   addHold: (
     position: Hold["position"],
     markerRadius?: number,
@@ -79,7 +85,6 @@ type WorkspaceState = {
   clearHolds: () => Promise<void>;
   createRoute: (draft: RouteDraft, initialHoldId?: string) => Promise<ClimbingRoute>;
   updateRoute: (routeId: string, patch: Partial<ClimbingRoute>) => Promise<void>;
-  duplicateRoute: (routeId: string) => Promise<ClimbingRoute>;
   removeRoute: (routeId: string) => Promise<void>;
   selectRoute: (routeId: string | null) => void;
   appendHold: (holdId: string) => Promise<void>;
@@ -123,6 +128,21 @@ async function prepareWallImage(file: File): Promise<Blob> {
 function touchRoutesForHold(routes: ClimbingRoute[], holdId: string): ClimbingRoute[] {
   const updatedAt = new Date().toISOString();
   return routes.map((route) => (route.holdIds.includes(holdId) ? { ...route, updatedAt } : route));
+}
+
+function createEmptyRoute(wall: Wall): ClimbingRoute {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    wallId: wall.id,
+    name: wall.name,
+    holdIds: [],
+    startHoldIds: [],
+    finishHoldIds: [],
+    source: "manual",
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 async function persistSnapshot(wallId: string, editor: EditorSnapshot): Promise<void> {
@@ -172,10 +192,11 @@ async function notifyDiscord(
     await shareRoutePng(
       settings.webhookUrl,
       {
-        name: route.name,
-        grade: formatRouteGrade(route),
+        name: wall.name,
+        grade:
+          [wall.japaneseGrade, wall.vGrade].filter(Boolean).join(" · ") || formatRouteGrade(route),
         author: route.author,
-        gymName: route.gymName,
+        gymName: wall.gymName ?? route.gymName,
         holdCount: route.holdIds.length,
       },
       png,
@@ -209,7 +230,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   async loadWall(wallId) {
     set({ isLoading: true, error: null });
     try {
-      const [holds, routes] = await Promise.all([listHolds(wallId), listRoutes(wallId)]);
+      const [holds, storedRoutes, wall] = await Promise.all([
+        listHolds(wallId),
+        listRoutes(wallId),
+        getWall(wallId),
+      ]);
+      const routes = storedRoutes.length || !wall ? storedRoutes : [createEmptyRoute(wall)];
+      if (routes.length && storedRoutes.length === 0) await saveRoute(routes[0]);
       set({
         selectedWallId: wallId,
         holds,
@@ -223,7 +250,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       set({ error: "壁の編集データを読み込めませんでした。", isLoading: false });
     }
   },
-  async createWall(file, name, inclination) {
+  async createWall(file, name, inclination, metadata) {
     if (!file.type.startsWith("image/") && !isHeicFile(file)) {
       throw new Error("画像ファイルを選択してください。");
     }
@@ -246,12 +273,15 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       imageId: image.id,
       width: image.width,
       height: image.height,
+      ...metadata,
       ...(inclination === undefined ? {} : { inclination }),
       createdAt: now,
       updatedAt: now,
     };
+    const route = createEmptyRoute(wall);
     await saveImage(image);
     await saveWall(wall);
+    await saveRoute(route);
     set((state) => ({ walls: [wall, ...state.walls] }));
     return wall;
   },
@@ -260,12 +290,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     set((state) => ({ walls: state.walls.filter((wall) => wall.id !== wallId) }));
   },
   async renameWall(wallId, name) {
+    await get().updateWall(wallId, { name: name.trim() });
+  },
+  async updateWall(wallId, patch) {
     const state = get();
     const wall = state.walls.find((item) => item.id === wallId);
-    if (!wall || !name.trim()) return;
-    const updated = { ...wall, name: name.trim(), updatedAt: new Date().toISOString() };
+    if (!wall) throw new Error("壁が見つかりません。");
+    const updated = { ...wall, ...patch, updatedAt: new Date().toISOString() };
     await saveWall(updated);
     set({ walls: state.walls.map((item) => (item.id === wallId ? updated : item)) });
+    return updated;
   },
   async addHold(position, markerRadius, color, bounds, shape) {
     const state = get();
@@ -402,6 +436,9 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const state = get();
     const wallId = state.selectedWallId;
     if (!wallId) throw new Error("壁を選択してください。");
+    if (state.routes.some((route) => route.wallId === wallId)) {
+      throw new Error("この壁にはすでにルートがあります。");
+    }
     const now = new Date().toISOString();
     const route: ClimbingRoute = {
       ...draft,
@@ -437,28 +474,6 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     await saveRoute(updated);
     void notifyDiscord(updated, "update", (message) => get().notify(message));
   },
-  async duplicateRoute(routeId) {
-    const source = get().routes.find((route) => route.id === routeId);
-    if (!source) throw new Error("複製するルートが見つかりません。");
-    const now = new Date().toISOString();
-    const duplicate: ClimbingRoute = {
-      ...source,
-      id: crypto.randomUUID(),
-      name: `${source.name} copy`,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const state = get();
-    set({
-      routes: [...state.routes, duplicate],
-      selectedRouteId: duplicate.id,
-      past: nextHistory(state.past, snapshot(state)),
-      future: [],
-    });
-    await saveRoute(duplicate);
-    void notifyDiscord(duplicate, "create", (message) => get().notify(message));
-    return duplicate;
-  },
   async removeRoute(routeId) {
     const state = get();
     const routes = state.routes.filter((route) => route.id !== routeId);
@@ -477,11 +492,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   async appendHold(holdId) {
     const state = get();
     const route = state.routes.find((item) => item.id === state.selectedRouteId);
-    if (!route) {
-      if (state.routes.length > 0 || !state.selectedWallId) return;
-      await get().createRoute({ name: "新しいルート" }, holdId);
-      return;
-    }
+    if (!route) return;
     if (route.holdIds.includes(holdId)) {
       await get().removeRouteHold(holdId);
       return;

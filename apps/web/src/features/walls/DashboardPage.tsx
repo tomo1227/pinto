@@ -529,7 +529,10 @@ export function DashboardPage() {
     if (!file) return;
     setSaving(true);
     try {
-      const wall = await createWall(file, name);
+      const wall = await createWall(file, name, undefined, {
+        gymName: gymName.trim() || undefined,
+        tags: postTags,
+      });
       setDialogOpen(false);
       setFile(null);
       setName("");
@@ -542,9 +545,9 @@ export function DashboardPage() {
           await publishWallPost({
             wallId: wall.id,
             wallName: wall.name,
-            gymName: gymName.trim(),
+            gymName: wall.gymName ?? "",
             routes: [],
-            tags: postTags,
+            tags: wall.tags ?? emptyWallPostTags,
             image: await encodeWallPostPreview(image.blob),
           });
           statusMessage = "壁を登録してタイムラインに投稿しました。";
