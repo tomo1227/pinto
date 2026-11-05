@@ -183,6 +183,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<"holds" | "route" | null>(null);
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
@@ -860,11 +861,25 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           </div>
         </section>
 
-        <aside className="editor-sidebar">
-          <div className="sidebar-content">
+        <aside
+          id="editor-sidebar-panel"
+          className={`editor-sidebar${mobilePanel ? " is-open" : ""}`}
+        >
+          <div className="mobile-editor-panel-heading">
+            <strong>{mobilePanel === "route" ? "ルート" : "ホールド"}</strong>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="パネルを閉じる"
+              onClick={() => setMobilePanel(null)}
+            >
+              <X size={17} />
+            </button>
+          </div>
+          <div className="sidebar-content" data-mobile-panel={mobilePanel ?? ""}>
             {!route && <p className="sidebar-empty">ルートを読み込んでいます。</p>}
             {route && (
-              <div className="route-sequence">
+              <div className="route-sequence editor-mobile-route-panel">
                 <div className="panel-section-heading">
                   <span>ORDER</span>
                   <span>{route.holdIds.length} MOVES</span>
@@ -891,14 +906,14 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 )}
               </div>
             )}
-            <div className="route-list-heading">
+            <div className="route-list-heading editor-mobile-holds-panel">
               <span>登録済みホールド</span>
               <span className="tool-hint">{tool === "hold" ? "編集" : "選択"}</span>
             </div>
             {holds.length === 0 ? (
-              <p className="sidebar-empty">ホールドはまだありません。</p>
+              <p className="sidebar-empty editor-mobile-holds-panel">ホールドはまだありません。</p>
             ) : (
-              <div className="hold-list">
+              <div className="hold-list editor-mobile-holds-panel">
                 {holds.map((hold, index) => (
                   <button
                     key={hold.id}
@@ -922,7 +937,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               </div>
             )}
             {selectedHold && (
-              <div className="hold-properties">
+              <div className="hold-properties editor-mobile-holds-panel">
                 <div className="panel-section-heading">
                   <span>HOLD ATTRIBUTES</span>
                   <button
@@ -1079,7 +1094,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               </div>
             )}
             {route && (
-              <div className="route-details-form">
+              <div className="route-details-form editor-mobile-route-panel">
                 <label className="field-label">
                   作成者
                   <input
@@ -1110,6 +1125,43 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           </div>
         </aside>
       </div>
+
+      {mobilePanel && (
+        <button
+          className="mobile-editor-backdrop"
+          type="button"
+          aria-label="パネルを閉じる"
+          onClick={() => setMobilePanel(null)}
+        />
+      )}
+      <nav className="mobile-editor-nav" aria-label="エディタパネル">
+        <button
+          className={mobilePanel === "holds" ? "is-active" : ""}
+          type="button"
+          aria-expanded={mobilePanel === "holds"}
+          aria-controls="editor-sidebar-panel"
+          onClick={() => {
+            setTool("hold");
+            setMobilePanel((current) => (current === "holds" ? null : "holds"));
+          }}
+        >
+          <MapPin size={18} />
+          <span>ホールド</span>
+        </button>
+        <button
+          className={mobilePanel === "route" ? "is-active" : ""}
+          type="button"
+          aria-expanded={mobilePanel === "route"}
+          aria-controls="editor-sidebar-panel"
+          onClick={() => {
+            setTool("route");
+            setMobilePanel((current) => (current === "route" ? null : "route"));
+          }}
+        >
+          <RouteIcon size={18} />
+          <span>ルート</span>
+        </button>
+      </nav>
 
       {wallSettingsOpen && (
         <div className="modal-backdrop" role="presentation">
