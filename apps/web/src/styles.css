@@ -19,16 +19,16 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #191919;
-  --surface: #222222;
+  --paper: #1d2025;
+  --surface: #272b32;
   --ink: #ededed;
-  --muted: #a5a5a5;
-  --line: #414141;
+  --muted: #a9adb5;
+  --line: #454a53;
   --moss: #82b4ff;
   --coral: #a3c8ff;
   --accent-strong: #315581;
-  --soft-surface: #2b2b2b;
-  --soft-raised: #363636;
+  --soft-surface: #30343b;
+  --soft-raised: #3a4048;
   --soft-accent: #26374c;
   --soft-danger: #3d2824;
 }
@@ -81,6 +81,9 @@ a {
   position: relative;
   z-index: 10;
   height: 66px;
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--ink);
   padding: 0 34px;
   display: flex;
   align-items: center;

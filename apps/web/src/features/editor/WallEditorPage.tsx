@@ -61,6 +61,46 @@ const blankDraft: RouteDraft = {
   author: "",
   gymName: "",
 };
+const editorColors = [
+  { name: "黒", value: "#202522" },
+  { name: "白", value: "#FFFEFA" },
+  { name: "赤", value: "#E55050" },
+  { name: "オレンジ", value: "#EF8C31" },
+  { name: "黄", value: "#F2D13D" },
+  { name: "緑", value: "#2F7A68" },
+  { name: "青", value: "#2589C7" },
+  { name: "紫", value: "#7654A6" },
+] as const;
+
+function ColorPalette({
+  value,
+  label,
+  compact = false,
+  onChange,
+}: {
+  value: string;
+  label: string;
+  compact?: boolean;
+  onChange: (color: string) => void;
+}) {
+  return (
+    <fieldset className={`color-palette${compact ? " color-palette--compact" : ""}`}>
+      <legend className="sr-only">{label}</legend>
+      {editorColors.map((color) => (
+        <button
+          key={color.value}
+          className="color-swatch"
+          type="button"
+          title={color.name}
+          aria-label={color.name}
+          aria-pressed={value.toLowerCase() === color.value.toLowerCase()}
+          style={{ backgroundColor: color.value }}
+          onClick={() => onChange(color.value)}
+        />
+      ))}
+    </fieldset>
+  );
+}
 
 function RouteGradeFields({
   japaneseGrade,
@@ -730,14 +770,16 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <span>線</span>
               </span>
             </label>
-            <label className="selected-object-color" title="選択中の色、または次に配置するホールド・文字の色">
-              <input
-                type="color"
-                aria-label="選択中の色、または次に配置する文字の色"
+            <div
+              className="selected-object-color"
+              title="選択中の色、または次に配置するホールド・文字の色"
+            >
+              <ColorPalette
                 value={selectedItemColor}
-                onChange={(event) => updateSelectedColor(event.currentTarget.value)}
+                label="選択中の色、または次に配置するホールド・文字の色"
+                onChange={updateSelectedColor}
               />
-            </label>
+            </div>
             <button
               className="icon-button danger-text editor-reset"
               type="button"
@@ -1238,19 +1280,18 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       <output>{selectedHold.markerWidth ?? 2} px</output>
                     </span>
                   </label>
-                  <label className="field-label">
-                    色
+                  <div className="field-label">
+                    <span>色</span>
                     <div className="color-input-row">
-                      <input
-                        type="color"
+                      <ColorPalette
                         value={selectedHold.color ?? "#f2d13d"}
-                        onChange={(event) =>
-                          void updateHold(selectedHold.id, { color: event.currentTarget.value })
-                        }
+                        label="ホールドの色"
+                        compact
+                        onChange={(color) => void updateHold(selectedHold.id, { color })}
                       />
                       <span>{selectedHold.color ?? "#f2d13d"}</span>
                     </div>
-                  </label>
+                  </div>
                 </div>
               )}
             </div>
