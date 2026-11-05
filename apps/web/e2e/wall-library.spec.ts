@@ -167,6 +167,46 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   for (const label of await routeActionLabels.all()) await expect(label).toBeHidden();
 });
 
+test("closes the mobile editor panel with a downward swipe", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const imageBase64 = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 8;
+    canvas.height = 8;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is unavailable");
+    context.fillStyle = "#2f7a68";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.getByRole("button", { name: "壁を追加" }).click();
+  await page.getByLabel("壁の写真").setInputFiles({
+    name: "mobile-panel.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(imageBase64, "base64"),
+  });
+  await page.getByLabel("壁の名前").fill("Mobile panel");
+  await page.getByRole("button", { name: "壁を作成" }).click();
+  await expect(page).toHaveURL(/\/walls\//);
+
+  const editorSidebar = page.locator("#editor-sidebar-panel");
+  await page.getByRole("button", { name: "ホールド", exact: true }).click();
+  await expect(editorSidebar).toHaveClass(/is-open/);
+  await expect(editorSidebar).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
+  const panelHeading = page.locator(".mobile-editor-panel-heading");
+  const panelHeadingBounds = await panelHeading.boundingBox();
+  if (!panelHeadingBounds) throw new Error("Mobile editor panel heading is unavailable");
+  const dragStartX = panelHeadingBounds.x + panelHeadingBounds.width / 2;
+  const dragStartY = panelHeadingBounds.y + panelHeadingBounds.height / 2;
+  await page.mouse.move(dragStartX, dragStartY);
+  await page.mouse.down();
+  await page.mouse.move(dragStartX, dragStartY + 120, { steps: 4 });
+  await expect(editorSidebar).toHaveAttribute("style", /translateY\(120px\)/);
+  await page.mouse.up();
+  await expect(editorSidebar).not.toHaveClass(/is-open/);
+});
+
 test("serves the local Worker API through the development proxy", async ({ request }) => {
   const response = await request.get("http://127.0.0.1:5173/api/hello");
   expect(response.ok()).toBeTruthy();

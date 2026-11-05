@@ -38,7 +38,13 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import {
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { shareRoutePng } from "../../infrastructure/api/discord";
 import { exportRoutePng } from "../../infrastructure/export/route-png";
 import { getDiscordSettings, getImage, getWall } from "../../infrastructure/storage/database";
@@ -184,6 +190,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [actionBusy, setActionBusy] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"holds" | "route" | null>(null);
+  const [panelDragOffset, setPanelDragOffset] = useState(0);
+  const panelDragRef = useRef<{ pointerId: number; startY: number } | null>(null);
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
@@ -427,6 +435,28 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         annotation.id === selectedText.id ? { ...annotation, color } : annotation,
       ),
     });
+  }
+
+  function startPanelDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if ((event.target as HTMLElement).closest("button")) return;
+    panelDragRef.current = { pointerId: event.pointerId, startY: event.clientY };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function movePanelDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = panelDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setPanelDragOffset(Math.max(0, event.clientY - drag.startY));
+  }
+
+  function finishPanelDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = panelDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const shouldClose = event.type === "pointerup" && event.clientY - drag.startY > 80;
+    panelDragRef.current = null;
+    setPanelDragOffset(0);
+    if (shouldClose) setMobilePanel(null);
   }
 
   async function createRouteFile(routeToExport: ClimbingRoute) {
@@ -697,55 +727,55 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               >
                 <Eraser size={17} />
               </button>
+              <div className="editor-settings-wrap">
+                <button
+                  className={`tool-settings-button ${settingsOpen ? "is-active" : ""}`}
+                  type="button"
+                  title="ホールド設定"
+                  aria-label="ホールド設定"
+                  aria-expanded={settingsOpen}
+                  onClick={() => setSettingsOpen((open) => !open)}
+                >
+                  <Settings2 size={17} />
+                </button>
+                {settingsOpen && (
+                  <div className="editor-settings-popover" role="dialog" aria-label="ホールド設定">
+                    <button
+                      className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
+                      type="button"
+                      role="switch"
+                      aria-label="ホールド輪郭の自動検出"
+                      aria-checked={autoDetectHolds}
+                      onClick={() => setAutoDetectHolds((enabled) => !enabled)}
+                    >
+                      <span className="auto-detect-control__label">輪郭検出</span>
+                      <span className="auto-detect-control__track" aria-hidden="true">
+                        <span />
+                      </span>
+                      <span className="auto-detect-control__status">
+                        {autoDetectHolds ? "ON" : "OFF"}
+                      </span>
+                    </button>
+                    <button
+                      className={`auto-detect-control ${allowEllipses ? "is-on" : ""}`}
+                      type="button"
+                      role="switch"
+                      aria-label="楕円を許可"
+                      aria-checked={allowEllipses}
+                      onClick={() => setAllowEllipses((enabled) => !enabled)}
+                    >
+                      <span className="auto-detect-control__label">楕円を許可</span>
+                      <span className="auto-detect-control__track" aria-hidden="true">
+                        <span />
+                      </span>
+                      <span className="auto-detect-control__status">
+                        {allowEllipses ? "ON" : "OFF"}
+                      </span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </fieldset>
-            <div className="editor-settings-wrap">
-              <button
-                className={`tool-settings-button ${settingsOpen ? "is-active" : ""}`}
-                type="button"
-                title="ホールド設定"
-                aria-label="ホールド設定"
-                aria-expanded={settingsOpen}
-                onClick={() => setSettingsOpen((open) => !open)}
-              >
-                <Settings2 size={17} />
-              </button>
-              {settingsOpen && (
-                <div className="editor-settings-popover" role="dialog" aria-label="ホールド設定">
-                  <button
-                    className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
-                    type="button"
-                    role="switch"
-                    aria-label="ホールド輪郭の自動検出"
-                    aria-checked={autoDetectHolds}
-                    onClick={() => setAutoDetectHolds((enabled) => !enabled)}
-                  >
-                    <span className="auto-detect-control__label">輪郭検出</span>
-                    <span className="auto-detect-control__track" aria-hidden="true">
-                      <span />
-                    </span>
-                    <span className="auto-detect-control__status">
-                      {autoDetectHolds ? "ON" : "OFF"}
-                    </span>
-                  </button>
-                  <button
-                    className={`auto-detect-control ${allowEllipses ? "is-on" : ""}`}
-                    type="button"
-                    role="switch"
-                    aria-label="楕円を許可"
-                    aria-checked={allowEllipses}
-                    onClick={() => setAllowEllipses((enabled) => !enabled)}
-                  >
-                    <span className="auto-detect-control__label">楕円を許可</span>
-                    <span className="auto-detect-control__track" aria-hidden="true">
-                      <span />
-                    </span>
-                    <span className="auto-detect-control__status">
-                      {allowEllipses ? "ON" : "OFF"}
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
             <span className="toolbar-separator" />
             <label className="line-toggle">
               <input
@@ -863,9 +893,18 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
         <aside
           id="editor-sidebar-panel"
-          className={`editor-sidebar${mobilePanel ? " is-open" : ""}`}
+          className={`editor-sidebar${mobilePanel ? " is-open" : ""}${panelDragOffset > 0 ? " is-dragging" : ""}`}
+          style={
+            panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined
+          }
         >
-          <div className="mobile-editor-panel-heading">
+          <div
+            className="mobile-editor-panel-heading"
+            onPointerDown={startPanelDrag}
+            onPointerMove={movePanelDrag}
+            onPointerUp={finishPanelDrag}
+            onPointerCancel={finishPanelDrag}
+          >
             <strong>{mobilePanel === "route" ? "ルート" : "ホールド"}</strong>
             <button
               className="icon-button"
@@ -878,37 +917,45 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           </div>
           <div className="sidebar-content" data-mobile-panel={mobilePanel ?? ""}>
             {!route && <p className="sidebar-empty">ルートを読み込んでいます。</p>}
-            {route && (
+            {route && route.holdIds.length > 0 && (
               <div className="route-sequence editor-mobile-route-panel">
-                <div className="panel-section-heading">
-                  <span>ORDER</span>
-                  <span>{route.holdIds.length} MOVES</span>
-                </div>
-                {route.holdIds.length === 0 ? (
-                  <p className="sidebar-empty">キャンバスからホールドを選択</p>
-                ) : (
-                  route.holdIds.map((id, index) => {
-                    const hold = holds.find((item) => item.id === id);
-                    if (!hold) return null;
-                    return (
-                      <RouteHoldRow
-                        key={id}
-                        hold={hold}
-                        route={route}
-                        index={index}
-                        count={route.holdIds.length}
-                        onRole={(role) => void setRouteRole(id, role)}
-                        onMove={(delta) => void moveRouteHold(id, delta)}
-                        onRemove={() => void removeRouteHold(id)}
-                      />
-                    );
-                  })
-                )}
+                {route.holdIds.map((id, index) => {
+                  const hold = holds.find((item) => item.id === id);
+                  if (!hold) return null;
+                  return (
+                    <RouteHoldRow
+                      key={id}
+                      hold={hold}
+                      route={route}
+                      index={index}
+                      count={route.holdIds.length}
+                      onRole={(role) => void setRouteRole(id, role)}
+                      onMove={(delta) => void moveRouteHold(id, delta)}
+                      onRemove={() => void removeRouteHold(id)}
+                    />
+                  );
+                })}
               </div>
             )}
             <div className="route-list-heading editor-mobile-holds-panel">
               <span>登録済みホールド</span>
               <span className="tool-hint">{tool === "hold" ? "編集" : "選択"}</span>
+              {selectedHold && (
+                <button
+                  className="icon-button danger-text"
+                  type="button"
+                  aria-label="ホールドを削除"
+                  title="ホールドを削除"
+                  onClick={() => {
+                    if (window.confirm("このホールドを削除しますか？")) {
+                      void removeHold(selectedHold.id);
+                      setSelectedHoldId(null);
+                    }
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
             </div>
             {holds.length === 0 ? (
               <p className="sidebar-empty editor-mobile-holds-panel">ホールドはまだありません。</p>
@@ -938,23 +985,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
             )}
             {selectedHold && (
               <div className="hold-properties editor-mobile-holds-panel">
-                <div className="panel-section-heading">
-                  <span>HOLD ATTRIBUTES</span>
-                  <button
-                    className="icon-button danger-text"
-                    type="button"
-                    aria-label="ホールドを削除"
-                    title="ホールドを削除"
-                    onClick={() => {
-                      if (window.confirm("このホールドを削除しますか？")) {
-                        void removeHold(selectedHold.id);
-                        setSelectedHoldId(null);
-                      }
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
                 <label className="field-label">
                   種類
                   <input
