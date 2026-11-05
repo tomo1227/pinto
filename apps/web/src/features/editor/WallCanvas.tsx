@@ -2,7 +2,6 @@ import type { Route as ClimbingRoute, Hold, Wall } from "@pinto/shared";
 import { Trash2 } from "lucide-react";
 import {
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
   useEffect,
   useRef,
   useState,
@@ -222,6 +221,20 @@ export function WallCanvas({
       image.onload = null;
     };
   }, [imageUrl]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      setViewport((current) => ({
+        ...current,
+        zoom: Math.min(5, Math.max(0.5, current.zoom * (event.deltaY < 0 ? 1.1 : 0.9))),
+      }));
+    };
+    canvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleWheel);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -928,14 +941,6 @@ export function WallCanvas({
     }
   }
 
-  function onWheel(event: ReactWheelEvent<HTMLCanvasElement>) {
-    event.preventDefault();
-    setViewport((current) => ({
-      ...current,
-      zoom: Math.min(5, Math.max(0.5, current.zoom * (event.deltaY < 0 ? 1.1 : 0.9))),
-    }));
-  }
-
   const canvas = canvasRef.current;
   const activeTextScale =
     route?.textAnnotations?.find(({ id }) => id === textInputDraft?.id)?.fontScale ?? 1;
@@ -960,7 +965,6 @@ export function WallCanvas({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
         onPointerLeave={() => setHoveredTextId(null)}
-        onWheel={onWheel}
       />
       {textInputDraft && (
         <input
