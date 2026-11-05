@@ -103,8 +103,8 @@ describe("wall image uploads", () => {
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([]);
     expect(useWorkspaceStore.getState().routes[0].finishHoldIds).toEqual([]);
 
-    const defaultColoredHold = await useWorkspaceStore.getState().addHold({ x: 0.3, y: 0.3 });
-    expect(defaultColoredHold.color).toBe("#000000");
+    const uncoloredHold = await useWorkspaceStore.getState().addHold({ x: 0.3, y: 0.3 });
+    expect(uncoloredHold.color).toBeUndefined();
   });
 
   it("creates the first route when a hold is added while there are no routes", async () => {
@@ -152,6 +152,9 @@ describe("wall image uploads", () => {
       holdIds: [hold.id],
       startHoldIds: [hold.id],
       finishHoldIds: [],
+      textAnnotations: [
+        { id: "text-reset", text: "Reset me", position: { x: 0.5, y: 0.5 }, color: "#ff0000" },
+      ],
       source: "manual" as const,
       createdAt: hold.createdAt,
       updatedAt: hold.updatedAt,
@@ -170,6 +173,7 @@ describe("wall image uploads", () => {
     expect(useWorkspaceStore.getState().holds).toEqual([]);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([]);
     expect(useWorkspaceStore.getState().routes[0].startHoldIds).toEqual([]);
+    expect(useWorkspaceStore.getState().routes[0].textAnnotations).toEqual([]);
     expect(await listHolds(hold.wallId)).toEqual([]);
     expect((await listRoutes(hold.wallId))[0].holdIds).toEqual([]);
 
@@ -177,6 +181,7 @@ describe("wall image uploads", () => {
 
     expect(useWorkspaceStore.getState().holds).toEqual([hold]);
     expect(useWorkspaceStore.getState().routes[0].holdIds).toEqual([hold.id]);
+    expect(useWorkspaceStore.getState().routes[0].textAnnotations).toHaveLength(1);
     expect(await listHolds(hold.wallId)).toEqual([hold]);
   });
 });

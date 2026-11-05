@@ -1,106 +1,566 @@
-import type { Wall } from "@pinto/shared";
+import {
+  WALL_POST_TAG_CATEGORIES,
+  WALL_POST_TAG_LABELS,
+  WALL_POST_TAGS,
+  type WallPostTags,
+} from "@pinto/shared";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowUpRight, ImagePlus, Mountain, Plus, Trash2 } from "lucide-react";
+import {
+  Bookmark,
+  Heart,
+  ImagePlus,
+  LayoutGrid,
+  List,
+  MapPin,
+  Plus,
+  RotateCcw,
+  Search,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { getImage, listRoutes } from "../../infrastructure/storage/database";
+import { GYM_PINS } from "../../domain/gym-pins";
+import { authClient } from "../../infrastructure/api/auth";
+import {
+  deleteWallPost,
+  getMyCommunityProfile,
+  getWallPostFeed,
+  publishWallPost,
+  setWallPostLike,
+  setWallPostSaved,
+  type WallPostFeed,
+} from "../../infrastructure/api/community";
+import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
+import { getImage } from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "../workspace/store";
 
-function WallTile({ wall, onDelete }: { wall: Wall; onDelete: (wall: Wall) => void }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [routeCount, setRouteCount] = useState(0);
+const emptyFeed: WallPostFeed = { posts: [], gyms: [], grades: [] };
+const emptyWallPostTags: WallPostTags = { hold: [], move: [], type: [] };
+
+function WallTagPicker({
+  tags,
+  onChange,
+}: {
+  tags: WallPostTags;
+  onChange: (tags: WallPostTags) => void;
+}) {
+  return (
+    <div className="wall-tag-groups">
+      {WALL_POST_TAG_CATEGORIES.map((category) => {
+        const selected: readonly string[] = tags[category];
+        return (
+          <fieldset className="wall-tag-group" key={category}>
+            <legend>{WALL_POST_TAG_LABELS[category]}</legend>
+            <div className="wall-tag-options">
+              {WALL_POST_TAGS[category].map((tag) => (
+                <label className="wall-tag-option" key={tag}>
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(tag)}
+                    onChange={(event) => {
+                      const next = event.currentTarget.checked
+                        ? [...selected, tag]
+                        : selected.filter((item) => item !== tag);
+                      onChange({ ...tags, [category]: next } as WallPostTags);
+                    }}
+                  />
+                  <span>{tag}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        );
+      })}
+    </div>
+  );
+}
+
+export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
+  const { data: session } = authClient.useSession();
+  const viewerId = session?.user.id ?? "";
+  const [scope, setScope] = useState<"all" | "following" | "own" | "saved">("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [gym, setGym] = useState("");
+  const [grade, setGrade] = useState("");
+  const [tagFilters, setTagFilters] = useState<WallPostTags>(emptyWallPostTags);
+  const [favoriteGym, setFavoriteGym] = useState("");
+  const [feed, setFeed] = useState(emptyFeed);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [pendingAction, setPendingAction] = useState("");
+  const tagFilterCount = WALL_POST_TAG_CATEGORIES.reduce(
+    (count, category) => count + tagFilters[category].length,
+    0,
+  );
+  const activeFilterCount = Number(Boolean(gym)) + Number(Boolean(grade)) + tagFilterCount;
 
   useEffect(() => {
-    let url: string | null = null;
-    void Promise.all([getImage(wall.imageId), listRoutes(wall.id)]).then(([image, routes]) => {
-      if (image) {
-        url = URL.createObjectURL(image.blob);
-        setImageUrl(url);
-      }
-      setRouteCount(routes.length);
-    });
+    if (!viewerId && scope !== "all") setScope("all");
+  }, [scope, viewerId]);
+
+  useEffect(() => {
+    if (!viewerId) {
+      setFavoriteGym("");
+      return;
+    }
+    let active = true;
+    void getMyCommunityProfile()
+      .then((profile) => {
+        if (active) setFavoriteGym(profile.homeGym);
+      })
+      .catch(() => undefined);
     return () => {
-      if (url) URL.revokeObjectURL(url);
+      active = false;
     };
-  }, [wall.id, wall.imageId]);
+  }, [viewerId]);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    void getWallPostFeed(
+      { scope: authorHandle ? "all" : scope, authorHandle, gym, grade, tags: tagFilters },
+      Boolean(viewerId),
+    )
+      .then((result) => {
+        if (active) setFeed(result);
+      })
+      .catch((reason: unknown) => {
+        if (active)
+          setError(reason instanceof Error ? reason.message : "投稿を読み込めませんでした。");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [scope, gym, grade, tagFilters, viewerId, authorHandle]);
+
+  async function removePost(id: string) {
+    try {
+      await deleteWallPost(id);
+      setFeed((current) => ({
+        ...current,
+        posts: current.posts.filter((post) => post.id !== id),
+      }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "投稿を削除できませんでした。");
+    }
+  }
+
+  async function toggleLike(postId: string, likedByMe: boolean) {
+    setPendingAction(`${postId}:like`);
+    setError("");
+    try {
+      const result = await setWallPostLike(postId, !likedByMe);
+      setFeed((current) => ({
+        ...current,
+        posts: current.posts.map((post) =>
+          post.id === postId
+            ? { ...post, likedByMe: result.active, likeCount: result.likeCount }
+            : post,
+        ),
+      }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "いいねを更新できませんでした。");
+    } finally {
+      setPendingAction("");
+    }
+  }
+
+  async function toggleSaved(postId: string, savedByMe: boolean) {
+    setPendingAction(`${postId}:save`);
+    setError("");
+    try {
+      const result = await setWallPostSaved(postId, !savedByMe);
+      setFeed((current) => ({
+        ...current,
+        posts: current.posts.map((post) =>
+          post.id === postId ? { ...post, savedByMe: result.active } : post,
+        ),
+      }));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "保存状態を更新できませんでした。");
+    } finally {
+      setPendingAction("");
+    }
+  }
 
   return (
-    <article className="wall-tile">
-      <Link to="/walls/$wallId" params={{ wallId: wall.id }} className="wall-tile__image group">
-        {imageUrl ? (
-          <img src={imageUrl} alt={`${wall.name}の壁`} />
-        ) : (
-          <div className="wall-tile__placeholder">
-            <Mountain size={34} />
-          </div>
-        )}
-        <span className="wall-tile__open">
-          <ArrowUpRight size={17} />
-        </span>
-      </Link>
-      <div className="wall-tile__meta">
-        <Link to="/walls/$wallId" params={{ wallId: wall.id }} className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-semibold">{wall.name}</h2>
-          <p className="mt-1 text-xs text-muted">
-            {routeCount} routes <span className="px-1">·</span> {wall.width} × {wall.height}px
-          </p>
-        </Link>
-        <button
-          className="icon-button text-muted hover:text-red-600"
-          type="button"
-          title="壁を削除"
-          aria-label={`${wall.name}を削除`}
-          onClick={() => onDelete(wall)}
-        >
-          <Trash2 size={16} />
-        </button>
+    <section
+      className="route-feed"
+      aria-label={authorHandle ? "ユーザーの投稿一覧" : "コミュニティの壁投稿"}
+    >
+      <div className="route-feed__heading">
+        <div>
+          <p className="eyebrow">{authorHandle ? "CLIMBER POSTS" : "COMMUNITY WALLS"}</p>
+          <h2>{authorHandle ? "投稿一覧" : "投稿された壁"}</h2>
+        </div>
+        <div className="route-feed__controls">
+          {!authorHandle && (
+            <div className="route-feed__filters">
+              <fieldset className="route-feed__scope" aria-label="投稿範囲">
+                <button
+                  type="button"
+                  className={scope === "all" ? "is-active" : ""}
+                  aria-pressed={scope === "all"}
+                  onClick={() => setScope("all")}
+                >
+                  全体
+                </button>
+                <button
+                  type="button"
+                  className={scope === "following" ? "is-active" : ""}
+                  aria-pressed={scope === "following"}
+                  disabled={!session?.user}
+                  onClick={() => setScope("following")}
+                >
+                  フォロー中
+                </button>
+                <button
+                  type="button"
+                  className={scope === "own" ? "is-active" : ""}
+                  aria-pressed={scope === "own"}
+                  disabled={!session?.user}
+                  onClick={() => setScope("own")}
+                >
+                  自分の投稿
+                </button>
+                <button
+                  type="button"
+                  className={scope === "saved" ? "is-active" : ""}
+                  aria-pressed={scope === "saved"}
+                  disabled={!session?.user}
+                  onClick={() => setScope("saved")}
+                >
+                  保存済み
+                </button>
+                <button
+                  className={`route-feed__search${filtersOpen ? " is-active" : ""}`}
+                  type="button"
+                  title="投稿を絞り込む"
+                  aria-label="投稿を絞り込む"
+                  aria-expanded={filtersOpen}
+                  aria-controls="route-feed-filter-panel"
+                  onClick={() => setFiltersOpen((current) => !current)}
+                >
+                  <Search size={16} aria-hidden="true" />
+                  {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
+                </button>
+                {filtersOpen && (
+                  <div className="route-feed__filter-panel" id="route-feed-filter-panel">
+                    <label className="sr-only" htmlFor="route-feed-gym">
+                      ジムで絞り込む
+                    </label>
+                    <select
+                      id="route-feed-gym"
+                      className="text-input route-feed__select"
+                      value={gym}
+                      onChange={(event) => setGym(event.currentTarget.value)}
+                    >
+                      <option value="">すべてのジム</option>
+                      {favoriteGym && (
+                        <option value={favoriteGym}>よく行くジム · {favoriteGym}</option>
+                      )}
+                      {feed.gyms.map(
+                        (name) =>
+                          name !== favoriteGym && (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ),
+                      )}
+                    </select>
+                    <label className="sr-only" htmlFor="route-feed-grade">
+                      グレードで絞り込む
+                    </label>
+                    <select
+                      id="route-feed-grade"
+                      className="text-input route-feed__select"
+                      value={grade}
+                      onChange={(event) => setGrade(event.currentTarget.value)}
+                    >
+                      <option value="">すべてのグレード</option>
+                      {feed.grades.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                    <details className="route-feed__tag-filter">
+                      <summary>タグ{tagFilterCount > 0 && <span>{tagFilterCount}</span>}</summary>
+                      <div className="route-feed__tag-panel">
+                        <WallTagPicker tags={tagFilters} onChange={setTagFilters} />
+                      </div>
+                    </details>
+                    {activeFilterCount > 0 && (
+                      <button
+                        className="route-feed__tag-reset"
+                        type="button"
+                        onClick={() => {
+                          setGym("");
+                          setGrade("");
+                          setTagFilters(emptyWallPostTags);
+                        }}
+                      >
+                        <RotateCcw size={14} /> 条件をクリア
+                      </button>
+                    )}
+                  </div>
+                )}
+              </fieldset>
+            </div>
+          )}
+          <fieldset className="route-feed__scope route-feed__view-toggle" aria-label="表示形式">
+            <button
+              type="button"
+              className={viewMode === "grid" ? "is-active" : ""}
+              aria-label="グリッド表示"
+              title="グリッド表示"
+              aria-pressed={viewMode === "grid"}
+              onClick={() => setViewMode("grid")}
+            >
+              <LayoutGrid size={16} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={viewMode === "list" ? "is-active" : ""}
+              aria-label="リスト表示"
+              title="リスト表示"
+              aria-pressed={viewMode === "list"}
+              onClick={() => setViewMode("list")}
+            >
+              <List size={16} aria-hidden="true" />
+            </button>
+          </fieldset>
+        </div>
       </div>
-    </article>
+      {error && (
+        <p className="community-status" role="alert">
+          {error}
+        </p>
+      )}
+      {loading ? (
+        <p className="empty-copy">投稿を読み込んでいます...</p>
+      ) : feed.posts.length ? (
+        <div className={`route-feed__grid${viewMode === "list" ? " is-list" : ""}`}>
+          {feed.posts.map((post) => {
+            const isOwnPost = post.userId === viewerId;
+            const wallImage = (
+              <img
+                className="route-post__image"
+                src={post.image}
+                alt={`${post.wallName}の壁画像`}
+              />
+            );
+            return (
+              <article className="route-post" key={post.id}>
+                {isOwnPost ? (
+                  <Link
+                    className="route-post__wall-image-link"
+                    to="/walls/$wallId"
+                    params={{ wallId: post.wallId }}
+                    aria-label={`${post.wallName}の詳細を開く`}
+                  >
+                    {wallImage}
+                  </Link>
+                ) : (
+                  wallImage
+                )}
+                <div className="route-post__body">
+                  <div className="route-post__author">
+                    {post.avatar ? (
+                      <img src={post.avatar} alt="" />
+                    ) : (
+                      <span>
+                        <UserRound size={15} aria-hidden="true" />
+                      </span>
+                    )}
+                    <Link
+                      className="route-post__author-link"
+                      to="/community/$handle"
+                      params={{ handle: post.handle }}
+                    >
+                      {post.username}
+                    </Link>
+                    <small>@{post.handle}</small>
+                    {post.userId === session?.user?.id && (
+                      <button
+                        className="icon-button route-post__delete"
+                        type="button"
+                        title="自分の投稿を削除"
+                        aria-label={`${post.wallName}の投稿を削除`}
+                        onClick={() => {
+                          if (window.confirm(`「${post.wallName}」の壁投稿を削除しますか？`))
+                            void removePost(post.id);
+                        }}
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                  <h3>
+                    {isOwnPost ? (
+                      <Link
+                        className="route-post__wall-title-link"
+                        to="/walls/$wallId"
+                        params={{ wallId: post.wallId }}
+                      >
+                        {post.wallName}
+                      </Link>
+                    ) : (
+                      post.wallName
+                    )}
+                  </h3>
+                  <p className="route-post__meta">
+                    <MapPin size={13} /> {post.gymName}
+                    <span>{post.routes.length} ルート</span>
+                  </p>
+                  {WALL_POST_TAG_CATEGORIES.some((category) => post.tags[category].length > 0) && (
+                    <div className="route-post__tags">
+                      {WALL_POST_TAG_CATEGORIES.flatMap((category) =>
+                        post.tags[category].map((tag) => (
+                          <span key={`${category}-${tag}`}>
+                            {WALL_POST_TAG_LABELS[category]}: {tag}
+                          </span>
+                        )),
+                      )}
+                    </div>
+                  )}
+                  {post.routes.length > 0 ? (
+                    <ul className="route-post__routes">
+                      {post.routes.map((route) => (
+                        <li key={route.id}>
+                          <span>{route.name}</span>
+                          {(route.japaneseGrade || route.vGrade || route.grade) && (
+                            <strong>
+                              {route.japaneseGrade || route.vGrade
+                                ? [route.japaneseGrade, route.vGrade].filter(Boolean).join(" · ")
+                                : route.grade}
+                            </strong>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="route-post__wall">ルート未登録</p>
+                  )}
+                  <div className="route-post__actions">
+                    <button
+                      className={`route-post__action ${post.likedByMe ? "is-active" : ""}`}
+                      type="button"
+                      aria-label={`${post.wallName}にいいね`}
+                      aria-pressed={post.likedByMe}
+                      title={session?.user ? "いいね" : "いいねするにはログインが必要です"}
+                      disabled={!session?.user || pendingAction === `${post.id}:like`}
+                      onClick={() => void toggleLike(post.id, post.likedByMe)}
+                    >
+                      <Heart size={16} fill={post.likedByMe ? "currentColor" : "none"} />
+                      <span>{post.likeCount}</span>
+                    </button>
+                    <button
+                      className={`route-post__action ${post.savedByMe ? "is-active" : ""}`}
+                      type="button"
+                      aria-label={`${post.wallName}を保存`}
+                      aria-pressed={post.savedByMe}
+                      title={session?.user ? "保存" : "保存するにはログインが必要です"}
+                      disabled={!session?.user || pendingAction === `${post.id}:save`}
+                      onClick={() => void toggleSaved(post.id, post.savedByMe)}
+                    >
+                      <Bookmark size={16} fill={post.savedByMe ? "currentColor" : "none"} />
+                      <span>{post.savedByMe ? "保存済み" : "保存"}</span>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="route-feed__empty">
+          {authorHandle
+            ? "投稿はまだありません。"
+            : scope === "following"
+              ? "フォロー中のユーザーが投稿した壁はまだありません。"
+              : scope === "saved"
+                ? "保存した壁投稿はまだありません。"
+                : scope === "own"
+                  ? "自分の壁投稿はまだありません。"
+                  : "壁の投稿はまだありません。"}
+        </p>
+      )}
+    </section>
   );
 }
 
 export function DashboardPage() {
-  const walls = useWorkspaceStore((state) => state.walls);
-  const isLoading = useWorkspaceStore((state) => state.isLoading);
-  const error = useWorkspaceStore((state) => state.error);
-  const loadWalls = useWorkspaceStore((state) => state.loadWalls);
+  const { data: session, isPending: sessionPending } = authClient.useSession();
+  const sessionUserId = session?.user.id;
   const createWall = useWorkspaceStore((state) => state.createWall);
-  const removeWall = useWorkspaceStore((state) => state.removeWall);
   const notify = useWorkspaceStore((state) => state.notify);
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
-  const [inclination, setInclination] = useState("");
+  const [gymName, setGymName] = useState("");
+  const [postTags, setPostTags] = useState<WallPostTags>(emptyWallPostTags);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void loadWalls();
-  }, [loadWalls]);
+    if (!dialogOpen || !sessionUserId) return;
+    let active = true;
+    void getMyCommunityProfile()
+      .then((profile) => {
+        if (active) {
+          const listedGym = GYM_PINS.find((gym) => gym.name === profile.homeGym)?.name ?? "";
+          setGymName((current) => current || listedGym);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [dialogOpen, sessionUserId]);
 
   async function submitWall(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return;
     setSaving(true);
     try {
-      const wall = await createWall(
-        file,
-        name,
-        inclination === "" ? undefined : Number(inclination),
-      );
+      const wall = await createWall(file, name);
       setDialogOpen(false);
       setFile(null);
       setName("");
+      setPostTags(emptyWallPostTags);
+      let statusMessage = "壁を登録しました。";
+      if (session?.user) {
+        try {
+          const image = await getImage(wall.imageId);
+          if (!image) throw new Error("壁画像が見つかりません。");
+          await publishWallPost({
+            wallId: wall.id,
+            wallName: wall.name,
+            gymName: gymName.trim(),
+            routes: [],
+            tags: postTags,
+            image: await encodeWallPostPreview(image.blob),
+          });
+          statusMessage = "壁を登録してタイムラインに投稿しました。";
+        } catch (reason) {
+          statusMessage = `壁は登録済みですが、タイムラインへの投稿に失敗しました: ${reason instanceof Error ? reason.message : "通信エラー"}`;
+        }
+      } else {
+        statusMessage = "壁を登録しました。タイムラインへの自動投稿にはログインが必要です。";
+      }
+      notify(statusMessage);
       await navigate({ to: "/walls/$wallId", params: { wallId: wall.id } });
     } catch (reason) {
       notify(reason instanceof Error ? reason.message : "壁を保存できませんでした。");
     } finally {
       setSaving(false);
     }
-  }
-
-  async function confirmDelete(wall: Wall) {
-    if (!window.confirm(`「${wall.name}」と関連データを削除しますか？`)) return;
-    await removeWall(wall.id);
   }
 
   return (
@@ -116,49 +576,16 @@ export function DashboardPage() {
         <button
           className="button button--primary"
           type="button"
-          onClick={() => setDialogOpen(true)}
+          onClick={() => {
+            setGymName("");
+            setDialogOpen(true);
+          }}
         >
           <Plus size={18} /> 壁を追加
         </button>
       </section>
 
-      <section className="library-section" aria-label="登録した壁">
-        <div className="section-label">
-          <span>WALLS</span>
-          <span>{String(walls.length).padStart(2, "0")}</span>
-        </div>
-        {error && (
-          <p className="inline-error" role="alert">
-            {error}
-          </p>
-        )}
-        {isLoading ? (
-          <p className="empty-copy">読み込み中...</p>
-        ) : walls.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-state__mark">
-              <ImagePlus size={28} />
-            </div>
-            <div>
-              <h2>最初の壁を登録</h2>
-              <p>ジムの壁を撮影した画像から、ローカルでルートを作成できます。</p>
-            </div>
-            <button
-              className="button button--outline"
-              type="button"
-              onClick={() => setDialogOpen(true)}
-            >
-              <Plus size={17} /> 画像を選ぶ
-            </button>
-          </div>
-        ) : (
-          <div className="wall-grid">
-            {walls.map((wall) => (
-              <WallTile key={wall.id} wall={wall} onDelete={confirmDelete} />
-            ))}
-          </div>
-        )}
-      </section>
+      <WallFeed />
 
       {dialogOpen && (
         <div className="modal-backdrop" role="presentation">
@@ -206,21 +633,37 @@ export function DashboardPage() {
                 required
               />
             </label>
-            <label className="field-label">
-              傾斜角度 <span className="field-hint inline">任意</span>
-              <div className="input-with-unit">
-                <input
-                  className="text-input"
-                  type="number"
-                  min="-90"
-                  max="90"
-                  value={inclination}
-                  onChange={(event) => setInclination(event.currentTarget.value)}
-                  placeholder="0"
-                />
-                <span>°</span>
-              </div>
-            </label>
+            {session?.user ? (
+              <>
+                <label className="field-label">
+                  ジム名
+                  <select
+                    className="text-input"
+                    value={gymName}
+                    onChange={(event) => setGymName(event.currentTarget.value)}
+                    required
+                  >
+                    <option value="">ジムを選択</option>
+                    {GYM_PINS.map((gym) => (
+                      <option key={gym.id} value={gym.name}>
+                        {gym.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="field-hint">
+                    登録後、壁画像がタイムラインに自動投稿されます。
+                  </span>
+                </label>
+                <div className="field-label wall-tag-field">
+                  <span>
+                    タグ <span className="field-hint inline">任意・複数選択可</span>
+                  </span>
+                  <WallTagPicker tags={postTags} onChange={setPostTags} />
+                </div>
+              </>
+            ) : (
+              <p className="field-hint">ログイン中は壁の登録後にタイムラインへ自動投稿されます。</p>
+            )}
             <div className="modal-actions">
               <button
                 className="button button--quiet"
@@ -229,7 +672,11 @@ export function DashboardPage() {
               >
                 キャンセル
               </button>
-              <button className="button button--primary" type="submit" disabled={!file || saving}>
+              <button
+                className="button button--primary"
+                type="submit"
+                disabled={!file || saving || sessionPending}
+              >
                 {saving ? "保存中..." : "壁を作成"}
               </button>
             </div>

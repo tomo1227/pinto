@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite --config vite.pinto.config.ts",
     "build": "vite build --config vite.pinto.config.ts",
-    "typecheck": "tsc --noEmit --target ES2022 --module ESNext --moduleResolution Bundler --strict --skipLibCheck --jsx react-jsx --lib ES2022,DOM,DOM.Iterable --types vite/client src/main.tsx",
+    "typecheck": "tsc --project tsconfig.json",
     "test": "vitest run --config vite.pinto.config.ts",
     "test:watch": "vitest --config vite.pinto.config.ts",
     "test:e2e": "playwright test --config playwright.config.ts"
@@ -13,6 +13,7 @@
   "dependencies": {
     "@pinto/shared": "workspace:*",
     "@tanstack/react-router": "^1.170.46",
+    "better-auth": "^1.7.15",
     "heic-to": "^1.6.7",
     "idb": "^8.0.4",
     "lucide-react": "^1.66.0",

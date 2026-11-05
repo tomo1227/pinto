@@ -1,4 +1,4 @@
-import type { Route as ClimbingRoute, Hold, Point } from "@pinto/shared";
+import type { Route as ClimbingRoute, Hold, Point, RouteText } from "@pinto/shared";
 
 export type Viewport = { zoom: number; panX: number; panY: number };
 export type CanvasScene = {
@@ -8,12 +8,20 @@ export type CanvasScene = {
   holds: Hold[];
   route?: ClimbingRoute;
   selectedHoldId?: string | null;
+  selectedTextId?: string | null;
   showLines?: boolean;
   allowEllipses?: boolean;
   viewport: Viewport;
 };
 export type ImageRect = { x: number; y: number; width: number; height: number; scale: number };
 export type HoldResizeHandle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+export type RouteTextResizeHandle = "nw" | "ne" | "se" | "sw";
+export type RouteTextGeometry = {
+  position: Point;
+  fontSize: number;
+  textWidth: number;
+  frame: { x: number; y: number; width: number; height: number };
+};
 export type HoldMarkerGeometry = {
   center: Point;
   radiusX: number;
@@ -32,6 +40,12 @@ const resizeHandleDirections: Record<HoldResizeHandle, Point> = {
   sw: { x: -1, y: 1 },
   w: { x: -1, y: 0 },
 };
+
+const routeTextResizeHandles: RouteTextResizeHandle[] = ["nw", "ne", "se", "sw"];
+
+export function clampRouteTextScale(scale: number): number {
+  return Math.min(5, Math.max(0.25, scale));
+}
 
 export function getImageRect(
   canvasWidth: number,
@@ -88,6 +102,68 @@ export function hitTestHold(
     }
     const center = normalizedToCanvas(hold.position, rect);
     return Math.hypot(center.x - point.x, center.y - point.y) <= radius;
+  });
+}
+
+export function hitTestRouteText(
+  point: Point,
+  annotations: RouteText[],
+  rect: ImageRect,
+): RouteText | undefined {
+  return [...annotations].reverse().find((annotation) => {
+    const { frame } = getRouteTextGeometry(annotation, rect);
+    return (
+      point.x >= frame.x &&
+      point.x <= frame.x + frame.width &&
+      point.y >= frame.y &&
+      point.y <= frame.y + frame.height
+    );
+  });
+}
+
+export function getRouteTextGeometry(annotation: RouteText, rect: ImageRect): RouteTextGeometry {
+  const position = normalizedToCanvas(annotation.position, rect);
+  const fontSize =
+    Math.max(14, 24 * rect.scale) * clampRouteTextScale(annotation.fontScale ?? 1);
+  const textWidth = Math.max(
+    fontSize,
+    Array.from(annotation.text).reduce(
+      (total, character) =>
+        total + fontSize * ((character.codePointAt(0) ?? 0) > 0x2e80 ? 1 : 0.7),
+      0,
+    ),
+  );
+  return {
+    position,
+    fontSize,
+    textWidth,
+    frame: {
+      x: position.x - 4,
+      y: position.y - fontSize / 2 - 3,
+      width: textWidth + 8,
+      height: fontSize + 6,
+    },
+  };
+}
+
+export function getRouteTextResizeHandlePosition(
+  geometry: RouteTextGeometry,
+  handle: RouteTextResizeHandle,
+): Point {
+  return {
+    x: handle.endsWith("e") ? geometry.frame.x + geometry.frame.width : geometry.frame.x,
+    y: handle.startsWith("s") ? geometry.frame.y + geometry.frame.height : geometry.frame.y,
+  };
+}
+
+export function getRouteTextResizeHandleAt(
+  point: Point,
+  geometry: RouteTextGeometry,
+  tolerance = 12,
+): RouteTextResizeHandle | undefined {
+  return routeTextResizeHandles.find((handle) => {
+    const position = getRouteTextResizeHandlePosition(geometry, handle);
+    return Math.hypot(position.x - point.x, position.y - point.y) <= tolerance;
   });
 }
 
@@ -204,6 +280,7 @@ export function drawScene(
     holds,
     route,
     selectedHoldId,
+    selectedTextId,
     showLines = true,
     allowEllipses = true,
     viewport,
@@ -314,7 +391,7 @@ export function drawScene(
     context.lineWidth = lineWidth;
     context.stroke();
     if (isInRoute) {
-      context.fillStyle = "#202522";
+      context.fillStyle = hold.color ?? "#202522";
       context.font = '700 11px "DM Sans", sans-serif';
       context.textAlign = "center";
       context.textBaseline = "middle";
@@ -322,5 +399,25 @@ export function drawScene(
     }
     if (isSelected) drawSelectionFrame(context, geometry);
   });
+  for (const annotation of route?.textAnnotations ?? []) {
+    const geometry = getRouteTextGeometry(annotation, rect);
+    const { position, fontSize, frame } = geometry;
+    context.font = `600 ${fontSize}px sans-serif`;
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+    context.fillStyle = annotation.color ?? "#202522";
+    context.fillText(annotation.text, position.x, position.y);
+    if (selectedTextId === annotation.id) {
+      context.strokeStyle = "#1673e6";
+      context.lineWidth = 1;
+      context.strokeRect(frame.x, frame.y, frame.width, frame.height);
+      for (const handle of routeTextResizeHandles) {
+        const handlePosition = getRouteTextResizeHandlePosition(geometry, handle);
+        context.fillStyle = "#ffffff";
+        context.fillRect(handlePosition.x - 4, handlePosition.y - 4, 8, 8);
+        context.strokeRect(handlePosition.x - 4, handlePosition.y - 4, 8, 8);
+      }
+    }
+  }
   context.restore();
 }
