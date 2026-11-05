@@ -78,7 +78,8 @@ a {
   min-height: 100vh;
 }
 .app-header {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 10;
   height: 66px;
   box-shadow:
@@ -90,6 +91,10 @@ a {
   gap: 44px;
   border-bottom: 1px solid var(--line);
   background: rgba(255, 254, 250, 0.88);
+  transition: transform 180ms ease;
+}
+.app-header--hidden {
+  transform: translateY(-100%);
 }
 .brand-mark {
   display: inline-flex;

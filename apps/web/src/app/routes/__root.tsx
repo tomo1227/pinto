@@ -201,6 +201,7 @@ function AccountMenu({ notify }: AccountMenuProps) {
 }
 
 function RootLayout() {
+  const [headerHidden, setHeaderHidden] = useState(false);
   const [communityProfile, setCommunityProfile] = useState<CommunityMember | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileLoadError, setProfileLoadError] = useState("");
@@ -212,6 +213,22 @@ function RootLayout() {
   const notify = useWorkspaceStore((state) => state.notify);
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const userId = session?.user.id;
+
+  useEffect(() => {
+    let previousScrollY = window.scrollY;
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY <= 0) {
+        setHeaderHidden(false);
+      } else if (currentScrollY !== previousScrollY) {
+        setHeaderHidden(currentScrollY > previousScrollY);
+      }
+      previousScrollY = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (sessionPending) return;
@@ -319,7 +336,7 @@ function RootLayout() {
 
   return (
     <div className="app-frame">
-      <header className="app-header">
+      <header className={`app-header${headerHidden ? " app-header--hidden" : ""}`}>
         <Link className="brand-mark" to="/" aria-label="Pinto home">
           <span className="brand-symbol">
             <Mountain size={19} strokeWidth={2.5} />
