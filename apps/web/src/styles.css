@@ -17,6 +17,28 @@
   text-rendering: optimizeLegibility;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #191919;
+  --surface: #222222;
+  --ink: #ededed;
+  --muted: #a5a5a5;
+  --line: #414141;
+  --moss: #82b4ff;
+  --coral: #a3c8ff;
+  --accent-strong: #315581;
+  --soft-surface: #2b2b2b;
+  --soft-raised: #363636;
+  --soft-accent: #26374c;
+  --soft-danger: #3d2824;
+}
+:root[data-theme="dark"][data-accent="orange"] {
+  --moss: #f0a45f;
+  --coral: #ffc184;
+  --accent-strong: #714a2b;
+  --soft-accent: #432f20;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1520,6 +1542,75 @@ a {
 .settings-section {
   border-top: 1px solid var(--line);
 }
+.appearance-heading {
+  margin: 4px 0 0;
+  font: 600 15px "Space Grotesk", sans-serif;
+}
+.appearance-toggle {
+  max-width: 480px;
+  border-top: 1px solid var(--line);
+}
+.appearance-toggle__label {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.appearance-toggle__label > svg {
+  color: var(--moss);
+}
+.appearance-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0 0;
+  padding: 0;
+  border: 0;
+}
+.appearance-colors legend {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.appearance-color-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 11px;
+}
+.appearance-color-option:has(input:checked) {
+  border-color: var(--moss);
+}
+.appearance-color-option:has(input:focus-visible) {
+  outline: 2px solid var(--moss);
+  outline-offset: 2px;
+}
+.appearance-color-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+.appearance-color-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.appearance-color-swatch--blue {
+  background: #82b4ff;
+}
+.appearance-color-swatch--orange {
+  background: #f0a45f;
+}
 .profile-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1734,6 +1825,126 @@ a {
   color: var(--moss);
 }
 
+
+:root[data-theme="dark"] .app-header {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+:root[data-theme="dark"] .account-menu__fallback-icon,
+:root[data-theme="dark"] .account-menu__avatar-fallback,
+:root[data-theme="dark"] .profile-avatar-preview,
+:root[data-theme="dark"] .connection-pill,
+:root[data-theme="dark"] .selected-file,
+:root[data-theme="dark"] .profile-home-gyms__option,
+:root[data-theme="dark"] .account-menu__member:hover {
+  color: var(--ink);
+  background: var(--soft-surface);
+}
+:root[data-theme="dark"] .profile-home-gyms__option:has(input:checked),
+:root[data-theme="dark"] .connection-pill.is-configured {
+  background: var(--soft-accent);
+}
+:root[data-theme="dark"] .text-input,
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  color: var(--ink);
+  background-color: var(--surface);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .profile-home-gyms__option {
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .button--outline,
+:root[data-theme="dark"] .button--quiet,
+:root[data-theme="dark"] .auth-button,
+:root[data-theme="dark"] .icon-button {
+  color: var(--ink);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .connection-pill.is-configured {
+  color: var(--moss);
+}
+:root[data-theme="dark"] .brand-symbol,
+:root[data-theme="dark"] .button--primary,
+:root[data-theme="dark"] .tool-settings-button:hover,
+:root[data-theme="dark"] .tool-settings-button.is-active,
+:root[data-theme="dark"] .tool-segment button.is-active {
+  color: #fff;
+  background: var(--accent-strong);
+}
+:root[data-theme="dark"] .intro-copy,
+:root[data-theme="dark"] .field-label,
+:root[data-theme="dark"] .back-link,
+:root[data-theme="dark"] .section-label,
+:root[data-theme="dark"] .button--quiet,
+:root[data-theme="dark"] .icon-button,
+:root[data-theme="dark"] .tool-settings-button,
+:root[data-theme="dark"] .tool-segment button,
+:root[data-theme="dark"] .line-toggle,
+:root[data-theme="dark"] .selected-object-color,
+:root[data-theme="dark"] .route-list-heading,
+:root[data-theme="dark"] .sidebar-tabs button,
+:root[data-theme="dark"] .panel-section-heading {
+  color: var(--muted);
+}
+:root[data-theme="dark"] .button--outline:hover:not(:disabled),
+:root[data-theme="dark"] .button--quiet:hover:not(:disabled),
+:root[data-theme="dark"] .icon-button:hover:not(:disabled),
+:root[data-theme="dark"] .tool-settings-button,
+:root[data-theme="dark"] .tool-segment,
+:root[data-theme="dark"] .sidebar-tabs button span,
+:root[data-theme="dark"] .route-card,
+:root[data-theme="dark"] .route-card.is-selected,
+:root[data-theme="dark"] .auto-detect-control,
+:root[data-theme="dark"] .canvas-frame {
+  background: var(--soft-surface);
+}
+:root[data-theme="dark"] .tool-segment button:hover,
+:root[data-theme="dark"] .auto-detect-control.is-on,
+:root[data-theme="dark"] .wall-tag-option:has(input:checked) {
+  color: var(--moss);
+  background: var(--soft-accent);
+}
+:root[data-theme="dark"] .editor-header,
+:root[data-theme="dark"] .editor-sidebar,
+:root[data-theme="dark"] .editor-settings-popover,
+:root[data-theme="dark"] .canvas-zoom-controls,
+:root[data-theme="dark"] .canvas-caption,
+:root[data-theme="dark"] .text-input {
+  color: var(--ink);
+  background: var(--surface);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .empty-state,
+:root[data-theme="dark"] .file-input,
+:root[data-theme="dark"] .wall-tag-option,
+:root[data-theme="dark"] .auto-detect-control {
+  color: var(--ink);
+  background: var(--soft-surface);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .empty-state__mark,
+:root[data-theme="dark"] .tool-settings-button:hover,
+:root[data-theme="dark"] .tool-settings-button.is-active {
+  background: var(--soft-raised);
+}
+:root[data-theme="dark"] .inline-error,
+:root[data-theme="dark"] .editor-reset {
+  color: #ffb6a5;
+  background: var(--soft-danger);
+  border-color: #70463b;
+}
+:root[data-theme="dark"] .route-source {
+  color: var(--moss);
+  background: var(--soft-accent);
+}
+:root[data-theme="dark"] .sequence-row {
+  border-color: var(--line);
+}
+:root[data-theme="dark"] ::selection {
+  color: var(--ink);
+  background: var(--accent-strong);
+}
 .editor-page {
   height: calc(100vh - 66px);
   min-height: 620px;

@@ -1,5 +1,5 @@
 import { type DiscordSettings, JAPANESE_CLIMBING_LEVELS, V_CLIMBING_LEVELS } from "@pinto/shared";
-import { Check, ExternalLink, Link2Off, Send, Trash2, UserRound } from "lucide-react";
+import { Check, ExternalLink, Link2Off, Moon, Send, Sun, Trash2, UserRound } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { GYM_PINS } from "../../domain/gym-pins";
 import { authClient } from "../../infrastructure/api/auth";
@@ -55,6 +55,12 @@ async function encodeAvatar(file: File) {
 
 export function SettingsPage() {
   const { data: session, isPending: sessionPending } = authClient.useSession();
+  const [darkAccent, setDarkAccent] = useState<"blue" | "orange">(
+    () => (window.localStorage.getItem("pinto-theme-accent") === "orange" ? "orange" : "blue"),
+  );
+  const [darkMode, setDarkMode] = useState(
+    () => window.localStorage.getItem("pinto-theme") === "dark",
+  );
   const [settings, setSettings] = useState(emptySettings);
   const [profile, setProfile] = useState(emptyProfile);
   const [saved, setSaved] = useState(false);
@@ -182,6 +188,19 @@ export function SettingsPage() {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
+  function updateTheme(enabled: boolean) {
+    setDarkMode(enabled);
+    const theme = enabled ? "dark" : "light";
+    window.localStorage.setItem("pinto-theme", theme);
+    document.documentElement.dataset.theme = theme;
+  }
+
+  function updateDarkAccent(accent: "blue" | "orange") {
+    setDarkAccent(accent);
+    window.localStorage.setItem("pinto-theme-accent", accent);
+    document.documentElement.dataset.accent = accent;
+  }
+
   return (
     <main className="page-shell settings-page">
       <div className="settings-heading">
@@ -189,10 +208,59 @@ export function SettingsPage() {
         <h1 className="display-title">Settings</h1>
         <p className="intro-copy">共有先と通知を設定します。設定はこの端末に保存されます。</p>
       </div>
+      <section className="settings-section" aria-labelledby="appearance-heading">
+        <div className="section-label">
+          <span>APPEARANCE</span>
+          <span>01</span>
+        </div>
+        <div className="settings-block">
+          <h2 className="appearance-heading" id="appearance-heading">表示テーマ</h2>
+          <label className="toggle-row appearance-toggle">
+            <span className="appearance-toggle__label">
+              {darkMode ? <Moon size={17} aria-hidden="true" /> : <Sun size={17} aria-hidden="true" />}
+              <span>
+                <strong>ダークモード</strong>
+                <small>この端末の表示に適用します。</small>
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              checked={darkMode}
+              onChange={(event) => updateTheme(event.currentTarget.checked)}
+              aria-label="ダークモード"
+            />
+          </label>
+          <fieldset className="appearance-colors">
+            <legend>ダークモードのアクセントカラー</legend>
+            <label className="appearance-color-option">
+              <input
+                type="radio"
+                name="dark-accent"
+                value="blue"
+                checked={darkAccent === "blue"}
+                onChange={() => updateDarkAccent("blue")}
+              />
+              <span className="appearance-color-swatch appearance-color-swatch--blue" />
+              <span>ブルー</span>
+            </label>
+            <label className="appearance-color-option">
+              <input
+                type="radio"
+                name="dark-accent"
+                value="orange"
+                checked={darkAccent === "orange"}
+                onChange={() => updateDarkAccent("orange")}
+              />
+              <span className="appearance-color-swatch appearance-color-swatch--orange" />
+              <span>オレンジ</span>
+            </label>
+          </fieldset>
+        </div>
+      </section>
       <form className="settings-section" onSubmit={(event) => void saveProfile(event)}>
         <div className="section-label">
           <span>COMMUNITY PROFILE</span>
-          <span>01</span>
+          <span>02</span>
         </div>
         {sessionPending ? (
           <p className="settings-block">アカウントを確認しています...</p>
@@ -432,7 +500,7 @@ export function SettingsPage() {
       <form className="settings-section" onSubmit={save}>
         <div className="section-label">
           <span>INTEGRATIONS</span>
-          <span>02</span>
+          <span>03</span>
         </div>
         <div className="settings-block">
           <div className="settings-block__heading">
