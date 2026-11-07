@@ -1,4 +1,6 @@
 import {
+  JAPANESE_CLIMBING_LEVELS,
+  V_CLIMBING_LEVELS,
   WALL_POST_TAG_CATEGORIES,
   WALL_POST_TAGS,
   type WallPostTagCategory,
@@ -23,6 +25,10 @@ type WallPost = {
   wallId: string;
   wallName: string;
   gymName: string;
+  japaneseGrade: string;
+  vGrade: string;
+  author: string;
+  description: string;
   routes: WallPostRoute[];
   tags: WallPostTags;
   image: string;
@@ -122,7 +128,8 @@ routePostRoutes.get("/", async (context) => {
   }).join("\n");
   const { results: rows } = await context.env.DB.prepare(
     `SELECT post.id, post.userId, profile.username, profile.handle, profile.avatar,
-            post.wallId, post.wallName, post.gymName, post.routes, post.tags, post.image, post.createdAt,
+            post.wallId, post.wallName, post.gymName, post.japaneseGrade, post.vGrade,
+            post.author, post.description, post.routes, post.tags, post.image, post.createdAt,
             (SELECT COUNT(*) FROM community_wall_post_like AS likes WHERE likes.postId = post.id) AS likeCount,
             (viewer_like.userId IS NOT NULL) AS likedByMe,
             (viewer_save.userId IS NOT NULL) AS savedByMe
@@ -143,9 +150,11 @@ routePostRoutes.get("/", async (context) => {
          WHERE postId = post.id AND userId = ?
        ))
        AND (? = '' OR post.gymName = ?)
-       AND (? = '' OR EXISTS (
+       AND (? = '' OR post.japaneseGrade = ? OR post.vGrade = ? OR EXISTS (
          SELECT 1 FROM json_each(post.routes) AS route
          WHERE json_extract(route.value, '$.grade') = ?
+            OR json_extract(route.value, '$.japaneseGrade') = ?
+            OR json_extract(route.value, '$.vGrade') = ?
        ))
        AND (? = '' OR profile.handle = ?)
        ${tagFilterSql}
@@ -164,6 +173,10 @@ routePostRoutes.get("/", async (context) => {
       viewerId,
       gym,
       gym,
+      grade,
+      grade,
+      grade,
+      grade,
       grade,
       grade,
       authorHandle,
@@ -189,11 +202,36 @@ routePostRoutes.get("/", async (context) => {
     .bind(viewerId, viewerId)
     .all<{ value: string }>();
   const { results: grades } = await context.env.DB.prepare(
-    `SELECT DISTINCT json_extract(route.value, '$.grade') AS value
-     FROM community_wall_post AS post
-     JOIN community_profile AS profile ON profile.userId = post.userId
-     JOIN json_each(post.routes) AS route
-    WHERE ${canSeeProfileSql()} AND json_extract(route.value, '$.grade') != ''
+    `SELECT DISTINCT value FROM (
+       SELECT post.japaneseGrade AS value, profile.isPrivate, post.userId
+       FROM community_wall_post AS post
+       JOIN community_profile AS profile ON profile.userId = post.userId
+       UNION ALL
+       SELECT post.vGrade AS value, profile.isPrivate, post.userId
+       FROM community_wall_post AS post
+       JOIN community_profile AS profile ON profile.userId = post.userId
+       UNION ALL
+       SELECT json_extract(route.value, '$.grade') AS value, profile.isPrivate, post.userId
+       FROM community_wall_post AS post
+       JOIN community_profile AS profile ON profile.userId = post.userId
+       JOIN json_each(post.routes) AS route
+       UNION ALL
+       SELECT json_extract(route.value, '$.japaneseGrade') AS value, profile.isPrivate, post.userId
+       FROM community_wall_post AS post
+       JOIN community_profile AS profile ON profile.userId = post.userId
+       JOIN json_each(post.routes) AS route
+       UNION ALL
+       SELECT json_extract(route.value, '$.vGrade') AS value, profile.isPrivate, post.userId
+       FROM community_wall_post AS post
+       JOIN community_profile AS profile ON profile.userId = post.userId
+       JOIN json_each(post.routes) AS route
+     ) AS grade_values
+     WHERE value != '' AND (
+       isPrivate = 0 OR userId = ? OR EXISTS (
+         SELECT 1 FROM community_follow
+         WHERE followerId = ? AND followedId = grade_values.userId
+       )
+     )
      ORDER BY value LIMIT 100`,
   )
     .bind(viewerId, viewerId)
@@ -212,7 +250,8 @@ routePostRoutes.get("/:id", async (context) => {
   const viewerId = session?.user.id ?? "";
   const row = await context.env.DB.prepare(
     `SELECT post.id, post.userId, profile.username, profile.handle, profile.avatar,
-            post.wallId, post.wallName, post.gymName, post.routes, post.tags, post.image, post.createdAt,
+            post.wallId, post.wallName, post.gymName, post.japaneseGrade, post.vGrade,
+            post.author, post.description, post.routes, post.tags, post.image, post.createdAt,
             (SELECT COUNT(*) FROM community_wall_post_like AS likes WHERE likes.postId = post.id) AS likeCount,
             (viewer_like.userId IS NOT NULL) AS likedByMe,
             (viewer_save.userId IS NOT NULL) AS savedByMe
@@ -324,8 +363,14 @@ routePostRoutes.post("/", async (context) => {
   const wallId = typeof input.wallId === "string" ? input.wallId : "";
   const wallName = typeof input.wallName === "string" ? input.wallName.trim() : "";
   const gymName = typeof input.gymName === "string" ? input.gymName.trim() : "";
+  const japaneseGrade = typeof input.japaneseGrade === "string" ? input.japaneseGrade.trim() : "";
+  const vGrade = typeof input.vGrade === "string" ? input.vGrade.trim() : "";
+  const author = typeof input.author === "string" ? input.author.trim() : "";
+  const description = typeof input.description === "string" ? input.description.trim() : "";
   const image = typeof input.image === "string" ? input.image : "";
   const tags = parseWallPostTags(input.tags);
+  const allowedJapaneseGrades: readonly string[] = JAPANESE_CLIMBING_LEVELS;
+  const allowedVGrades: readonly string[] = V_CLIMBING_LEVELS;
   if (!/^[\w-]{1,64}$/.test(wallId)) {
     return context.json({ error: "壁IDが無効です。" }, 400);
   }
@@ -334,6 +379,23 @@ routePostRoutes.post("/", async (context) => {
   }
   if (!gymName || gymName.length > 80) {
     return context.json({ error: "ジム名は1〜80文字で入力してください。" }, 400);
+  }
+  if (
+    (input.japaneseGrade !== undefined && typeof input.japaneseGrade !== "string") ||
+    (input.vGrade !== undefined && typeof input.vGrade !== "string") ||
+    (japaneseGrade && !allowedJapaneseGrades.includes(japaneseGrade)) ||
+    (vGrade && !allowedVGrades.includes(vGrade))
+  ) {
+    return context.json({ error: "グレードの設定内容が無効です。" }, 400);
+  }
+  if ((input.author !== undefined && typeof input.author !== "string") || author.length > 80) {
+    return context.json({ error: "作成者は80文字以内で入力してください。" }, 400);
+  }
+  if (
+    (input.description !== undefined && typeof input.description !== "string") ||
+    description.length > 500
+  ) {
+    return context.json({ error: "説明は500文字以内で入力してください。" }, 400);
   }
   if (!Array.isArray(input.routes) || input.routes.length > 100) {
     return context.json({ error: "ルート一覧の形式が無効です。" }, 400);
@@ -368,10 +430,13 @@ routePostRoutes.post("/", async (context) => {
   const now = Date.now();
   await context.env.DB.prepare(
     `INSERT INTO community_wall_post
-       (id, userId, wallId, wallName, gymName, routes, tags, image, createdAt, updatedAt)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       (id, userId, wallId, wallName, gymName, japaneseGrade, vGrade, author, description,
+        routes, tags, image, createdAt, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(userId, wallId) DO UPDATE SET
        wallName = excluded.wallName, gymName = excluded.gymName,
+       japaneseGrade = excluded.japaneseGrade, vGrade = excluded.vGrade,
+       author = excluded.author, description = excluded.description,
        routes = excluded.routes, tags = excluded.tags, image = excluded.image,
        updatedAt = excluded.updatedAt`,
   )
@@ -381,6 +446,10 @@ routePostRoutes.post("/", async (context) => {
       wallId,
       wallName,
       gymName,
+      japaneseGrade,
+      vGrade,
+      author,
+      description,
       JSON.stringify(routes),
       JSON.stringify(tags),
       image,
@@ -390,8 +459,100 @@ routePostRoutes.post("/", async (context) => {
     .run();
 
   return context.json({
-    post: { id: postId, userId: session.user.id, wallId, wallName, gymName, routes, tags },
+    post: {
+      id: postId,
+      userId: session.user.id,
+      wallId,
+      wallName,
+      gymName,
+      japaneseGrade,
+      vGrade,
+      author,
+      description,
+      routes,
+      tags,
+    },
   });
+});
+
+routePostRoutes.put("/:id", async (context) => {
+  if (!hasTrustedOrigin(context.req.raw, context.env)) {
+    return context.json({ error: "投稿元を確認できません。" }, 403);
+  }
+  const session = await getSession(context.req.raw, context.env);
+  if (!session) return context.json({ error: "ログインが必要です。" }, 401);
+
+  const postId = context.req.param("id");
+  const post = await context.env.DB.prepare(
+    "SELECT id FROM community_wall_post WHERE id = ? AND userId = ?",
+  )
+    .bind(postId, session.user.id)
+    .first<{ id: string }>();
+  if (!post) return context.json({ error: "投稿が見つかりません。" }, 404);
+
+  let input: Record<string, unknown>;
+  try {
+    input = await context.req.json<Record<string, unknown>>();
+  } catch {
+    return context.json({ error: "投稿の形式が無効です。" }, 400);
+  }
+  const wallName = typeof input.wallName === "string" ? input.wallName.trim() : "";
+  const gymName = typeof input.gymName === "string" ? input.gymName.trim() : "";
+  const japaneseGrade = typeof input.japaneseGrade === "string" ? input.japaneseGrade.trim() : "";
+  const vGrade = typeof input.vGrade === "string" ? input.vGrade.trim() : "";
+  const author = typeof input.author === "string" ? input.author.trim() : "";
+  const description = typeof input.description === "string" ? input.description.trim() : "";
+  const tags = parseWallPostTags(input.tags);
+  const allowedJapaneseGrades: readonly string[] = JAPANESE_CLIMBING_LEVELS;
+  const allowedVGrades: readonly string[] = V_CLIMBING_LEVELS;
+  if (!wallName || wallName.length > 80) {
+    return context.json({ error: "壁名は1〜80文字で入力してください。" }, 400);
+  }
+  if (!gymName || gymName.length > 80) {
+    return context.json({ error: "ジム名は1〜80文字で入力してください。" }, 400);
+  }
+  if (
+    typeof input.japaneseGrade !== "string" ||
+    typeof input.vGrade !== "string" ||
+    (japaneseGrade && !allowedJapaneseGrades.includes(japaneseGrade)) ||
+    (vGrade && !allowedVGrades.includes(vGrade))
+  ) {
+    return context.json({ error: "グレードの設定内容が無効です。" }, 400);
+  }
+  if (
+    typeof input.author !== "string" ||
+    typeof input.description !== "string" ||
+    author.length > 80
+  ) {
+    return context.json({ error: "作成者は80文字以内で入力してください。" }, 400);
+  }
+  if (description.length > 500) {
+    return context.json({ error: "説明は500文字以内で入力してください。" }, 400);
+  }
+  if (input.tags === undefined || !tags) {
+    return context.json({ error: "タグの選択内容が無効です。" }, 400);
+  }
+
+  await context.env.DB.prepare(
+    `UPDATE community_wall_post
+     SET wallName = ?, gymName = ?, japaneseGrade = ?, vGrade = ?,
+         author = ?, description = ?, tags = ?, updatedAt = ?
+     WHERE id = ? AND userId = ?`,
+  )
+    .bind(
+      wallName,
+      gymName,
+      japaneseGrade,
+      vGrade,
+      author,
+      description,
+      JSON.stringify(tags),
+      Date.now(),
+      postId,
+      session.user.id,
+    )
+    .run();
+  return context.json({ updated: true });
 });
 
 routePostRoutes.delete("/:id", async (context) => {

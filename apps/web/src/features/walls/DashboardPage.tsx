@@ -1,7 +1,8 @@
 import {
+  JAPANESE_CLIMBING_LEVELS,
+  V_CLIMBING_LEVELS,
   WALL_POST_TAG_CATEGORIES,
   WALL_POST_TAG_LABELS,
-  WALL_POST_TAGS,
   type WallPostTags,
 } from "@pinto/shared";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -35,47 +36,10 @@ import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-pre
 import { getImage } from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "../workspace/store";
 import { WallPostDetailPage } from "./WallPostDetailPage";
+import { WallTagPicker } from "./WallTagPicker";
 
 const emptyFeed: WallPostFeed = { posts: [], gyms: [], grades: [] };
 const emptyWallPostTags: WallPostTags = { hold: [], move: [], type: [] };
-
-function WallTagPicker({
-  tags,
-  onChange,
-}: {
-  tags: WallPostTags;
-  onChange: (tags: WallPostTags) => void;
-}) {
-  return (
-    <div className="wall-tag-groups">
-      {WALL_POST_TAG_CATEGORIES.map((category) => {
-        const selected: readonly string[] = tags[category];
-        return (
-          <fieldset className="wall-tag-group" key={category}>
-            <legend>{WALL_POST_TAG_LABELS[category]}</legend>
-            <div className="wall-tag-options">
-              {WALL_POST_TAGS[category].map((tag) => (
-                <label className="wall-tag-option" key={tag}>
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(tag)}
-                    onChange={(event) => {
-                      const next = event.currentTarget.checked
-                        ? [...selected, tag]
-                        : selected.filter((item) => item !== tag);
-                      onChange({ ...tags, [category]: next } as WallPostTags);
-                    }}
-                  />
-                  <span>{tag}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        );
-      })}
-    </div>
-  );
-}
 
 export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
   const { data: session } = authClient.useSession();
@@ -356,7 +320,6 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
         <div className={`route-feed__grid${viewMode === "list" ? " is-list" : ""}`}>
           {feed.posts.map((post) => {
             const isOwnPost = post.userId === viewerId;
-            const hasLocalWall = isOwnPost && walls.some((wall) => wall.id === post.wallId);
             const wallName = isOwnPost
               ? (walls.find((wall) => wall.id === post.wallId)?.name ?? post.wallName)
               : post.wallName;
@@ -366,24 +329,13 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
             const postDetailsHref = `/?post=${encodeURIComponent(post.id)}`;
             return (
               <article className="route-post" key={post.id}>
-                {hasLocalWall ? (
-                  <Link
-                    className="route-post__wall-image-link"
-                    to="/walls/$wallId"
-                    params={{ wallId: post.wallId }}
-                    aria-label={`${wallName}の詳細を開く`}
-                  >
-                    {wallImage}
-                  </Link>
-                ) : (
-                  <a
-                    className="route-post__wall-image-link"
-                    href={postDetailsHref}
-                    aria-label={`${wallName}の投稿詳細を開く`}
-                  >
-                    {wallImage}
-                  </a>
-                )}
+                <a
+                  className="route-post__wall-image-link"
+                  href={postDetailsHref}
+                  aria-label={`${wallName}の投稿詳細を開く`}
+                >
+                  {wallImage}
+                </a>
                 <div className="route-post__body">
                   <div className="route-post__author">
                     {post.avatar ? (
@@ -417,24 +369,21 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     )}
                   </div>
                   <h3>
-                    {hasLocalWall ? (
-                      <Link
-                        className="route-post__wall-title-link"
-                        to="/walls/$wallId"
-                        params={{ wallId: post.wallId }}
-                      >
-                        {wallName}
-                      </Link>
-                    ) : (
-                      <a className="route-post__wall-title-link" href={postDetailsHref}>
-                        {wallName}
-                      </a>
-                    )}
+                    <a className="route-post__wall-title-link" href={postDetailsHref}>
+                      {wallName}
+                    </a>
                   </h3>
                   <p className="route-post__meta">
                     <MapPin size={13} /> {post.gymName}
+                    {[post.japaneseGrade, post.vGrade].some(Boolean) && (
+                      <span>{[post.japaneseGrade, post.vGrade].filter(Boolean).join(" · ")}</span>
+                    )}
                     <span>{post.routes.length} ルート</span>
                   </p>
+                  {post.author && <p className="route-post__description">作成者: {post.author}</p>}
+                  {post.description && (
+                    <p className="route-post__description">{post.description}</p>
+                  )}
                   {WALL_POST_TAG_CATEGORIES.some((category) => post.tags[category].length > 0) && (
                     <div className="route-post__tags">
                       {WALL_POST_TAG_CATEGORIES.flatMap((category) =>
@@ -525,6 +474,10 @@ export function DashboardPage() {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [gymName, setGymName] = useState("");
+  const [japaneseGrade, setJapaneseGrade] = useState("");
+  const [vGrade, setVGrade] = useState("");
+  const [postAuthor, setPostAuthor] = useState("");
+  const [postDescription, setPostDescription] = useState("");
   const [postTags, setPostTags] = useState<WallPostTags>(emptyWallPostTags);
   const [saving, setSaving] = useState(false);
 
@@ -555,12 +508,18 @@ export function DashboardPage() {
     setSaving(true);
     try {
       const wall = await createWall(file, name, undefined, {
+        japaneseGrade: japaneseGrade || undefined,
+        vGrade: vGrade || undefined,
         gymName: gymName.trim() || undefined,
         tags: postTags,
       });
       setDialogOpen(false);
       setFile(null);
       setName("");
+      setJapaneseGrade("");
+      setVGrade("");
+      setPostAuthor("");
+      setPostDescription("");
       setPostTags(emptyWallPostTags);
       let statusMessage = "壁を登録しました。";
       if (session?.user) {
@@ -571,6 +530,10 @@ export function DashboardPage() {
             wallId: wall.id,
             wallName: wall.name,
             gymName: wall.gymName ?? "",
+            japaneseGrade: wall.japaneseGrade ?? "",
+            vGrade: wall.vGrade ?? "",
+            author: postAuthor.trim(),
+            description: postDescription.trim(),
             routes: [],
             tags: wall.tags ?? emptyWallPostTags,
             image: await encodeWallPostPreview(image.blob),
@@ -623,6 +586,10 @@ export function DashboardPage() {
               setLoginPromptOpen(true);
               return;
             }
+            setJapaneseGrade("");
+            setVGrade("");
+            setPostAuthor("");
+            setPostDescription("");
             setGymName("");
             setDialogOpen(true);
           }}
@@ -722,6 +689,38 @@ export function DashboardPage() {
                 required
               />
             </label>
+            <div className="route-grade-fields">
+              <label className="field-label">
+                日本式グレード
+                <select
+                  className="text-input"
+                  value={japaneseGrade}
+                  onChange={(event) => setJapaneseGrade(event.currentTarget.value)}
+                >
+                  <option value="">未設定</option>
+                  {JAPANESE_CLIMBING_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label">
+                Vグレード
+                <select
+                  className="text-input"
+                  value={vGrade}
+                  onChange={(event) => setVGrade(event.currentTarget.value)}
+                >
+                  <option value="">未設定</option>
+                  {V_CLIMBING_LEVELS.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             {session?.user ? (
               <>
                 <label className="field-label">
@@ -742,6 +741,24 @@ export function DashboardPage() {
                   <span className="field-hint">
                     登録後、壁画像がタイムラインに自動投稿されます。
                   </span>
+                </label>
+                <label className="field-label">
+                  作成者 <span className="field-hint inline">任意</span>
+                  <input
+                    className="text-input"
+                    value={postAuthor}
+                    onChange={(event) => setPostAuthor(event.currentTarget.value)}
+                    maxLength={80}
+                  />
+                </label>
+                <label className="field-label">
+                  説明
+                  <textarea
+                    className="text-input textarea-input"
+                    value={postDescription}
+                    onChange={(event) => setPostDescription(event.currentTarget.value)}
+                    maxLength={500}
+                  />
                 </label>
                 <div className="field-label wall-tag-field">
                   <span>

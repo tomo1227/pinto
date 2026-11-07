@@ -12,6 +12,10 @@ test("opens another climber's wall post details and shares the post without edit
     wallId: "another-users-local-wall",
     wallName: "Competition Wall",
     gymName: "Test Climbing Gym",
+    japaneseGrade: "3級",
+    vGrade: "V4",
+    author: "Setter",
+    description: "A steep competition wall.",
     routes: [
       {
         id: "route-1",
@@ -48,14 +52,25 @@ test("opens another climber's wall post details and shares the post without edit
   });
 
   await page.goto("/");
+  await expect(page.locator(".route-post__meta").first()).toContainText("3級 · V4");
+  await expect(page.getByText("作成者: Setter")).toBeVisible();
+  await expect(page.getByText("A steep competition wall.")).toBeVisible();
   await page.getByRole("link", { name: "Competition Wallの投稿詳細を開く" }).click();
 
   await expect(page).toHaveURL(/\/\?post=shared-wall-post$/);
   await expect(page.getByRole("heading", { name: "Competition Wall" })).toBeVisible();
+  await expect(page.locator(".wall-post-detail__heading .route-post__meta")).toContainText(
+    "3級 · V4",
+  );
+  await expect(page.getByText("作成者: Setter")).toBeVisible();
+  await expect(page.getByText("A steep competition wall.")).toBeVisible();
   await expect(page.getByText("Blue Problem")).toBeVisible();
   await expect(page.getByText("Start on the lower hold.")).toBeVisible();
   await expect(page.locator("canvas.wall-canvas")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "壁を編集" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Competition Wallを編集" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "編集", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "投稿情報を編集" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "投稿を共有" }).click();
   await expect(page.locator("html")).toHaveAttribute(
@@ -74,6 +89,10 @@ test("opens an own post's details when its wall is not stored on this device", a
     wallId: "wall-from-another-device",
     wallName: "Shared Wall",
     gymName: "Test Climbing Gym",
+    japaneseGrade: "",
+    vGrade: "",
+    author: "",
+    description: "",
     routes: [],
     tags: { hold: [], move: [], type: [] },
     image: "data:image/webp;base64,AA==",
@@ -139,9 +158,43 @@ test("opens an own post's details when its wall is not stored on this device", a
   });
 
   await page.goto("/");
+  await expect(page.getByRole("link", { name: "投稿詳細・編集" })).toHaveCount(0);
   await page.getByRole("link", { name: "Shared Wallの投稿詳細を開く" }).click();
 
   await expect(page).toHaveURL(/\/\?post=local-wall-post$/);
   await expect(page.getByRole("heading", { name: "Shared Wall" })).toBeVisible();
   await expect(page.getByText("投稿を読み込んでいます...")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Shared Wallを編集" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "投稿情報を編集" })).toHaveCount(0);
+
+  await page.evaluate(async (wallId) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open("pinto-local", 2);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const transaction = database.transaction("walls", "readwrite");
+    transaction.objectStore("walls").put({
+      id: wallId,
+      name: "Shared Wall",
+      imageId: "shared-wall-image",
+      width: 100,
+      height: 100,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    await new Promise<void>((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    database.close();
+  }, post.wallId);
+  await page.reload();
+
+  const imageLink = page.getByRole("link", { name: "Shared Wallを編集" });
+  await expect(imageLink).toBeVisible();
+  await expect(page.getByRole("link", { name: "編集", exact: true })).toBeVisible();
+  await page.locator(".wall-post-detail__image-link").click();
+  await expect(page).toHaveURL(/\/walls\/wall-from-another-device$/);
 });

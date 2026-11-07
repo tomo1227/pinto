@@ -159,6 +159,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [wallSettingsSaving, setWallSettingsSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const autoDetectHolds = wall?.autoDetectHolds ?? true;
@@ -320,6 +321,11 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       if (imageObjectUrl) URL.revokeObjectURL(imageObjectUrl);
     };
   }, [wallId, loadWall, loadWalls]);
+
+  useEffect(() => {
+    if (!previewImageUrl) return;
+    return () => URL.revokeObjectURL(previewImageUrl);
+  }, [previewImageUrl]);
 
   async function saveRouteDetails() {
     if (!route) return;
@@ -533,6 +539,19 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     }
   }
 
+  async function previewRoute(routeToPreview: ClimbingRoute) {
+    if (actionBusy) return;
+    setActionBusy(true);
+    try {
+      const file = await createRouteFile(routeToPreview);
+      setPreviewImageUrl(URL.createObjectURL(file));
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : "投稿プレビューを作成できませんでした。");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
   async function shareRouteToDiscord(routeToShare: ClimbingRoute) {
     if (!wall || actionBusy) return;
     setActionBusy(true);
@@ -672,6 +691,18 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           <Redo2 size={15} /> <span>進む</span>
         </button>
         <button
+          className="button button--outline button--small editor-preview"
+          type="button"
+          aria-label="投稿をプレビュー"
+          title="投稿をプレビュー"
+          disabled={!route || actionBusy}
+          onClick={() => {
+            if (route) void previewRoute(route);
+          }}
+        >
+          <Eye size={15} /> <span>プレビュー</span>
+        </button>
+        <button
           className="button button--primary editor-save"
           type="button"
           disabled={!route}
@@ -680,6 +711,37 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           <Save size={15} /> 投稿
         </button>
       </header>
+
+      {previewImageUrl && (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            className="modal-panel editor-preview-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editor-preview-title"
+          >
+            <div className="modal-heading">
+              <div>
+                <p className="eyebrow">ROUTE PREVIEW</p>
+                <h2 id="editor-preview-title">投稿プレビュー</h2>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="プレビューを閉じる"
+                onClick={() => setPreviewImageUrl(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <img
+              className="editor-preview-modal__image"
+              src={previewImageUrl}
+              alt={`${wall.name} ${route?.name ?? ""}の投稿プレビュー`}
+            />
+          </section>
+        </div>
+      )}
 
       <div className="editor-layout">
         <section className="canvas-column">

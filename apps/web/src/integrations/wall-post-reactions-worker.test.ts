@@ -33,6 +33,13 @@ function makeEnv(postExists = true) {
             run: vi.fn().mockResolvedValue({ success: true }),
           };
         }
+        if (sql.includes("SELECT id FROM community_wall_post WHERE id = ? AND userId = ?")) {
+          return {
+            first: vi.fn().mockResolvedValue(postExists ? { id: "post-1" } : null),
+            all: vi.fn().mockResolvedValue({ results: [] }),
+            run: vi.fn().mockResolvedValue({ success: true }),
+          };
+        }
         if (sql.includes("SELECT COUNT(*) AS likeCount")) {
           return {
             first: vi.fn().mockResolvedValue({ likeCount: 3 }),
@@ -115,6 +122,87 @@ describe("wall post reactions", () => {
   });
 });
 
+describe("wall post edits", () => {
+  it("updates post metadata only for its owner", async () => {
+    const { env, statements, boundValues } = makeEnv();
+    const response = await routePostRoutes.request(
+      "/post-1",
+      {
+        method: "PUT",
+        headers: originHeaders,
+        body: JSON.stringify({
+          wallName: "Updated wall",
+          gymName: "Updated gym",
+          japaneseGrade: "3級",
+          vGrade: "V4",
+          author: "Setter",
+          description: "Updated description",
+          tags: { hold: ["カチ"], move: [], type: ["ルーフ"] },
+        }),
+      },
+      env,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ updated: true });
+    const updateIndex = statements.findIndex((sql) => sql.includes("UPDATE community_wall_post"));
+    expect(boundValues[updateIndex]).toEqual(
+      expect.arrayContaining([
+        "Updated wall",
+        "Updated gym",
+        "Updated description",
+        "post-1",
+        "viewer-1",
+      ]),
+    );
+
+    const notOwner = makeEnv(false);
+    const forbiddenUpdate = await routePostRoutes.request(
+      "/post-1",
+      {
+        method: "PUT",
+        headers: originHeaders,
+        body: JSON.stringify({
+          wallName: "Updated wall",
+          gymName: "Updated gym",
+          japaneseGrade: "",
+          vGrade: "",
+          author: "",
+          description: "",
+          tags: { hold: [], move: [], type: [] },
+        }),
+      },
+      notOwner.env,
+    );
+    expect(forbiddenUpdate.status).toBe(404);
+    expect(notOwner.statements).toHaveLength(1);
+  });
+
+  it("rejects invalid metadata without updating the post", async () => {
+    const { env, statements } = makeEnv();
+    const response = await routePostRoutes.request(
+      "/post-1",
+      {
+        method: "PUT",
+        headers: originHeaders,
+        body: JSON.stringify({
+          wallName: "",
+          gymName: "Updated gym",
+          japaneseGrade: "",
+          vGrade: "",
+          author: "",
+          description: "",
+          tags: { hold: [], move: [], type: [] },
+        }),
+      },
+      env,
+    );
+
+    expect(response.status).toBe(400);
+    expect(statements.some((sql) => sql.includes("UPDATE community_wall_post"))).toBe(false);
+  });
+});
+
 describe("wall post tags", () => {
   it("accepts PNG previews when the browser falls back from WebP encoding", async () => {
     const { env } = makeEnv();
@@ -137,7 +225,7 @@ describe("wall post tags", () => {
     expect(response.status).toBe(200);
   });
 
-  it("stores allowed tags and uses category filters in the feed query", async () => {
+  it("stores post metadata and allowed tags and uses category filters in the feed query", async () => {
     const { env, statements, boundValues } = makeEnv();
     const tags = { hold: ["カチ"], move: ["ヒールフック", "クロス"], type: ["ルーフ"] };
     const response = await routePostRoutes.request(
@@ -149,6 +237,10 @@ describe("wall post tags", () => {
           wallId: "wall-1",
           wallName: "壁",
           gymName: "ジム",
+          japaneseGrade: "3級",
+          vGrade: "V4",
+          author: "Setter",
+          description: "Competition wall",
           routes: [],
           tags,
           image: "data:image/webp;base64,AAAA",
@@ -156,12 +248,22 @@ describe("wall post tags", () => {
       },
       env,
     );
-
     expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      post: {
+        japaneseGrade: "3級",
+        vGrade: "V4",
+        author: "Setter",
+        description: "Competition wall",
+      },
+    });
     const insertIndex = statements.findIndex((sql) =>
       sql.includes("INSERT INTO community_wall_post"),
     );
     expect(boundValues[insertIndex]).toContain(JSON.stringify(tags));
+    expect(boundValues[insertIndex]).toEqual(
+      expect.arrayContaining(["3級", "V4", "Setter", "Competition wall"]),
+    );
 
     const feedResponse = await routePostRoutes.request(
       "/?scope=all&hold=カチ&hold=ガバ&type=スラブ",
@@ -173,6 +275,29 @@ describe("wall post tags", () => {
     expect(statements[feedIndex]).toContain("json_each(post.tags, '$.hold')");
     expect(statements[feedIndex]).toContain("json_each(post.tags, '$.type')");
     expect(boundValues[feedIndex]).toEqual(expect.arrayContaining(["カチ", "ガバ", "スラブ"]));
+  });
+
+  it("rejects unsupported wall grades", async () => {
+    const { env, statements } = makeEnv();
+    const response = await routePostRoutes.request(
+      "/",
+      {
+        method: "POST",
+        headers: originHeaders,
+        body: JSON.stringify({
+          wallId: "wall-1",
+          wallName: "壁",
+          gymName: "ジム",
+          vGrade: "V99",
+          routes: [],
+          image: "data:image/webp;base64,AAAA",
+        }),
+      },
+      env,
+    );
+
+    expect(response.status).toBe(400);
+    expect(statements.some((sql) => sql.includes("INSERT INTO community_wall_post"))).toBe(false);
   });
 
   it("filters the feed to a profile handle", async () => {

@@ -263,6 +263,11 @@ test("edits selected circle, text and line styles and persists them on desktop a
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Style wallのPNGを保存" }).click();
   expect((await download).suggestedFilename()).toBe("Style wall.png");
+  await page.getByRole("button", { name: "投稿をプレビュー" }).click();
+  const previewDialog = page.getByRole("dialog", { name: "投稿プレビュー" });
+  await expect(previewDialog).toBeVisible();
+  await expect(previewDialog.locator("img")).toHaveAttribute("src", /^blob:/);
+  await previewDialog.getByRole("button", { name: "プレビューを閉じる" }).click();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();

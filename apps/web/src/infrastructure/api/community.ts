@@ -61,6 +61,10 @@ export type WallPost = {
   wallId: string;
   wallName: string;
   gymName: string;
+  japaneseGrade: string;
+  vGrade: string;
+  author: string;
+  description: string;
   routes: WallPostRoute[];
   tags: WallPostTags;
   image: string;
@@ -73,6 +77,12 @@ export type WallPost = {
 export type WallPostInput = Pick<
   WallPost,
   "wallId" | "wallName" | "gymName" | "routes" | "tags" | "image"
+> &
+  Partial<Pick<WallPost, "japaneseGrade" | "vGrade" | "author" | "description">>;
+
+export type WallPostUpdateInput = Pick<
+  WallPost,
+  "wallName" | "gymName" | "japaneseGrade" | "vGrade" | "author" | "description" | "tags"
 >;
 
 export type WallPostFeed = {
@@ -165,9 +175,29 @@ export async function getWallPost(id: string, authenticated = false) {
 
 export async function publishWallPost(input: WallPostInput) {
   return requestJson<{
-    post: Pick<WallPost, "id" | "wallId" | "wallName" | "gymName" | "routes" | "tags">;
+    post: Pick<
+      WallPost,
+      | "id"
+      | "wallId"
+      | "wallName"
+      | "gymName"
+      | "japaneseGrade"
+      | "vGrade"
+      | "author"
+      | "description"
+      | "routes"
+      | "tags"
+    >;
   }>("/api/community/posts", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateWallPost(id: string, input: WallPostUpdateInput) {
+  return requestJson<{ updated: boolean }>(`/api/community/posts/${encodeURIComponent(id)}`, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });

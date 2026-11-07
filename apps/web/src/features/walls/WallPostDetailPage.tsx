@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Bookmark, Heart, MapPin, Share2, UserRound } from "lucide-react";
+import { ArrowLeft, Bookmark, Heart, MapPin, Pencil, Share2, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { authClient } from "../../infrastructure/api/auth";
 import {
@@ -8,14 +8,19 @@ import {
   setWallPostSaved,
   type WallPost,
 } from "../../infrastructure/api/community";
+import { getWall } from "../../infrastructure/storage/database";
 
 export function WallPostDetailPage({ postId }: { postId: string }) {
   const { data: session } = authClient.useSession();
   const [post, setPost] = useState<WallPost | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasLocalWall, setHasLocalWall] = useState(false);
   const [pendingAction, setPendingAction] = useState<"like" | "save" | null>(null);
   const [error, setError] = useState("");
   const [shareNotice, setShareNotice] = useState("");
+  const postWallId = post?.wallId;
+  const postUserId = post?.userId;
+  const viewerUserId = session?.user?.id;
 
   useEffect(() => {
     let active = true;
@@ -38,6 +43,30 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
       active = false;
     };
   }, [postId, session?.user]);
+
+  useEffect(() => {
+    if (!postWallId || postUserId !== viewerUserId) {
+      setHasLocalWall(false);
+      return;
+    }
+
+    let active = true;
+    void getWall(postWallId)
+      .then((wall) => {
+        if (active) setHasLocalWall(Boolean(wall));
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setHasLocalWall(false);
+          setError(
+            reason instanceof Error ? reason.message : "ローカルの壁を確認できませんでした。",
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [postWallId, postUserId, viewerUserId]);
 
   async function toggleLike() {
     if (!post || !session?.user) return;
@@ -114,11 +143,26 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
         <p className="empty-copy">投稿が見つからないか、閲覧できません。</p>
       ) : (
         <article className="wall-post-detail">
-          <img
-            className="wall-post-detail__image"
-            src={post.image}
-            alt={`${post.wallName}の壁画像`}
-          />
+          {session?.user?.id === post.userId && hasLocalWall ? (
+            <Link
+              className="wall-post-detail__image-link"
+              to="/walls/$wallId"
+              params={{ wallId: post.wallId }}
+              aria-label={`${post.wallName}を編集`}
+            >
+              <img
+                className="wall-post-detail__image"
+                src={post.image}
+                alt={`${post.wallName}の壁画像`}
+              />
+            </Link>
+          ) : (
+            <img
+              className="wall-post-detail__image"
+              src={post.image}
+              alt={`${post.wallName}の壁画像`}
+            />
+          )}
           <div className="wall-post-detail__body">
             <header className="wall-post-detail__heading">
               <div className="route-post__author">
@@ -142,8 +186,13 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
               <h1 className="display-title">{post.wallName}</h1>
               <p className="route-post__meta">
                 <MapPin size={14} /> {post.gymName}
+                {[post.japaneseGrade, post.vGrade].some(Boolean) && (
+                  <span>{[post.japaneseGrade, post.vGrade].filter(Boolean).join(" · ")}</span>
+                )}
                 <span>{post.routes.length} ルート</span>
               </p>
+              {post.author && <p className="route-post__description">作成者: {post.author}</p>}
+              {post.description && <p className="route-post__description">{post.description}</p>}
               <time dateTime={new Date(post.createdAt).toISOString()}>
                 {new Intl.DateTimeFormat("ja-JP", {
                   dateStyle: "medium",
@@ -194,6 +243,15 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
             </section>
 
             <div className="wall-post-detail__actions">
+              {session?.user?.id === post.userId && hasLocalWall && (
+                <Link
+                  className="button button--primary"
+                  to="/walls/$wallId"
+                  params={{ wallId: post.wallId }}
+                >
+                  <Pencil size={15} /> 編集
+                </Link>
+              )}
               <button
                 className={`route-post__action ${post.likedByMe ? "is-active" : ""}`}
                 type="button"
