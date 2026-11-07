@@ -423,7 +423,8 @@ a {
 .community-page {
   padding: 58px 0 90px;
 }
-.gym-directory-page {
+.gym-directory-page,
+.tools-page {
   padding: 58px 0 90px;
 }
 .gym-directory-heading {
@@ -2757,7 +2758,8 @@ a {
   .community-page {
     padding-top: 38px;
   }
-  .gym-directory-page {
+  .gym-directory-page,
+  .tools-page {
     padding-top: 38px;
   }
   .gym-directory-controls {

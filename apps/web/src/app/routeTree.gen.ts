@@ -16,6 +16,7 @@ import { Route as GymsRouteImport } from './routes/gyms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as CommunityHandleRouteImport } from './routes/community.$handle'
 import { Route as WallsWallIdRouteImport } from './routes/walls.$wallId'
 
@@ -54,6 +55,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsRoute = ToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommunityHandleRoute = CommunityHandleRouteImport.update({
   id: '/$handle',
   path: '/$handle',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/tools': typeof ToolsRoute
   '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/tools': typeof ToolsRoute
   '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/tools': typeof ToolsRoute
   '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/settings'
     | '/terms'
+    | '/tools'
     | '/community/$handle'
     | '/walls/$wallId'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/settings'
     | '/terms'
+    | '/tools'
     | '/community/$handle'
     | '/walls/$wallId'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/settings'
     | '/terms'
+    | '/tools'
     | '/community/$handle'
     | '/walls/$wallId'
   fileRoutesById: FileRoutesById
@@ -143,6 +155,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
+  ToolsRoute: typeof ToolsRoute
   WallsWallIdRoute: typeof WallsWallIdRoute
 }
 
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools': {
+      id: '/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof ToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/community/$handle': {
       id: '/community/$handle'
       path: '/$handle'
@@ -234,6 +254,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
+  ToolsRoute: ToolsRoute,
   WallsWallIdRoute: WallsWallIdRoute,
 }
 export const routeTree = rootRouteImport

@@ -368,6 +368,9 @@ function RootLayout() {
           <Link to="/gyms" activeProps={{ className: "is-active" }}>
             ジム
           </Link>
+          <Link to="/tools" activeProps={{ className: "is-active" }}>
+            ツール
+          </Link>
         </nav>
         <div className="header-auth">
           {session?.user ? (
