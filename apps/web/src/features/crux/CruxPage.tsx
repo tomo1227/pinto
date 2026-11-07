@@ -23,12 +23,16 @@ import {
   defaultCruxDisplayOptions,
   parseCruxDisplayOptions,
 } from "./display-options";
+import { Pose3DPreview } from "./Pose3DPreview";
 import {
   calculatePoseMetrics,
   createPoseTimestampGenerator,
+  defaultPoseConfidenceThresholds,
   getSynchronizedTime,
   isJointPartVisible,
   minimumLandmarkVisibility,
+  type PoseConfidenceThresholds,
+  poseConnections,
   poseJointGroups,
   poseJointLandmarks,
   poseLandmarkerModelUrl,
@@ -37,30 +41,11 @@ import {
 
 const visionWasmUrl = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm";
 const displayOptionsStorageKey = "pinto-crux-display-options";
-const poseConnections = [
-  [11, 12],
-  [11, 13],
-  [13, 15],
-  [15, 17],
-  [15, 19],
-  [15, 21],
-  [12, 14],
-  [14, 16],
-  [16, 18],
-  [16, 20],
-  [16, 22],
-  [11, 23],
-  [12, 24],
-  [23, 24],
-  [23, 25],
-  [25, 27],
-  [27, 29],
-  [27, 31],
-  [24, 26],
-  [26, 28],
-  [28, 30],
-  [28, 32],
-] as const;
+const poseConfidenceControls: { key: keyof PoseConfidenceThresholds; label: string }[] = [
+  { key: "minPoseDetectionConfidence", label: "人物検出" },
+  { key: "minPosePresenceConfidence", label: "人物の存在" },
+  { key: "minTrackingConfidence", label: "追跡" },
+];
 
 function errorText(reason: unknown, fallback: string) {
   return reason instanceof Error ? reason.message : fallback;
@@ -106,6 +91,7 @@ function PoseVideoPlayer({
 }: PoseVideoPlayerProps) {
   const [landmarks, setLandmarks] = useState<NormalizedLandmark[] | null>(null);
   const [worldLandmarks, setWorldLandmarks] = useState<Landmark[] | null>(null);
+  const [show3DModel, setShow3DModel] = useState(false);
   const [aspectRatio, setAspectRatio] = useState("16 / 9");
   const [error, setError] = useState("");
   const [videoDimensions, setVideoDimensions] = useState({ width: 1, height: 1 });
@@ -124,6 +110,8 @@ function PoseVideoPlayer({
       setWorldLandmarks(result.worldLandmarks[0] ?? null);
       setError("");
     } catch (reason) {
+      setLandmarks(null);
+      setWorldLandmarks(null);
       setError(errorText(reason, "姿勢を解析できませんでした。"));
     }
   }, [poseLandmarker, videoRef]);
@@ -273,6 +261,21 @@ function PoseVideoPlayer({
           <span className="crux-player__status">人物を検出できません</span>
         )}
       </div>
+      {poseLandmarker && (
+        <>
+          <button
+            className="button button--outline crux-player__3d-toggle"
+            type="button"
+            aria-expanded={show3DModel}
+            onClick={() => setShow3DModel((shown) => !shown)}
+          >
+            {show3DModel ? "3Dモデルを隠す" : "3Dモデルを表示"}
+          </button>
+          {show3DModel && (
+            <Pose3DPreview landmarks={worldLandmarks} displayOptions={displayOptions} />
+          )}
+        </>
+      )}
       {showStartPosition && (
         <label className="crux-start-position">
           <span>
@@ -346,6 +349,9 @@ export function CruxPage() {
   const [displayOptions, setDisplayOptions] = useState(defaultCruxDisplayOptions);
   const [displayOptionsLoaded, setDisplayOptionsLoaded] = useState(false);
   const [displayOptionsError, setDisplayOptionsError] = useState("");
+  const [poseConfidenceThresholds, setPoseConfidenceThresholds] = useState(
+    defaultPoseConfidenceThresholds,
+  );
   const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
   const [comparisonLandmarker, setComparisonLandmarker] = useState<PoseLandmarker | null>(null);
@@ -555,6 +561,7 @@ export function CruxPage() {
         PoseLandmarker.createFromOptions(vision, {
           baseOptions: { modelAssetPath: poseLandmarkerModelUrl, delegate },
           ...poseLandmarkerOptions,
+          ...poseConfidenceThresholds,
         });
       const createLandmarker = async () => {
         try {
@@ -694,10 +701,10 @@ export function CruxPage() {
         <Link className="back-link" to="/tools">
           <ArrowLeft size={15} aria-hidden="true" /> ツール一覧
         </Link>
-        <p className="eyebrow">CRUX · 2D VIDEO ANALYSIS</p>
+        <p className="eyebrow">CRUX · POSE ANALYSIS</p>
         <h1 className="display-title">Crux</h1>
         <p className="intro-copy">
-          クライミング動画を端末内で2D解析。姿勢の確認と動画比較ができます。
+          クライミング動画を端末内で解析。2D骨格と回転できる3D姿勢を確認し、動画を比較できます。
         </p>
       </header>
 
@@ -832,6 +839,34 @@ export function CruxPage() {
               <details className="crux-display-settings">
                 <summary>表示設定</summary>
                 <div className="crux-display-settings__content">
+                  <fieldset className="crux-display-settings__confidence">
+                    <legend>姿勢推定の信頼度</legend>
+                    <p>
+                      低信頼の検出を除外します。値を上げると誤検出は減りますが、人物を検出しにくくなります。解析停止中に変更してください。
+                    </p>
+                    {poseConfidenceControls.map(({ key, label }) => (
+                      <label key={key}>
+                        {label}
+                        <span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={poseConfidenceThresholds[key]}
+                            disabled={analysisStatus !== "idle"}
+                            onChange={(event) =>
+                              setPoseConfidenceThresholds((current) => ({
+                                ...current,
+                                [key]: Number(event.currentTarget.value),
+                              }))
+                            }
+                          />
+                          <output>{poseConfidenceThresholds[key].toFixed(2)}</output>
+                        </span>
+                      </label>
+                    ))}
+                  </fieldset>
                   <fieldset className="crux-display-settings__visibility">
                     <legend>表示 / 非表示</legend>
                     <label>
@@ -1083,7 +1118,7 @@ export function CruxPage() {
             </section>
           )}
           <p className="crux-footnote">
-            関節角度はMediaPipeが推定した3Dランドマークから算出します。胴体中心は2Dの目安で、実際の重心ではありません。LiDAR・壁の距離計測は使用しません。
+            3D姿勢と関節角度はMediaPipeの単眼推定です。実寸・壁までの距離・実際の重心を示すものではありません。LiDAR計測は使用しません。
           </p>
         </section>
       </div>

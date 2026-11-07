@@ -9,6 +9,226 @@ export const poseLandmarkerOptions = {
   outputSegmentationMasks: false,
 } satisfies PoseLandmarkerOptions;
 export const minimumLandmarkVisibility = 0.35;
+export type PoseConfidenceThresholds = {
+  minPoseDetectionConfidence: number;
+  minPosePresenceConfidence: number;
+  minTrackingConfidence: number;
+};
+export const defaultPoseConfidenceThresholds: PoseConfidenceThresholds = {
+  minPoseDetectionConfidence: 0.5,
+  minPosePresenceConfidence: 0.5,
+  minTrackingConfidence: 0.5,
+};
+export const poseConnections = [
+  [11, 12],
+  [11, 13],
+  [13, 15],
+  [15, 17],
+  [15, 19],
+  [15, 21],
+  [12, 14],
+  [14, 16],
+  [16, 18],
+  [16, 20],
+  [16, 22],
+  [11, 23],
+  [12, 24],
+  [23, 24],
+  [23, 25],
+  [25, 27],
+  [27, 29],
+  [27, 31],
+  [24, 26],
+  [26, 28],
+  [28, 30],
+] as const;
+
+export type Pose3DRotation = { yaw: number; pitch: number };
+export const pose3DInitialRotation: Pose3DRotation = {
+  yaw: Math.PI / 18,
+  pitch: Math.PI / 18,
+};
+export type ProjectedPoseLandmark3D = { x: number; y: number; depth: number } | null;
+export type PosePlotCoordinate3D = { x: number; y: number; z: number };
+
+type Point2D = { x: number; y: number };
+type AxisName3D = "X" | "Y" | "Z";
+const posePlotCoordinateMargin = 0.4;
+
+export function positivePosePlotCoordinates3D(
+  landmarks: Landmark[],
+): (PosePlotCoordinate3D | null)[] {
+  const coordinates = landmarks.map((landmark) =>
+    [landmark.x, landmark.y, landmark.z].every(Number.isFinite)
+      ? { x: -landmark.z, y: landmark.x, z: -landmark.y }
+      : null,
+  );
+  const valid = coordinates.filter((point) => point !== null);
+  if (valid.length === 0) return coordinates;
+  const minimum = valid.reduce(
+    (result, point) => ({
+      x: Math.min(result.x, point.x),
+      y: Math.min(result.y, point.y),
+      z: Math.min(result.z, point.z),
+    }),
+    { x: Infinity, y: Infinity, z: Infinity },
+  );
+  const offset = {
+    x: posePlotCoordinateMargin - minimum.x,
+    y: posePlotCoordinateMargin - minimum.y,
+    z: posePlotCoordinateMargin - minimum.z,
+  };
+  return coordinates.map((point) =>
+    point ? { x: point.x + offset.x, y: point.y + offset.y, z: point.z + offset.z } : null,
+  );
+}
+
+export type AxisProjection3D = {
+  name: AxisName3D;
+  start: Point2D;
+  end: Point2D;
+  ticks: { value: number; point: Point2D }[];
+};
+
+export type PoseSceneProjection3D = {
+  landmarks: ProjectedPoseLandmark3D[];
+  axes: AxisProjection3D[];
+  box: Point2D[];
+  axisLimit: number;
+};
+
+export function projectPoseScene3D(
+  landmarks: Landmark[],
+  width: number,
+  height: number,
+  rotation: Pose3DRotation,
+  zoom = 1,
+): PoseSceneProjection3D {
+  const empty = (): PoseSceneProjection3D => ({
+    landmarks: landmarks.map(() => null),
+    axes: [],
+    box: [],
+    axisLimit: 0,
+  });
+  if (
+    !Number.isFinite(width) ||
+    !Number.isFinite(height) ||
+    width <= 0 ||
+    height <= 0 ||
+    !Number.isFinite(rotation.yaw) ||
+    !Number.isFinite(rotation.pitch) ||
+    !Number.isFinite(zoom) ||
+    zoom <= 0
+  )
+    return empty();
+
+  const cosAzimuth = Math.cos(rotation.yaw);
+  const sinAzimuth = Math.sin(rotation.yaw);
+  const cosElevation = Math.cos(rotation.pitch);
+  const sinElevation = Math.sin(rotation.pitch);
+  const rotatePlotPoint = (point: { x: number; y: number; z: number }) => {
+    return {
+      x: -point.x * sinAzimuth + point.y * cosAzimuth,
+      y:
+        -point.x * sinElevation * cosAzimuth -
+        point.y * sinElevation * sinAzimuth +
+        point.z * cosElevation,
+      depth:
+        point.x * cosElevation * cosAzimuth +
+        point.y * cosElevation * sinAzimuth +
+        point.z * sinElevation,
+    };
+  };
+  const plotLandmarks = positivePosePlotCoordinates3D(landmarks).map((point, index) => {
+    const visibility = landmarks[index].visibility ?? 1;
+    if (!Number.isFinite(visibility) || visibility < minimumLandmarkVisibility || !point) {
+      return null;
+    }
+    return point;
+  });
+  const visiblePlotPoints = plotLandmarks.filter((point) => point !== null);
+  if (visiblePlotPoints.length === 0) return empty();
+  const visible = visiblePlotPoints.map(rotatePlotPoint);
+
+  const coordinateLimit = Math.max(0.25, ...visiblePlotPoints.flatMap(({ x, y, z }) => [x, y, z]));
+  const axisLimit = Math.ceil(coordinateLimit * 1.1 * 4) / 4;
+  const axisDefinitions: {
+    name: AxisName3D;
+    direction: "x" | "y" | "z";
+  }[] = [
+    { name: "X", direction: "x" },
+    { name: "Y", direction: "y" },
+    { name: "Z", direction: "z" },
+  ];
+  const axisCoordinates = [0, axisLimit / 4, axisLimit / 2, (axisLimit * 3) / 4, axisLimit];
+  const rawAxes = axisDefinitions.map(({ name, direction }) => {
+    const pointAt = (value: number) =>
+      rotatePlotPoint({
+        x: direction === "x" ? value : 0,
+        y: direction === "y" ? value : 0,
+        z: direction === "z" ? value : 0,
+      });
+    return {
+      name,
+      start: pointAt(0),
+      end: pointAt(axisLimit),
+      ticks: axisCoordinates.map((value) => ({ value, point: pointAt(value) })),
+    };
+  });
+  const rawBox = Array.from({ length: 8 }, (_, index) =>
+    rotatePlotPoint({
+      x: index & 1 ? axisLimit : 0,
+      y: index & 2 ? axisLimit : 0,
+      z: index & 4 ? axisLimit : 0,
+    }),
+  );
+  const fitPoints = [...visible, ...rawBox];
+  const bounds = fitPoints.reduce(
+    (result, point) => ({
+      minX: Math.min(result.minX, point.x),
+      maxX: Math.max(result.maxX, point.x),
+      minY: Math.min(result.minY, point.y),
+      maxY: Math.max(result.maxY, point.y),
+    }),
+    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity },
+  );
+  const scale =
+    Math.min(
+      (width * 0.72) / Math.max(bounds.maxX - bounds.minX, 0.001),
+      (height * 0.72) / Math.max(bounds.maxY - bounds.minY, 0.001),
+    ) * zoom;
+  const centerX = (bounds.minX + bounds.maxX) / 2;
+  const centerY = (bounds.minY + bounds.maxY) / 2;
+  const project = (point: { x: number; y: number; depth: number }): Point2D => ({
+    x: width / 2 + (point.x - centerX) * scale,
+    y: height / 2 - (point.y - centerY) * scale,
+  });
+  const projectedAxes = rawAxes.map((axis) => ({
+    name: axis.name,
+    start: project(axis.start),
+    end: project(axis.end),
+    ticks: axis.ticks.map(({ value, point }) => ({ value, point: project(point) })),
+  }));
+  return {
+    landmarks: plotLandmarks.map((point) => {
+      if (!point) return null;
+      const transformed = rotatePlotPoint(point);
+      return { ...project(transformed), depth: transformed.depth };
+    }),
+    axes: projectedAxes,
+    box: rawBox.map(project),
+    axisLimit,
+  };
+}
+
+export function projectPoseLandmarks3D(
+  landmarks: Landmark[],
+  width: number,
+  height: number,
+  rotation: Pose3DRotation,
+): ProjectedPoseLandmark3D[] {
+  return projectPoseScene3D(landmarks, width, height, rotation).landmarks;
+}
 
 export type PoseJointGroup = "head" | "torso" | "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
 type PoseJointGroupOption =

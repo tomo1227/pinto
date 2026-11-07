@@ -680,6 +680,41 @@ a {
   color: var(--muted);
   font-size: 10px;
 }
+.crux-display-settings__content .crux-display-settings__confidence {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.crux-display-settings__confidence > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.crux-display-settings__confidence label {
+  display: grid;
+  grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 10px;
+}
+.crux-display-settings__confidence label > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.crux-display-settings__confidence input[type="range"] {
+  min-width: 0;
+  flex: 1;
+  accent-color: var(--moss);
+}
+.crux-display-settings__confidence output {
+  width: 34px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
 .crux-display-settings__visibility label {
   display: inline-flex;
   align-items: center;
@@ -854,6 +889,95 @@ a {
   color: #fff;
   background: #101312bd;
   font-size: 10px;
+}
+.crux-player__3d-toggle {
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+.crux-3d-preview {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.crux-3d-preview__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 11px;
+}
+.crux-3d-preview__heading .button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.crux-3d-preview__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #101312;
+  cursor: grab;
+  touch-action: none;
+}
+.crux-3d-preview__canvas:active {
+  cursor: grabbing;
+}
+.crux-3d-preview__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.crux-3d-preview__coordinates {
+  min-width: 0;
+}
+.crux-3d-preview__coordinates > summary {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crux-3d-preview__coordinates > p {
+  margin: 5px 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+.crux-3d-preview__table-scroll {
+  max-height: 220px;
+  overflow: auto;
+}
+.crux-3d-preview__coordinates table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.crux-3d-preview__coordinates th,
+.crux-3d-preview__coordinates td {
+  padding: 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.crux-3d-preview__coordinates thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--muted);
+}
+.crux-3d-preview__coordinates th:first-child {
+  text-align: left;
+}
+.crux-3d-preview__coordinates tbody th {
+  color: var(--ink);
+  font-weight: 500;
+}
+.crux-3d-preview__coordinates .crux-3d-preview__low-confidence {
+  opacity: 0.5;
 }
 .crux-metrics {
   display: grid;
