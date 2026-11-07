@@ -11,6 +11,7 @@ import {
   ImagePlus,
   LayoutGrid,
   List,
+  LogIn,
   MapPin,
   Plus,
   RotateCcw,
@@ -502,6 +503,7 @@ export function DashboardPage() {
   const notify = useWorkspaceStore((state) => state.notify);
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [gymName, setGymName] = useState("");
@@ -526,6 +528,11 @@ export function DashboardPage() {
 
   async function submitWall(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!session?.user) {
+      setDialogOpen(false);
+      setLoginPromptOpen(true);
+      return;
+    }
     if (!file) return;
     setSaving(true);
     try {
@@ -566,6 +573,18 @@ export function DashboardPage() {
     }
   }
 
+  async function signInWithGoogle() {
+    try {
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: window.location.href,
+      });
+      if (result.error) notify(result.error.message ?? "Googleログインに失敗しました。");
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : "Googleログインに失敗しました。");
+    }
+  }
+
   return (
     <main className="page-shell dashboard-page">
       <section className="dashboard-heading">
@@ -580,6 +599,10 @@ export function DashboardPage() {
           className="button button--primary"
           type="button"
           onClick={() => {
+            if (!session?.user) {
+              setLoginPromptOpen(true);
+              return;
+            }
             setGymName("");
             setDialogOpen(true);
           }}
@@ -589,6 +612,49 @@ export function DashboardPage() {
       </section>
 
       <WallFeed />
+
+      {loginPromptOpen && (
+        <div className="modal-backdrop" role="presentation">
+          <section
+            className="modal-panel modal-panel--compact"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="wall-login-title"
+          >
+            <div className="modal-heading">
+              <div>
+                <p className="eyebrow">PINTO ACCOUNT</p>
+                <h2 id="wall-login-title">ログインが必要です</h2>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="閉じる"
+                onClick={() => setLoginPromptOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <p className="intro-copy">壁を追加するにはログインしてください。</p>
+            <div className="modal-actions">
+              <button
+                className="button button--quiet"
+                type="button"
+                onClick={() => setLoginPromptOpen(false)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="button button--primary"
+                type="button"
+                onClick={() => void signInWithGoogle()}
+              >
+                <LogIn size={16} /> Googleでログイン
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {dialogOpen && (
         <div className="modal-backdrop" role="presentation">

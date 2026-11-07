@@ -1,6 +1,68 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+
+async function authenticateAsE2eUser(page: Page) {
+  const now = new Date().toISOString();
+  await page.route("**/api/auth/get-session**", (route) =>
+    route.fulfill({
+      json: {
+        session: {
+          id: "e2e-session",
+          userId: "e2e-user",
+          token: "e2e-token",
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        user: {
+          id: "e2e-user",
+          name: "E2E Climber",
+          email: "e2e@example.com",
+          emailVerified: true,
+          image: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/community/profile", (route) =>
+    route.fulfill({
+      json: {
+        profile: {
+          id: "e2e-user",
+          handle: "e2e_climber",
+          username: "E2E Climber",
+          bio: "",
+          climbingLevel: "",
+          japaneseClimbingLevel: "",
+          vClimbingLevel: "",
+          homeGym: "",
+          homeGyms: [],
+          residence: "",
+          age: null,
+          avatar: null,
+          isPrivate: false,
+          followerCount: 0,
+          followingCount: 0,
+        },
+      },
+    }),
+  );
+}
+
+test("asks logged-out visitors to sign in before adding a wall", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "壁を追加" }).click();
+  const prompt = page.getByRole("dialog", { name: "ログインが必要です" });
+  await expect(prompt).toBeVisible();
+  await expect(prompt.getByText("壁を追加するにはログインしてください。")).toBeVisible();
+  await expect(prompt.getByRole("button", { name: "Googleでログイン" })).toBeVisible();
+  await prompt.getByRole("button", { name: "キャンセル" }).click();
+  await expect(prompt).toHaveCount(0);
+});
 
 test("deletes holds by keyboard and touch drag", async ({ page }) => {
+  await authenticateAsE2eUser(page);
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "canShare", {
       configurable: true,
@@ -43,6 +105,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
     buffer: Buffer.from(imageBase64, "base64"),
   });
   await page.getByLabel("壁の名前").fill("E2E wall");
+  await page.getByLabel(/ジム名/).selectOption({ index: 1 });
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
   await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
@@ -168,6 +231,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
 });
 
 test("closes the mobile editor panel with a downward swipe", async ({ page }) => {
+  await authenticateAsE2eUser(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const imageBase64 = await page.evaluate(() => {
@@ -187,6 +251,7 @@ test("closes the mobile editor panel with a downward swipe", async ({ page }) =>
     buffer: Buffer.from(imageBase64, "base64"),
   });
   await page.getByLabel("壁の名前").fill("Mobile panel");
+  await page.getByLabel(/ジム名/).selectOption({ index: 1 });
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
 
@@ -213,6 +278,7 @@ test("serves the local Worker API through the development proxy", async ({ reque
 });
 
 test("reopens selected route text for editing instead of duplicating it", async ({ page }) => {
+  await authenticateAsE2eUser(page);
   await page.goto("/");
   const imageBase64 = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
@@ -231,6 +297,7 @@ test("reopens selected route text for editing instead of duplicating it", async 
     buffer: Buffer.from(imageBase64, "base64"),
   });
   await page.getByLabel("壁の名前").fill("Text editing wall");
+  await page.getByLabel(/ジム名/).selectOption({ index: 1 });
   await page.getByRole("button", { name: "壁を作成" }).click();
   await page.getByRole("button", { name: "ルートを作成" }).click();
   await page.locator(".modal-panel").getByLabel("ルート名").fill("Text editing route");
