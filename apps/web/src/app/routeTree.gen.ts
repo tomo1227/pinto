@@ -18,6 +18,7 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as CommunityHandleRouteImport } from './routes/community.$handle'
+import { Route as ToolsCruxRouteImport } from './routes/tools.crux'
 import { Route as WallsWallIdRouteImport } from './routes/walls.$wallId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +66,11 @@ const CommunityHandleRoute = CommunityHandleRouteImport.update({
   path: '/$handle',
   getParentRoute: () => CommunityRoute,
 } as any)
+const ToolsCruxRoute = ToolsCruxRouteImport.update({
+  id: '/crux',
+  path: '/crux',
+  getParentRoute: () => ToolsRoute,
+} as any)
 const WallsWallIdRoute = WallsWallIdRouteImport.update({
   id: '/walls/$wallId',
   path: '/walls/$wallId',
@@ -79,8 +85,9 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
-  '/tools': typeof ToolsRoute
+  '/tools': typeof ToolsRouteWithChildren
   '/community/$handle': typeof CommunityHandleRoute
+  '/tools/crux': typeof ToolsCruxRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRoutesByTo {
@@ -91,8 +98,9 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
-  '/tools': typeof ToolsRoute
+  '/tools': typeof ToolsRouteWithChildren
   '/community/$handle': typeof CommunityHandleRoute
+  '/tools/crux': typeof ToolsCruxRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRoutesById {
@@ -104,8 +112,9 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
-  '/tools': typeof ToolsRoute
+  '/tools': typeof ToolsRouteWithChildren
   '/community/$handle': typeof CommunityHandleRoute
+  '/tools/crux': typeof ToolsCruxRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tools'
     | '/community/$handle'
+    | '/tools/crux'
     | '/walls/$wallId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tools'
     | '/community/$handle'
+    | '/tools/crux'
     | '/walls/$wallId'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/tools'
     | '/community/$handle'
+    | '/tools/crux'
     | '/walls/$wallId'
   fileRoutesById: FileRoutesById
 }
@@ -155,7 +167,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
-  ToolsRoute: typeof ToolsRoute
+  ToolsRoute: typeof ToolsRouteWithChildren
   WallsWallIdRoute: typeof WallsWallIdRoute
 }
 
@@ -224,6 +236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CommunityHandleRouteImport
       parentRoute: typeof CommunityRoute
     }
+    '/tools/crux': {
+      id: '/tools/crux'
+      path: '/crux'
+      fullPath: '/tools/crux'
+      preLoaderRoute: typeof ToolsCruxRouteImport
+      parentRoute: typeof ToolsRoute
+    }
     '/walls/$wallId': {
       id: '/walls/$wallId'
       path: '/walls/$wallId'
@@ -246,6 +265,16 @@ const CommunityRouteWithChildren = CommunityRoute._addFileChildren(
   CommunityRouteChildren,
 )
 
+interface ToolsRouteChildren {
+  ToolsCruxRoute: typeof ToolsCruxRoute
+}
+
+const ToolsRouteChildren: ToolsRouteChildren = {
+  ToolsCruxRoute: ToolsCruxRoute,
+}
+
+const ToolsRouteWithChildren = ToolsRoute._addFileChildren(ToolsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CommunityRoute: CommunityRouteWithChildren,
@@ -254,7 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
-  ToolsRoute: ToolsRoute,
+  ToolsRoute: ToolsRouteWithChildren,
   WallsWallIdRoute: WallsWallIdRoute,
 }
 export const routeTree = rootRouteImport
