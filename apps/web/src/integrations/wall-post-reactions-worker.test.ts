@@ -116,6 +116,27 @@ describe("wall post reactions", () => {
 });
 
 describe("wall post tags", () => {
+  it("accepts PNG previews when the browser falls back from WebP encoding", async () => {
+    const { env } = makeEnv();
+    const response = await routePostRoutes.request(
+      "/",
+      {
+        method: "POST",
+        headers: originHeaders,
+        body: JSON.stringify({
+          wallId: "wall-1",
+          wallName: "壁",
+          gymName: "ジム",
+          routes: [],
+          image: "data:image/png;base64,AAAA",
+        }),
+      },
+      env,
+    );
+
+    expect(response.status).toBe(200);
+  });
+
   it("stores allowed tags and uses category filters in the feed query", async () => {
     const { env, statements, boundValues } = makeEnv();
     const tags = { hold: ["カチ"], move: ["ヒールフック", "クロス"], type: ["ルーフ"] };

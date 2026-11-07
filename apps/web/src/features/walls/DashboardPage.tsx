@@ -356,6 +356,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
         <div className={`route-feed__grid${viewMode === "list" ? " is-list" : ""}`}>
           {feed.posts.map((post) => {
             const isOwnPost = post.userId === viewerId;
+            const hasLocalWall = isOwnPost && walls.some((wall) => wall.id === post.wallId);
             const wallName = isOwnPost
               ? (walls.find((wall) => wall.id === post.wallId)?.name ?? post.wallName)
               : post.wallName;
@@ -365,7 +366,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
             const postDetailsHref = `/?post=${encodeURIComponent(post.id)}`;
             return (
               <article className="route-post" key={post.id}>
-                {isOwnPost ? (
+                {hasLocalWall ? (
                   <Link
                     className="route-post__wall-image-link"
                     to="/walls/$wallId"
@@ -416,7 +417,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     )}
                   </div>
                   <h3>
-                    {isOwnPost ? (
+                    {hasLocalWall ? (
                       <Link
                         className="route-post__wall-title-link"
                         to="/walls/$wallId"

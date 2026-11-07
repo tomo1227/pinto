@@ -360,7 +360,7 @@ routePostRoutes.post("/", async (context) => {
     }
     routes.push({ id: routeId, name, grade, description });
   }
-  if (image.length > 700_000 || !/^data:image\/webp;base64,/.test(image)) {
+  if (image.length > 700_000 || !/^data:image\/(webp|png|jpeg);base64,/.test(image)) {
     return context.json({ error: "投稿画像が無効か、サイズ上限を超えています。" }, 400);
   }
 
