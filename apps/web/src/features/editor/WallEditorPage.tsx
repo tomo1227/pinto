@@ -8,12 +8,12 @@ import {
   WALL_POST_TAG_LABELS,
   WALL_POST_TAGS,
   type Wall,
+  type WallEditorStyleDefaults,
   type WallPostTags,
 } from "@pinto/shared";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
-  Check,
   Download,
   Eraser,
   Eye,
@@ -21,13 +21,11 @@ import {
   Hand,
   MapPin,
   MessageCircle,
-  Pencil,
   Redo2,
   RotateCcw,
   Route as RouteIcon,
   Save,
   Settings2,
-  Share2,
   Type,
   Undo2,
   Upload,
@@ -49,8 +47,19 @@ type WallSettingsDraft = {
   tags: WallPostTags;
   author: string;
   description: string;
+  autoDetectHolds: boolean;
+  allowEllipses: boolean;
 };
 const emptyWallTags: WallPostTags = { hold: [], move: [], type: [] };
+const defaultEditorStyleDefaults: Required<WallEditorStyleDefaults> = {
+  markerWidth: 3,
+  holdOutlineWidth: 0,
+  holdOutlineColor: "#FFFEFA",
+  textFontWeight: 600,
+  textFontFamily: "sans-serif",
+  textOutlineWidth: 0,
+  textOutlineColor: "#FFFEFA",
+};
 const editorColors = [
   { name: "黒", value: "#202522" },
   { name: "白", value: "#FFFEFA" },
@@ -94,15 +103,6 @@ function routePngFileName(name: string) {
   return `${name.replace(/[\\/:*?"<>|]/g, "-").trim() || "route"}.png`;
 }
 
-function canSharePng(file: File) {
-  if (typeof navigator.share !== "function") return false;
-  try {
-    return typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] });
-  } catch {
-    return false;
-  }
-}
-
 function downloadPng(file: File) {
   const url = URL.createObjectURL(file);
   const anchor = document.createElement("a");
@@ -127,7 +127,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const future = useWorkspaceStore((state) => state.future);
   const loadWalls = useWorkspaceStore((state) => state.loadWalls);
   const loadWall = useWorkspaceStore((state) => state.loadWall);
-  const renameWall = useWorkspaceStore((state) => state.renameWall);
   const addHold = useWorkspaceStore((state) => state.addHold);
   const moveHold = useWorkspaceStore((state) => state.moveHold);
   const updateHold = useWorkspaceStore((state) => state.updateHold);
@@ -141,15 +140,11 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const notify = useWorkspaceStore((state) => state.notify);
   const [wall, setWall] = useState<Wall | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [wallName, setWallName] = useState("");
   const [tool, setTool] = useState<Tool>("hold");
   const [selectedItemColor, setSelectedItemColor] = useState("#202522");
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
-  const [autoDetectHolds, setAutoDetectHolds] = useState(true);
-  const [allowEllipses, setAllowEllipses] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [wallSettingsDraft, setWallSettingsDraft] = useState<WallSettingsDraft>({
     name: "",
     japaneseGrade: "",
@@ -158,30 +153,45 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     tags: emptyWallTags,
     author: "",
     description: "",
+    autoDetectHolds: true,
+    allowEllipses: true,
   });
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [wallSettingsSaving, setWallSettingsSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
-  const [renaming, setRenaming] = useState(false);
 
   const route = routes.find((item) => item.id === selectedRouteId);
+  const autoDetectHolds = wall?.autoDetectHolds ?? true;
+  const allowEllipses = wall?.allowEllipses ?? true;
   const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
   const selectedText = route?.textAnnotations?.find(({ id }) => id === selectedTextId);
   const editingLine = tool === "route";
   const activeText = tool === "text" ? selectedText : undefined;
   const activeHold = tool === "hold" ? selectedHold : undefined;
-  const styleTarget = editingLine ? route : (activeText ?? activeHold);
+  const editorStyleDefaults = {
+    ...defaultEditorStyleDefaults,
+    ...wall?.editorStyleDefaults,
+  };
+  const canEditStyle = editingLine ? Boolean(route) : tool === "text" || tool === "hold";
   const styleWidth = editingLine
     ? (route?.lineWidth ?? 4)
     : tool === "text"
-      ? (activeText?.fontWeight ?? 600)
-      : (activeHold?.markerWidth ?? 3);
+      ? (activeText?.fontWeight ?? editorStyleDefaults.textFontWeight)
+      : (activeHold?.markerWidth ?? editorStyleDefaults.markerWidth);
   const outlineWidth = editingLine
     ? (route?.lineOutlineWidth ?? 2)
-    : (activeText?.outlineWidth ?? activeHold?.outlineWidth ?? 0);
+    : (activeText?.outlineWidth ??
+      activeHold?.outlineWidth ??
+      (tool === "text"
+        ? editorStyleDefaults.textOutlineWidth
+        : editorStyleDefaults.holdOutlineWidth));
   const outlineColor = editingLine
     ? (route?.lineOutlineColor ?? "#202522")
-    : (activeText?.outlineColor ?? activeHold?.outlineColor ?? "#FFFEFA");
+    : (activeText?.outlineColor ??
+      activeHold?.outlineColor ??
+      (tool === "text"
+        ? editorStyleDefaults.textOutlineColor
+        : editorStyleDefaults.holdOutlineColor));
 
   useEffect(() => {
     const color = activeText?.color ?? activeHold?.color;
@@ -276,7 +286,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       const legacyRoute = useWorkspaceStore.getState().routes[0];
       const legacyGrade = legacyRoute?.grade;
       setWall(record);
-      setWallName(record.name);
       setWallSettingsDraft({
         name: record.name,
         japaneseGrade:
@@ -297,6 +306,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         tags: record.tags ?? emptyWallTags,
         author: legacyRoute?.author ?? "",
         description: legacyRoute?.description ?? "",
+        autoDetectHolds: record.autoDetectHolds ?? true,
+        allowEllipses: record.allowEllipses ?? true,
       });
       const image = await getImage(record.imageId);
       if (active && image) {
@@ -337,9 +348,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         vGrade: wallSettingsDraft.vGrade || undefined,
         gymName: wallSettingsDraft.gymName.trim() || undefined,
         tags: wallSettingsDraft.tags,
+        autoDetectHolds: wallSettingsDraft.autoDetectHolds,
+        allowEllipses: wallSettingsDraft.allowEllipses,
       });
       setWall(updated);
-      setWallName(updated.name);
       setWallSettingsOpen(false);
       notify("壁の設定を保存しました");
     } catch (reason) {
@@ -349,20 +361,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     }
   }
 
-  async function saveWallName(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const name = wallName.trim();
-    if (!name) {
-      notify("壁の名前を入力してください。");
-      return;
-    }
-    await renameWall(wallId, name);
-    setWall((current) => (current ? { ...current, name } : current));
-    setWallName(name);
-    setWallSettingsDraft((current) => ({ ...current, name }));
-    setRenaming(false);
-  }
-
   function addRouteText(position: Hold["position"], text: string) {
     if (!route || !text.trim()) return;
     const annotation: RouteText = {
@@ -370,6 +368,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       text: text.trim(),
       position,
       color: selectedItemColor,
+      fontWeight: editorStyleDefaults.textFontWeight,
+      fontFamily: editorStyleDefaults.textFontFamily,
+      outlineWidth: editorStyleDefaults.textOutlineWidth,
+      outlineColor: editorStyleDefaults.textOutlineColor,
     };
     setTool("text");
     setSelectedHoldId(null);
@@ -436,9 +438,78 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           annotation.id === activeText.id ? { ...annotation, ...textPatch } : annotation,
         ),
       }).catch(reportStyleError);
+      updateEditorStyleDefaults({
+        ...(textPatch.fontWeight === undefined ? {} : { textFontWeight: textPatch.fontWeight }),
+        ...(textPatch.fontFamily === undefined ? {} : { textFontFamily: textPatch.fontFamily }),
+        ...(textPatch.outlineWidth === undefined
+          ? {}
+          : { textOutlineWidth: textPatch.outlineWidth }),
+        ...(textPatch.outlineColor === undefined
+          ? {}
+          : { textOutlineColor: textPatch.outlineColor }),
+      });
     } else if (activeHold) {
       void updateHold(activeHold.id, holdPatch).catch(reportStyleError);
+      updateEditorStyleDefaults({
+        ...(holdPatch.markerWidth === undefined ? {} : { markerWidth: holdPatch.markerWidth }),
+        ...(holdPatch.outlineWidth === undefined
+          ? {}
+          : { holdOutlineWidth: holdPatch.outlineWidth }),
+        ...(holdPatch.outlineColor === undefined
+          ? {}
+          : { holdOutlineColor: holdPatch.outlineColor }),
+      });
+    } else if (tool === "text") {
+      updateEditorStyleDefaults({
+        ...(textPatch.fontWeight === undefined ? {} : { textFontWeight: textPatch.fontWeight }),
+        ...(textPatch.fontFamily === undefined ? {} : { textFontFamily: textPatch.fontFamily }),
+        ...(textPatch.outlineWidth === undefined
+          ? {}
+          : { textOutlineWidth: textPatch.outlineWidth }),
+        ...(textPatch.outlineColor === undefined
+          ? {}
+          : { textOutlineColor: textPatch.outlineColor }),
+      });
+    } else if (tool === "hold") {
+      updateEditorStyleDefaults({
+        ...(holdPatch.markerWidth === undefined ? {} : { markerWidth: holdPatch.markerWidth }),
+        ...(holdPatch.outlineWidth === undefined
+          ? {}
+          : { holdOutlineWidth: holdPatch.outlineWidth }),
+        ...(holdPatch.outlineColor === undefined
+          ? {}
+          : { holdOutlineColor: holdPatch.outlineColor }),
+      });
     }
+  }
+
+  function updateEditorStyleDefaults(patch: Partial<WallEditorStyleDefaults>) {
+    if (!wall) return;
+    const editorStyleDefaults = {
+      ...defaultEditorStyleDefaults,
+      ...wall.editorStyleDefaults,
+      ...patch,
+    };
+    setWall((current) => (current ? { ...current, editorStyleDefaults } : current));
+    void updateWall(wall.id, { editorStyleDefaults }).catch(reportStyleError);
+  }
+
+  function resetStyleWidth() {
+    if (editingLine) updateSelectedStyle({}, {}, { lineWidth: 4 });
+    else if (tool === "text") updateSelectedStyle({}, { fontWeight: 600 }, {});
+    else if (tool === "hold") updateSelectedStyle({ markerWidth: 3 }, {}, {});
+  }
+
+  function resetOutlineWidth() {
+    if (editingLine) updateSelectedStyle({}, {}, { lineOutlineWidth: 2 });
+    else if (tool === "text") updateSelectedStyle({}, { outlineWidth: 0 }, {});
+    else if (tool === "hold") updateSelectedStyle({ outlineWidth: 0 }, {}, {});
+  }
+
+  function resetOutlineColor() {
+    if (editingLine) updateSelectedStyle({}, {}, { lineOutlineColor: "#202522" });
+    else if (tool === "text") updateSelectedStyle({}, { outlineColor: "#FFFEFA" }, {});
+    else if (tool === "hold") updateSelectedStyle({ outlineColor: "#FFFEFA" }, {}, {});
   }
 
   async function createRouteFile(routeToExport: ClimbingRoute) {
@@ -457,35 +528,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       downloadPng(file);
     } catch (reason) {
       notify(reason instanceof Error ? reason.message : "PNGを作成できませんでした。");
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
-  async function shareRoute(routeToShare: ClimbingRoute) {
-    if (actionBusy) return;
-    setActionBusy(true);
-    let file: File | null = null;
-    try {
-      file = await createRouteFile(routeToShare);
-      if (!canSharePng(file)) {
-        downloadPng(file);
-        notify("この端末は共有メニューに対応していないため、PNGをダウンロードしました。");
-        return;
-      }
-      await navigator.share({
-        files: [file],
-        title: wall?.name ?? "壁",
-        text: `${wall?.name ?? "壁"}${wallGrade ? ` (${wallGrade})` : ""}`,
-      });
-    } catch (reason) {
-      if (isNamedError(reason, "AbortError")) return;
-      if (file && isNamedError(reason, "NotAllowedError")) {
-        downloadPng(file);
-        notify("共有メニューを開けなかったため、PNGをダウンロードしました。");
-        return;
-      }
-      notify(reason instanceof Error ? reason.message : "共有できませんでした。");
     } finally {
       setActionBusy(false);
     }
@@ -524,10 +566,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   async function shareWallLink() {
     if (!wall) return;
     const url = new URL(`/walls/${encodeURIComponent(wallId)}`, window.location.origin).toString();
-    const shareText = `${wallName || wall.name}（壁データは同じ端末に保存されています）`;
+    const shareText = `${wall.name}（壁データは同じ端末に保存されています）`;
     try {
       if (typeof navigator.share === "function") {
-        await navigator.share({ title: wallName || wall.name, text: shareText, url });
+        await navigator.share({ title: wall.name, text: shareText, url });
         return;
       }
       if (!navigator.clipboard?.writeText) throw new Error("リンクをコピーできませんでした。");
@@ -549,29 +591,12 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   return (
     <main className="editor-page">
       <header className="editor-header">
-        <Link className="back-link" to="/">
+        <Link className="back-link" to="/" aria-label="壁一覧に戻る">
           <ArrowLeft size={17} />
-          <span>Walls</span>
         </Link>
-        <span className="header-divider" />
-        {renaming ? (
-          <form className="wall-rename-form" onSubmit={(event) => void saveWallName(event)}>
-            <input value={wallName} onChange={(event) => setWallName(event.currentTarget.value)} />
-            <button className="icon-button" type="submit" title="名前を保存">
-              <Check size={16} />
-            </button>
-          </form>
-        ) : (
-          <button
-            className="wall-title-button"
-            type="button"
-            title="壁名を変更"
-            onClick={() => setRenaming(true)}
-          >
-            <strong>{wall.name}</strong>
-            <Pencil size={13} />
-          </button>
-        )}
+        <div className="wall-title">
+          <strong>{wall.name}</strong>
+        </div>
         <button
           className="icon-button"
           type="button"
@@ -582,6 +607,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               ...current,
               author: route?.author ?? "",
               description: route?.description ?? "",
+              autoDetectHolds: wall?.autoDetectHolds ?? true,
+              allowEllipses: wall?.allowEllipses ?? true,
             }));
             setWallSettingsOpen(true);
           }}
@@ -608,16 +635,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               onClick={() => void exportPng(route)}
             >
               <Download size={14} />
-            </button>
-            <button
-              className="icon-button route-card__tool route-card__tool--share"
-              type="button"
-              title={`${wall.name}を共有`}
-              aria-label={`${wall.name}を共有`}
-              disabled={actionBusy}
-              onClick={() => void shareRoute(route)}
-            >
-              <Share2 size={14} />
             </button>
             <button
               className="icon-button route-card__tool"
@@ -660,7 +677,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           disabled={!route}
           onClick={() => void saveRouteDetails()}
         >
-          <Save size={15} /> 保存
+          <Save size={15} /> 投稿
         </button>
       </header>
 
@@ -717,58 +734,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 >
                   <Eraser size={17} />
                 </button>
-                <div className="editor-settings-wrap">
-                  <button
-                    className={`tool-settings-button ${settingsOpen ? "is-active" : ""}`}
-                    type="button"
-                    title="ホールド設定"
-                    aria-label="ホールド設定"
-                    aria-expanded={settingsOpen}
-                    onClick={() => setSettingsOpen((open) => !open)}
-                  >
-                    <Settings2 size={17} />
-                  </button>
-                  {settingsOpen && (
-                    <div
-                      className="editor-settings-popover"
-                      role="dialog"
-                      aria-label="ホールド設定"
-                    >
-                      <button
-                        className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
-                        type="button"
-                        role="switch"
-                        aria-label="ホールド輪郭の自動検出"
-                        aria-checked={autoDetectHolds}
-                        onClick={() => setAutoDetectHolds((enabled) => !enabled)}
-                      >
-                        <span className="auto-detect-control__label">輪郭検出</span>
-                        <span className="auto-detect-control__track" aria-hidden="true">
-                          <span />
-                        </span>
-                        <span className="auto-detect-control__status">
-                          {autoDetectHolds ? "ON" : "OFF"}
-                        </span>
-                      </button>
-                      <button
-                        className={`auto-detect-control ${allowEllipses ? "is-on" : ""}`}
-                        type="button"
-                        role="switch"
-                        aria-label="楕円を許可"
-                        aria-checked={allowEllipses}
-                        onClick={() => setAllowEllipses((enabled) => !enabled)}
-                      >
-                        <span className="auto-detect-control__label">楕円を許可</span>
-                        <span className="auto-detect-control__track" aria-hidden="true">
-                          <span />
-                        </span>
-                        <span className="auto-detect-control__status">
-                          {allowEllipses ? "ON" : "OFF"}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </div>
               </fieldset>
             </nav>
             <div className="editor-toolbar">
@@ -804,7 +769,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                         className="text-input text-input--compact"
                         aria-label="文字の太さ"
                         value={styleWidth}
-                        disabled={!activeText}
+                        disabled={!canEditStyle}
+                        onDoubleClick={() => updateSelectedStyle({}, { fontWeight: 600 }, {})}
                         onChange={(event) =>
                           updateSelectedStyle(
                             {},
@@ -829,7 +795,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                           max={20}
                           step={1}
                           value={styleWidth}
-                          disabled={!styleTarget}
+                          disabled={!canEditStyle}
+                          onDoubleClick={resetStyleWidth}
                           onChange={(event) => {
                             const width = Number(event.currentTarget.value);
                             updateSelectedStyle({ markerWidth: width }, {}, { lineWidth: width });
@@ -848,7 +815,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       max={10}
                       step={1}
                       value={outlineWidth}
-                      disabled={!styleTarget}
+                      disabled={!canEditStyle}
+                      onDoubleClick={resetOutlineWidth}
                       onChange={(event) => {
                         const width = Number(event.currentTarget.value);
                         updateSelectedStyle(
@@ -866,7 +834,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       type="color"
                       aria-label="枠線の色"
                       value={outlineColor}
-                      disabled={!styleTarget}
+                      disabled={!canEditStyle}
+                      onDoubleClick={resetOutlineColor}
                       onChange={(event) => {
                         const color = event.currentTarget.value;
                         updateSelectedStyle(
@@ -877,30 +846,35 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                       }}
                     />
                   </label>
-                  {activeText && (
-                    <label>
-                      フォント
-                      <select
-                        className="text-input text-input--compact"
-                        aria-label="文字のフォント"
-                        value={activeText.fontFamily ?? "sans-serif"}
-                        onChange={(event) => {
-                          const family = event.currentTarget.value;
-                          if (
-                            family === "sans-serif" ||
-                            family === "serif" ||
-                            family === "monospace"
-                          ) {
-                            updateSelectedStyle({}, { fontFamily: family }, {});
-                          }
-                        }}
-                      >
-                        <option value="sans-serif">ゴシック体</option>
-                        <option value="serif">明朝体</option>
-                        <option value="monospace">等幅</option>
-                      </select>
-                    </label>
-                  )}
+                  <label
+                    className={tool === "text" ? undefined : "font-control-reserved"}
+                    aria-hidden={tool !== "text"}
+                  >
+                    フォント
+                    <select
+                      className="text-input text-input--compact"
+                      aria-label="文字のフォント"
+                      value={activeText?.fontFamily ?? editorStyleDefaults.textFontFamily}
+                      disabled={tool !== "text" || !canEditStyle}
+                      onDoubleClick={() =>
+                        updateSelectedStyle({}, { fontFamily: "sans-serif" }, {})
+                      }
+                      onChange={(event) => {
+                        const family = event.currentTarget.value;
+                        if (
+                          family === "sans-serif" ||
+                          family === "serif" ||
+                          family === "monospace"
+                        ) {
+                          updateSelectedStyle({}, { fontFamily: family }, {});
+                        }
+                      }}
+                    >
+                      <option value="sans-serif">ゴシック体</option>
+                      <option value="serif">明朝体</option>
+                      <option value="monospace">等幅</option>
+                    </select>
+                  </label>
                 </div>
               </div>
               <button
@@ -948,11 +922,19 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               selectedTextId={selectedTextId}
               tool={tool}
               textColor={selectedItemColor}
+              textFontWeight={editorStyleDefaults.textFontWeight}
+              textFontFamily={editorStyleDefaults.textFontFamily}
+              textOutlineWidth={editorStyleDefaults.textOutlineWidth}
+              textOutlineColor={editorStyleDefaults.textOutlineColor}
               showLines={showLines}
               autoDetectHolds={autoDetectHolds}
               allowEllipses={allowEllipses}
               onAddHold={(position, markerRadius, bounds, shape) =>
-                void addHold(position, markerRadius, selectedItemColor, bounds, shape)
+                void addHold(position, markerRadius, selectedItemColor, bounds, shape, {
+                  markerWidth: editorStyleDefaults.markerWidth,
+                  outlineWidth: editorStyleDefaults.holdOutlineWidth,
+                  outlineColor: editorStyleDefaults.holdOutlineColor,
+                })
                   .then((hold) => {
                     setTool("hold");
                     setSelectedTextId(null);
@@ -1136,6 +1118,53 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 maxLength={500}
               />
             </label>
+            <fieldset className="wall-editor-options">
+              <legend className="field-label">キャンバス設定</legend>
+              <button
+                className={`auto-detect-control ${wallSettingsDraft.autoDetectHolds ? "is-on" : ""}`}
+                type="button"
+                role="switch"
+                aria-label="ホールド輪郭の自動検出"
+                aria-checked={wallSettingsDraft.autoDetectHolds}
+                disabled={wallSettingsSaving}
+                onClick={() =>
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    autoDetectHolds: !current.autoDetectHolds,
+                  }))
+                }
+              >
+                <span className="auto-detect-control__label">ホールド輪郭の自動検出</span>
+                <span className="auto-detect-control__track" aria-hidden="true">
+                  <span />
+                </span>
+                <span className="auto-detect-control__status">
+                  {wallSettingsDraft.autoDetectHolds ? "ON" : "OFF"}
+                </span>
+              </button>
+              <button
+                className={`auto-detect-control ${wallSettingsDraft.allowEllipses ? "is-on" : ""}`}
+                type="button"
+                role="switch"
+                aria-label="楕円を許可"
+                aria-checked={wallSettingsDraft.allowEllipses}
+                disabled={wallSettingsSaving}
+                onClick={() =>
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    allowEllipses: !current.allowEllipses,
+                  }))
+                }
+              >
+                <span className="auto-detect-control__label">楕円を許可</span>
+                <span className="auto-detect-control__track" aria-hidden="true">
+                  <span />
+                </span>
+                <span className="auto-detect-control__status">
+                  {wallSettingsDraft.allowEllipses ? "ON" : "OFF"}
+                </span>
+              </button>
+            </fieldset>
             <div className="field-label wall-tag-field">
               <span>タイプ・タグ</span>
               <div className="wall-tag-groups">

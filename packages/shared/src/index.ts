@@ -4,6 +4,16 @@ export type PhysicalDimensions = {
   unit: "cm" | "m";
 };
 
+export type WallEditorStyleDefaults = {
+  markerWidth?: number;
+  holdOutlineWidth?: number;
+  holdOutlineColor?: string;
+  textFontWeight?: number;
+  textFontFamily?: "sans-serif" | "serif" | "monospace";
+  textOutlineWidth?: number;
+  textOutlineColor?: string;
+};
+
 export type Wall = {
   id: string;
   name: string;
@@ -16,6 +26,9 @@ export type Wall = {
   tags?: WallPostTags;
   physicalDimensions?: PhysicalDimensions;
   inclination?: number;
+  autoDetectHolds?: boolean;
+  allowEllipses?: boolean;
+  editorStyleDefaults?: WallEditorStyleDefaults;
   createdAt: string;
   updatedAt: string;
 };

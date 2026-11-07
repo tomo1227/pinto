@@ -135,9 +135,12 @@ test("edits selected circle, text and line styles and persists them on desktop a
   page,
 }) => {
   await openTestEditor(page);
+  await expect(page.locator(".wall-title")).toBeVisible();
+  await expect(page.getByRole("button", { name: "壁名を変更" })).toHaveCount(0);
+  await expect(page.locator("button.wall-title")).toHaveCount(0);
   await expect(page.getByLabel("見た目を変更する対象")).toHaveCount(0);
-  await expect(page.getByLabel("丸の太さ")).toBeDisabled();
-  await expect(page.getByLabel("文字のフォント")).toHaveCount(0);
+  await expect(page.getByLabel("丸の太さ")).toBeEnabled();
+  await expect(page.getByLabel("文字のフォント")).toBeHidden();
 
   await selectCanvasObject(page, 0.25, 0.65);
   await page.getByLabel("丸の太さ").fill("8");
@@ -154,20 +157,45 @@ test("edits selected circle, text and line styles and persists them on desktop a
   await expect.poll(async () => (await readStyles(page)).hold.outlineColor).toBeUndefined();
   await page.getByRole("button", { name: "やり直す", exact: true }).click();
   await expect.poll(async () => (await readStyles(page)).hold.outlineColor).toBe("#ffffff");
+  await page.getByLabel("丸の太さ").dblclick();
+  await expect(page.getByLabel("丸の太さ")).toHaveValue("3");
+  await page.getByLabel("丸の太さ").fill("8");
+  await page.getByLabel("枠線の太さ").dblclick();
+  await expect(page.getByLabel("枠線の太さ")).toHaveValue("0");
+  await page.getByLabel("枠線の太さ").fill("3");
+  await page.getByLabel("枠線の色").dblclick();
+  await expect(page.getByLabel("枠線の色")).toHaveValue("#fffefa");
+  await page.getByLabel("枠線の色").fill("#ffffff");
+  await expect
+    .poll(async () => (await readStyles(page)).hold)
+    .toMatchObject({ markerWidth: 8, outlineWidth: 3, outlineColor: "#ffffff" });
 
   await page.getByRole("button", { name: "文字を入力して配置" }).click();
-  await expect(page.getByLabel("文字の太さ")).toBeDisabled();
+  await expect(page.getByLabel("文字の太さ")).toBeEnabled();
   await expect(page.getByLabel("丸の太さ")).toHaveCount(0);
   await selectCanvasObject(page, 0.25, 0.3);
   await page.getByLabel("文字の太さ").selectOption("900");
   await page.getByLabel("文字のフォント").selectOption("serif");
   await page.getByLabel("枠線の太さ").fill("2");
+  await page.getByLabel("文字の太さ").dblclick();
+  await expect(page.getByLabel("文字の太さ")).toHaveValue("600");
+  await page.getByLabel("文字の太さ").selectOption("900");
+  await page.getByLabel("文字のフォント").dblclick();
+  await expect(page.getByLabel("文字のフォント")).toHaveValue("sans-serif");
+  await page.getByLabel("文字のフォント").selectOption("serif");
+  await page.getByLabel("枠線の太さ").dblclick();
+  await expect(page.getByLabel("枠線の太さ")).toHaveValue("0");
+  await page.getByLabel("枠線の太さ").fill("2");
+  await page.getByLabel("枠線の色").dblclick();
+  await expect(page.getByLabel("枠線の色")).toHaveValue("#fffefa");
+  await page.getByLabel("枠線の色").fill("#ffffff");
   await expect
     .poll(async () => (await readStyles(page)).route.textAnnotations?.[0])
     .toMatchObject({
       fontWeight: 900,
       fontFamily: "serif",
       outlineWidth: 2,
+      outlineColor: "#ffffff",
     });
   await selectCanvasObject(page, 0.25, 0.3);
   await selectCanvasObject(page, 0.25, 0.3);
@@ -197,13 +225,23 @@ test("edits selected circle, text and line styles and persists them on desktop a
         fontWeight: 900,
         fontFamily: "serif",
         outlineWidth: 2,
+        outlineColor: "#ffffff",
       }),
     ]);
 
   await page.getByRole("button", { name: "ルートに追加" }).click();
-  await expect(page.getByLabel("文字のフォント")).toHaveCount(0);
+  await expect(page.getByLabel("文字のフォント")).toBeHidden();
   await page.getByLabel("線の太さ", { exact: true }).fill("12");
   await page.getByLabel("枠線の太さ").fill("4");
+  await page.getByLabel("枠線の色").fill("#ffffff");
+  await page.getByLabel("線の太さ", { exact: true }).dblclick();
+  await expect(page.getByLabel("線の太さ", { exact: true })).toHaveValue("4");
+  await page.getByLabel("線の太さ", { exact: true }).fill("12");
+  await page.getByLabel("枠線の太さ").dblclick();
+  await expect(page.getByLabel("枠線の太さ")).toHaveValue("2");
+  await page.getByLabel("枠線の太さ").fill("4");
+  await page.getByLabel("枠線の色").dblclick();
+  await expect(page.getByLabel("枠線の色")).toHaveValue("#202522");
   await page.getByLabel("枠線の色").fill("#ffffff");
   await page
     .getByRole("group", { name: "選択中の色、または次に配置するホールド・文字の色" })
@@ -221,7 +259,7 @@ test("edits selected circle, text and line styles and persists them on desktop a
   await selectCanvasObject(page, 0.25, 0.65);
   await expect(page.getByLabel("丸の太さ")).toHaveValue("8");
   await expect(page.getByLabel("枠線の太さ")).toHaveValue("3");
-  await expect(page.getByLabel("文字のフォント")).toHaveCount(0);
+  await expect(page.getByLabel("文字のフォント")).toBeHidden();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Style wallのPNGを保存" }).click();
   expect((await download).suggestedFilename()).toBe("Style wall.png");
@@ -229,30 +267,104 @@ test("edits selected circle, text and line styles and persists them on desktop a
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(page.locator("canvas.wall-canvas")).toBeVisible();
+  await expect(page.locator(".editor-header .back-link")).toHaveAccessibleName("壁一覧に戻る");
+  await expect(page.locator(".editor-header")).not.toContainText("Walls");
+  await expect(page.locator(".editor-header .header-divider")).toHaveCount(0);
+  await expect(page.locator(".editor-header")).toHaveCSS("min-height", "56px");
+  await expect(page.locator(".editor-header")).toHaveCSS("gap", "2px");
+  expect(
+    await page
+      .locator(".editor-header button:not(.editor-save)")
+      .evaluateAll((buttons) =>
+        buttons.every((button) => getComputedStyle(button).borderWidth === "0px"),
+      ),
+  ).toBe(true);
+  await expect(page.locator(".editor-header .editor-save")).not.toHaveCSS("border-width", "0px");
+  expect(
+    await page
+      .locator(
+        ".editor-header > .icon-button, .editor-header > .editor-history-button, .editor-header > .editor-save",
+      )
+      .evaluateAll((buttons) =>
+        buttons.every((button) => getComputedStyle(button).height === "34px"),
+      ),
+  ).toBe(true);
   const toolNav = page.getByRole("navigation", { name: "キャンバスツール" });
   await expect(toolNav).toBeVisible();
   await expect(toolNav).toHaveCSS("position", "fixed");
+  await expect(toolNav).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(toolNav).toHaveCSS("box-shadow", "none");
+  await expect(toolNav).toHaveCSS("backdrop-filter", "none");
+  await expect(page.locator(".tool-segment")).toHaveCSS("gap", "0px");
+  await expect(page.locator(".tool-segment")).toHaveCSS("padding", "0px");
+  await expect(page.locator(".tool-segment")).toHaveCSS("border-radius", "0px");
+  expect(
+    await page
+      .locator(".tool-segment > button")
+      .evaluateAll((buttons) =>
+        buttons.every((button) => getComputedStyle(button).borderRadius === "0px"),
+      ),
+  ).toBe(true);
+  await expect(page.locator(".editor-toolbar")).toHaveCSS("border-top-width", "0px");
+  await expect(page.locator(".line-toggle > span")).toHaveCSS("border-width", "0px");
+  await expect(page.locator(".selected-object-color")).toHaveCSS("border-width", "0px");
+  await expect
+    .poll(() =>
+      page
+        .locator(".selected-object-style__controls label")
+        .evaluateAll((labels) =>
+          labels.every((label) => getComputedStyle(label).borderWidth === "0px"),
+        ),
+    )
+    .toBe(true);
   for (const label of [
     "画像を移動",
     "ホールド追加・移動",
     "ルートに追加",
     "文字を入力して配置",
     "ホールドを消去",
-    "ホールド設定",
   ]) {
     await expect(toolNav.getByRole("button", { name: label })).toBeVisible();
   }
   const mobileNavBounds = await toolNav.boundingBox();
+  const toolSegmentBounds = await page.locator(".tool-segment").boundingBox();
   const canvasBounds = await page.locator(".canvas-frame").boundingBox();
   const toolbarBounds = await page.locator(".editor-toolbar").boundingBox();
+  const styleControlsBounds = await page.locator(".selected-object-style__controls").boundingBox();
   const footerBounds = await page.locator(".site-footer").boundingBox();
-  if (!mobileNavBounds || !canvasBounds || !toolbarBounds || !footerBounds)
+  if (
+    !mobileNavBounds ||
+    !toolSegmentBounds ||
+    !canvasBounds ||
+    !toolbarBounds ||
+    !styleControlsBounds ||
+    !footerBounds
+  )
     throw new Error("Mobile editor controls are unavailable");
   expect(mobileNavBounds.y + mobileNavBounds.height).toBeCloseTo(844, 0);
+  expect(toolSegmentBounds.x).toBeCloseTo(0, 0);
+  expect(toolSegmentBounds.width).toBeCloseTo(390, 0);
+  expect(toolSegmentBounds.y + toolSegmentBounds.height).toBeCloseTo(
+    mobileNavBounds.y + mobileNavBounds.height,
+    0,
+  );
+  expect(
+    await page
+      .locator(".tool-segment > button")
+      .evaluateAll((buttons) =>
+        buttons.every((button) => getComputedStyle(button).height === "60px"),
+      ),
+  ).toBe(true);
   expect(mobileNavBounds.y).toBeLessThan(footerBounds.y + footerBounds.height);
   expect(mobileNavBounds.y + mobileNavBounds.height).toBeGreaterThan(footerBounds.y);
   expect(canvasBounds.y + canvasBounds.height).toBeLessThanOrEqual(toolbarBounds.y);
   expect(toolbarBounds.y + toolbarBounds.height).toBeLessThanOrEqual(mobileNavBounds.y);
+  expect(toolbarBounds.x).toBeGreaterThanOrEqual(0);
+  expect(toolbarBounds.x + toolbarBounds.width).toBeLessThanOrEqual(390);
+  expect(styleControlsBounds.x).toBeGreaterThanOrEqual(toolbarBounds.x);
+  expect(styleControlsBounds.x + styleControlsBounds.width).toBeLessThanOrEqual(
+    toolbarBounds.x + toolbarBounds.width,
+  );
   await page.getByRole("button", { name: "ルートに追加" }).click();
   await expect(page.getByLabel("線の太さ", { exact: true })).toHaveValue("12");
   await expect(page.getByLabel("枠線の太さ")).toHaveValue("4");
@@ -263,6 +375,7 @@ test("edits selected circle, text and line styles and persists them on desktop a
   await page.getByRole("button", { name: "文字を入力して配置" }).click();
   await selectCanvasObject(page, 0.25, 0.3);
   await expect(page.getByLabel("文字のフォント")).toHaveValue("serif");
+  await expect(page.getByLabel("文字のフォント")).toHaveCSS("border-width", "0px");
   await expect(page.getByLabel("文字の太さ")).toHaveValue("900");
   await expect(page.getByLabel("枠線の太さ")).toHaveValue("2");
   await page.getByLabel("文字のフォント").selectOption("monospace");
@@ -272,6 +385,24 @@ test("edits selected circle, text and line styles and persists them on desktop a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+});
+
+test("keeps editor toolbar height stable when switching to text mode", async ({ page }) => {
+  await openTestEditor(page);
+  for (const viewport of [
+    { width: 1280, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const toolbar = page.locator(".editor-toolbar");
+    const holdBounds = await toolbar.boundingBox();
+    if (!holdBounds) throw new Error("Editor toolbar is unavailable");
+    await page.getByRole("button", { name: "文字を入力して配置" }).click();
+    const textBounds = await toolbar.boundingBox();
+    if (!textBounds) throw new Error("Text toolbar is unavailable");
+    expect(textBounds.height).toBeCloseTo(holdBounds.height, 0);
+    await page.getByRole("button", { name: "ホールド追加・移動" }).click();
+  }
 });
 
 for (const viewport of [
@@ -290,10 +421,21 @@ for (const viewport of [
     const canvasColumn = await page.locator(".canvas-column").boundingBox();
     if (!layout || !canvasColumn) throw new Error("Editor layout is unavailable");
     expect(canvasColumn.width).toBeCloseTo(layout.width, 0);
-    await expect(page.locator(".editor-layout")).toHaveCSS("padding-bottom", "0px");
+    await expect(page.locator(".editor-layout")).toHaveCSS(
+      "padding-bottom",
+      viewport.name === "mobile" ? "60px" : "0px",
+    );
 
     const settings = page.getByRole("form", { name: "壁の設定" });
     await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+    await expect(settings.getByRole("switch", { name: "ホールド輪郭の自動検出" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(settings.getByRole("switch", { name: "楕円を許可" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     await expect(settings.getByLabel("作成者")).toHaveValue("Existing setter");
     await expect(settings.getByLabel("説明")).toHaveValue("Existing description");
     await expect(settings.getByLabel("作成者")).toHaveAttribute("maxlength", "80");
@@ -311,6 +453,8 @@ for (const viewport of [
     await settings.getByLabel("日本式グレード").selectOption("4級");
     await settings.getByLabel("作成者").fill("  New setter  ");
     await settings.getByLabel("説明").fill("  First line\nSecond line  ");
+    await settings.getByRole("switch", { name: "ホールド輪郭の自動検出" }).click();
+    await settings.getByRole("switch", { name: "楕円を許可" }).click();
     await settings.getByRole("button", { name: "設定を保存" }).click();
     await expect(settings).toHaveCount(0);
     await expect
@@ -324,6 +468,8 @@ for (const viewport of [
       .toMatchObject({
         name: "Settings wall",
         japaneseGrade: "4級",
+        autoDetectHolds: false,
+        allowEllipses: false,
       });
 
     await page.reload();
@@ -331,6 +477,36 @@ for (const viewport of [
     await page.getByRole("button", { name: "壁の設定", exact: true }).click();
     await expect(settings.getByLabel("壁の名前")).toHaveValue("Settings wall");
     await expect(settings.getByLabel("日本式グレード")).toHaveValue("4級");
+    await expect(settings.getByLabel("作成者")).toHaveValue("New setter");
+    await expect(settings.getByLabel("説明")).toHaveValue("First line\nSecond line");
+    await expect(settings.getByRole("switch", { name: "ホールド輪郭の自動検出" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await expect(settings.getByRole("switch", { name: "楕円を許可" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await settings.getByRole("switch", { name: "ホールド輪郭の自動検出" }).click();
+    await settings.getByRole("switch", { name: "楕円を許可" }).click();
+    await settings.getByRole("button", { name: "設定を保存" }).click();
+    await expect
+      .poll(async () => (await readStyles(page)).wall)
+      .toMatchObject({
+        autoDetectHolds: true,
+        allowEllipses: true,
+      });
+    await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+    await expect(settings.getByRole("switch", { name: "ホールド輪郭の自動検出" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(settings.getByRole("switch", { name: "楕円を許可" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await settings.getByRole("button", { name: "キャンセル" }).click();
+    await page.getByRole("button", { name: "壁の設定", exact: true }).click();
     await expect(settings.getByLabel("作成者")).toHaveValue("New setter");
     await expect(settings.getByLabel("説明")).toHaveValue("First line\nSecond line");
     await settings.getByLabel("作成者").fill(" ");
@@ -348,5 +524,151 @@ for (const viewport of [
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     ).toBe(true);
+    await page.setViewportSize({ width: 320, height: 740 });
+    const narrowToolbarBounds = await page.locator(".editor-toolbar").boundingBox();
+    if (!narrowToolbarBounds) throw new Error("Narrow mobile toolbar is unavailable");
+    expect(narrowToolbarBounds.x).toBeGreaterThanOrEqual(0);
+    expect(narrowToolbarBounds.x + narrowToolbarBounds.width).toBeLessThanOrEqual(320);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true);
   });
 }
+
+test("configures and applies hold and text defaults without selecting an object", async ({
+  page,
+}) => {
+  await openTestEditor(page);
+  await expect(page.getByLabel("丸の太さ")).toBeEnabled();
+  await expect(page.getByLabel("枠線の太さ")).toBeEnabled();
+  await expect(page.getByLabel("枠線の色")).toBeEnabled();
+  await page.getByLabel("丸の太さ").fill("7");
+  await page.getByLabel("枠線の太さ").fill("4");
+  await page.getByLabel("枠線の色").fill("#123456");
+  await expect
+    .poll(async () => (await readStyles(page)).wall.editorStyleDefaults)
+    .toMatchObject({
+      markerWidth: 7,
+      holdOutlineWidth: 4,
+      holdOutlineColor: "#123456",
+    });
+
+  await page.reload();
+  await expect(page.locator("canvas.wall-canvas")).toBeVisible();
+  await expect(page.getByLabel("丸の太さ")).toHaveValue("7");
+  await expect(page.getByLabel("枠線の太さ")).toHaveValue("4");
+  await expect(page.getByLabel("枠線の色")).toHaveValue("#123456");
+  await selectCanvasObject(page, 0.5, 0.5);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<Hold | undefined>((resolve, reject) => {
+            const request = indexedDB.open("pinto-local");
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+              const database = request.result;
+              const transaction = database.transaction("holds");
+              const holds = transaction.objectStore("holds").getAll();
+              transaction.oncomplete = () => {
+                resolve(
+                  holds.result.find(
+                    (hold: Hold) =>
+                      hold.markerWidth === 7 &&
+                      hold.outlineWidth === 4 &&
+                      hold.outlineColor === "#123456",
+                  ),
+                );
+                database.close();
+              };
+              transaction.onerror = () => reject(transaction.error);
+            };
+          }),
+      ),
+    )
+    .toBeTruthy();
+  await page.getByLabel("丸の太さ").fill("9");
+  await page.getByLabel("枠線の太さ").fill("5");
+  await page.getByLabel("枠線の色").fill("#765432");
+  await selectCanvasObject(page, 0.5, 0.4);
+  await expect(page.getByLabel("丸の太さ")).toHaveValue("9");
+  await expect(page.getByLabel("枠線の太さ")).toHaveValue("5");
+  await expect(page.getByLabel("枠線の色")).toHaveValue("#765432");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<boolean>((resolve, reject) => {
+            const request = indexedDB.open("pinto-local");
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+              const database = request.result;
+              const transaction = database.transaction("holds");
+              const holds = transaction.objectStore("holds").getAll();
+              transaction.oncomplete = () => {
+                resolve(
+                  holds.result.some(
+                    (hold: Hold) =>
+                      hold.markerWidth === 9 &&
+                      hold.outlineWidth === 5 &&
+                      hold.outlineColor === "#765432",
+                  ),
+                );
+                database.close();
+              };
+              transaction.onerror = () => reject(transaction.error);
+            };
+          }),
+      ),
+    )
+    .toBe(true);
+
+  await page.getByRole("button", { name: "文字を入力して配置" }).click();
+  await expect(page.getByLabel("文字の太さ")).toBeEnabled();
+  await expect(page.getByLabel("文字のフォント")).toBeEnabled();
+  await page.getByLabel("文字の太さ").selectOption("700");
+  await page.getByLabel("文字のフォント").selectOption("serif");
+  await page.getByLabel("枠線の太さ").fill("2");
+  await page.getByLabel("枠線の色").fill("#654321");
+  await expect
+    .poll(async () => (await readStyles(page)).wall.editorStyleDefaults)
+    .toMatchObject({
+      textFontWeight: 700,
+      textFontFamily: "serif",
+      textOutlineWidth: 2,
+      textOutlineColor: "#654321",
+    });
+  await selectCanvasObject(page, 0.5, 0.25);
+  const textInput = page.getByLabel("壁面に配置する文字");
+  await textInput.fill("Default style");
+  await textInput.press("Enter");
+  await expect
+    .poll(async () => (await readStyles(page)).route.textAnnotations)
+    .toContainEqual(
+      expect.objectContaining({
+        text: "Default style",
+        fontWeight: 700,
+        fontFamily: "serif",
+        outlineWidth: 2,
+        outlineColor: "#654321",
+      }),
+    );
+  await page.getByLabel("文字の太さ").selectOption("900");
+  await page.getByLabel("文字のフォント").selectOption("monospace");
+  await page.getByLabel("枠線の太さ").fill("3");
+  await page.getByLabel("枠線の色").fill("#987654");
+  await selectCanvasObject(page, 0.7, 0.25);
+  await page.getByLabel("壁面に配置する文字").fill("Next style");
+  await page.getByLabel("壁面に配置する文字").press("Enter");
+  await expect
+    .poll(async () => (await readStyles(page)).route.textAnnotations)
+    .toContainEqual(
+      expect.objectContaining({
+        text: "Next style",
+        fontWeight: 900,
+        fontFamily: "monospace",
+        outlineWidth: 3,
+        outlineColor: "#987654",
+      }),
+    );
+});

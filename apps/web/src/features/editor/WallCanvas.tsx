@@ -68,6 +68,10 @@ type Props = {
   selectedTextId: string | null;
   tool: Tool;
   textColor: string;
+  textFontWeight: number;
+  textFontFamily: NonNullable<Wall["editorStyleDefaults"]>["textFontFamily"];
+  textOutlineWidth: number;
+  textOutlineColor: string;
   showLines: boolean;
   autoDetectHolds: boolean;
   allowEllipses: boolean;
@@ -161,6 +165,10 @@ export function WallCanvas({
   selectedTextId,
   tool,
   textColor,
+  textFontWeight,
+  textFontFamily,
+  textOutlineWidth,
+  textOutlineColor,
   showLines,
   autoDetectHolds,
   allowEllipses,
@@ -977,11 +985,11 @@ export function WallCanvas({
             top: textInputDraft.y,
             color: textColor,
             fontSize: textFontSize,
-            fontWeight: editingText?.fontWeight ?? 600,
-            fontFamily: editingText?.fontFamily ?? "sans-serif",
+            fontWeight: editingText?.fontWeight ?? textFontWeight,
+            fontFamily: editingText?.fontFamily ?? textFontFamily,
             WebkitTextStroke:
-              `${(editingText?.outlineWidth ?? 0) * 2}px ` +
-              (editingText?.outlineColor ?? "#FFFEFA"),
+              `${(editingText?.outlineWidth ?? textOutlineWidth) * 2}px ` +
+              (editingText?.outlineColor ?? textOutlineColor),
             paintOrder: "stroke fill",
             width: Math.min(
               240,

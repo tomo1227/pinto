@@ -79,6 +79,8 @@ function WallTagPicker({
 export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
   const { data: session } = authClient.useSession();
   const viewerId = session?.user.id ?? "";
+  const walls = useWorkspaceStore((state) => state.walls);
+  const loadWalls = useWorkspaceStore((state) => state.loadWalls);
   const [scope, setScope] = useState<"all" | "following" | "own" | "saved">("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -95,6 +97,10 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
     0,
   );
   const activeFilterCount = Number(Boolean(gym)) + Number(Boolean(grade)) + tagFilterCount;
+
+  useEffect(() => {
+    void loadWalls();
+  }, [loadWalls]);
 
   useEffect(() => {
     if (!viewerId && scope !== "all") setScope("all");
@@ -349,12 +355,11 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
         <div className={`route-feed__grid${viewMode === "list" ? " is-list" : ""}`}>
           {feed.posts.map((post) => {
             const isOwnPost = post.userId === viewerId;
+            const wallName = isOwnPost
+              ? (walls.find((wall) => wall.id === post.wallId)?.name ?? post.wallName)
+              : post.wallName;
             const wallImage = (
-              <img
-                className="route-post__image"
-                src={post.image}
-                alt={`${post.wallName}の壁画像`}
-              />
+              <img className="route-post__image" src={post.image} alt={`${wallName}の壁画像`} />
             );
             return (
               <article className="route-post" key={post.id}>
@@ -363,7 +368,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     className="route-post__wall-image-link"
                     to="/walls/$wallId"
                     params={{ wallId: post.wallId }}
-                    aria-label={`${post.wallName}の詳細を開く`}
+                    aria-label={`${wallName}の詳細を開く`}
                   >
                     {wallImage}
                   </Link>
@@ -392,9 +397,9 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                         className="icon-button route-post__delete"
                         type="button"
                         title="自分の投稿を削除"
-                        aria-label={`${post.wallName}の投稿を削除`}
+                        aria-label={`${wallName}の投稿を削除`}
                         onClick={() => {
-                          if (window.confirm(`「${post.wallName}」の壁投稿を削除しますか？`))
+                          if (window.confirm(`「${wallName}」の壁投稿を削除しますか？`))
                             void removePost(post.id);
                         }}
                       >
@@ -409,10 +414,10 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                         to="/walls/$wallId"
                         params={{ wallId: post.wallId }}
                       >
-                        {post.wallName}
+                        {wallName}
                       </Link>
                     ) : (
-                      post.wallName
+                      wallName
                     )}
                   </h3>
                   <p className="route-post__meta">
@@ -452,7 +457,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     <button
                       className={`route-post__action ${post.likedByMe ? "is-active" : ""}`}
                       type="button"
-                      aria-label={`${post.wallName}にいいね`}
+                      aria-label={`${wallName}にいいね`}
                       aria-pressed={post.likedByMe}
                       title={session?.user ? "いいね" : "いいねするにはログインが必要です"}
                       disabled={!session?.user || pendingAction === `${post.id}:like`}
@@ -464,7 +469,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     <button
                       className={`route-post__action ${post.savedByMe ? "is-active" : ""}`}
                       type="button"
-                      aria-label={`${post.wallName}を保存`}
+                      aria-label={`${wallName}を保存`}
                       aria-pressed={post.savedByMe}
                       title={session?.user ? "保存" : "保存するにはログインが必要です"}
                       disabled={!session?.user || pendingAction === `${post.id}:save`}

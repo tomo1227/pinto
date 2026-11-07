@@ -108,11 +108,13 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   await page.getByLabel(/ジム名/).selectOption({ index: 1 });
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
-  await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
+  await expect(page.locator(".wall-title")).toContainText("E2E wall");
+  await expect(page.getByRole("button", { name: "壁名を変更" })).toHaveCount(0);
+  await expect(page.locator(".wall-title")).not.toHaveAttribute("role", "button");
   await page.getByRole("button", { name: "壁のリンクを共有" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-shared-url", /\/walls\//);
   await page.reload();
-  await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
+  await expect(page.locator(".wall-title")).toContainText("E2E wall");
 
   const canvas = page.locator("canvas.wall-canvas");
   const bounds = await canvas.boundingBox();
@@ -215,9 +217,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   const pngDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "E2E routeのPNGを保存" }).click();
   expect((await pngDownload).suggestedFilename()).toBe("E2E route.png");
-  await page.getByRole("button", { name: "E2E routeを共有" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-share-count", "1");
-  await expect(page.locator("html")).toHaveAttribute("data-shared-file", "E2E route.png");
+  await expect(page.getByRole("button", { name: "E2E routeを共有" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "E2E routeをDiscordに共有" })).toBeVisible();
 
   const routeActionLabels = page.locator(".route-card__tool span");

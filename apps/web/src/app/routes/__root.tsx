@@ -12,9 +12,10 @@ import {
 
 type AccountMenuProps = {
   notify: (message: string) => void;
+  onSignOut: () => void;
 };
 
-function AccountMenu({ notify }: AccountMenuProps) {
+function AccountMenu({ notify, onSignOut }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"followers" | "following">("followers");
   const [profile, setProfile] = useState<CommunityMember | null>(null);
@@ -118,6 +119,18 @@ function AccountMenu({ notify }: AccountMenuProps) {
             >
               <Settings2 size={17} />
             </Link>
+            <button
+              className="icon-button danger-text account-menu__logout"
+              type="button"
+              title="ログアウト"
+              aria-label="ログアウト"
+              onClick={() => {
+                close();
+                onSignOut();
+              }}
+            >
+              <LogOut size={17} />
+            </button>
           </div>
           <fieldset className="account-menu__tabs" aria-label="フォロー関係">
             <button
@@ -358,22 +371,10 @@ function RootLayout() {
         </nav>
         <div className="header-auth">
           {session?.user ? (
-            <>
-              <AccountMenu notify={notify} />
-              <button
-                className="auth-button"
-                type="button"
-                title="ログアウト"
-                aria-label="ログアウト"
-                onClick={() => void signOut()}
-              >
-                <LogOut size={15} />
-                <span>ログアウト</span>
-              </button>
-            </>
+            <AccountMenu notify={notify} onSignOut={() => void signOut()} />
           ) : (
             <button
-              className="auth-button"
+              className="auth-button auth-button--login"
               type="button"
               title="Googleでログイン"
               aria-label="Googleでログイン"
