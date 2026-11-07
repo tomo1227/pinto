@@ -19,14 +19,24 @@ import {
   removeCruxVideo,
 } from "./crux-store";
 import {
+  type CruxDisplayOptions,
+  defaultCruxDisplayOptions,
+  parseCruxDisplayOptions,
+} from "./display-options";
+import {
   calculatePoseMetrics,
   createPoseTimestampGenerator,
+  getSynchronizedTime,
+  isJointPartVisible,
   minimumLandmarkVisibility,
+  poseJointGroups,
+  poseJointLandmarks,
   poseLandmarkerModelUrl,
   poseLandmarkerOptions,
 } from "./pose-analysis";
 
 const visionWasmUrl = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.2/wasm";
+const displayOptionsStorageKey = "pinto-crux-display-options";
 const poseConnections = [
   [11, 12],
   [11, 13],
@@ -69,6 +79,11 @@ type PoseVideoPlayerProps = {
   label: string;
   poseLandmarker: PoseLandmarker | null;
   videoRef: RefObject<HTMLVideoElement | null>;
+  startPosition: number;
+  duration: number;
+  showStartPosition: boolean;
+  onStartPositionChange: (time: number) => void;
+  displayOptions: CruxDisplayOptions;
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   onEnded?: () => void;
@@ -80,6 +95,11 @@ function PoseVideoPlayer({
   label,
   poseLandmarker,
   videoRef,
+  startPosition,
+  duration,
+  showStartPosition,
+  onStartPositionChange,
+  displayOptions,
   onTimeUpdate,
   onDurationChange,
   onEnded,
@@ -87,13 +107,10 @@ function PoseVideoPlayer({
   const [landmarks, setLandmarks] = useState<NormalizedLandmark[] | null>(null);
   const [worldLandmarks, setWorldLandmarks] = useState<Landmark[] | null>(null);
   const [aspectRatio, setAspectRatio] = useState("16 / 9");
-  const [captionsUrl, setCaptionsUrl] = useState("/no-captions.vtt");
-  const [captionsName, setCaptionsName] = useState("字幕なし");
   const [error, setError] = useState("");
   const [videoDimensions, setVideoDimensions] = useState({ width: 1, height: 1 });
   const timestampGenerator = useRef(createPoseTimestampGenerator());
   const lastDetectedTime = useRef(-1);
-  const captionObjectUrl = useRef<string | null>(null);
 
   const detectPose = useCallback(() => {
     const video = videoRef.current;
@@ -158,13 +175,6 @@ function PoseVideoPlayer({
     };
   }, [detectPose, poseLandmarker, videoRef]);
 
-  useEffect(
-    () => () => {
-      if (captionObjectUrl.current) URL.revokeObjectURL(captionObjectUrl.current);
-    },
-    [],
-  );
-
   const metrics =
     landmarks && worldLandmarks ? calculatePoseMetrics(landmarks, worldLandmarks) : null;
   const pointVisible = (point: NormalizedLandmark | undefined) =>
@@ -175,28 +185,6 @@ function PoseVideoPlayer({
       <div className="crux-player__heading">
         <Film size={15} aria-hidden="true" />
         <span title={name}>{name}</span>
-        <label className="crux-caption-input">
-          字幕
-          <input
-            type="file"
-            accept=".vtt,text/vtt"
-            aria-label={`${name}の字幕ファイル`}
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              if (!file) return;
-              if (file.type !== "text/vtt" && !file.name.toLowerCase().endsWith(".vtt")) {
-                setError("字幕にはWebVTT（.vtt）ファイルを選択してください。");
-                return;
-              }
-              if (captionObjectUrl.current) URL.revokeObjectURL(captionObjectUrl.current);
-              captionObjectUrl.current = URL.createObjectURL(file);
-              setCaptionsUrl(captionObjectUrl.current);
-              setCaptionsName(file.name);
-              setError("");
-            }}
-          />
-        </label>
       </div>
       <div
         className="crux-player__screen"
@@ -205,6 +193,7 @@ function PoseVideoPlayer({
           maxWidth: `min(100%, calc(62vh * ${videoDimensions.width / videoDimensions.height}))`,
         }}
       >
+        {/* biome-ignore lint/a11y/useMediaCaption: Crux does not provide subtitle tracks. */}
         <video
           ref={videoRef}
           src={src}
@@ -226,9 +215,8 @@ function PoseVideoPlayer({
           onSeeked={detectPose}
           onEnded={onEnded}
           onError={() => setError("この動画形式またはコーデックはブラウザーで再生できません。")}
-        >
-          <track kind="captions" src={captionsUrl} srcLang="ja" label={captionsName} />
-        </video>
+          style={{ opacity: displayOptions.showVideo ? 1 : 0 }}
+        />
         {landmarks && (
           <svg
             className="crux-player__overlay"
@@ -236,39 +224,47 @@ function PoseVideoPlayer({
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            {poseConnections.map(([start, end]) => {
-              const first = landmarks[start];
-              const last = landmarks[end];
-              if (!pointVisible(first) || !pointVisible(last)) return null;
-              return (
-                <line
-                  key={`${start}-${end}`}
-                  x1={first.x}
-                  y1={first.y}
-                  x2={last.x}
-                  y2={last.y}
-                  className="crux-player__bone"
-                />
-              );
-            })}
-            {landmarks.map((point, index) =>
-              pointVisible(point) ? (
-                <circle
-                  // biome-ignore lint/suspicious/noArrayIndexKey: Pose landmarks have stable joint indices.
-                  key={index}
-                  cx={point.x}
-                  cy={point.y}
-                  r="0.008"
-                  className="crux-player__joint"
-                />
-              ) : null,
-            )}
-            {metrics?.torsoCenter && (
+            {displayOptions.showSkeleton &&
+              poseConnections.map(([start, end]) => {
+                const first = landmarks[start];
+                const last = landmarks[end];
+                if (!pointVisible(first) || !pointVisible(last)) return null;
+                return (
+                  <line
+                    key={`${start}-${end}`}
+                    x1={first.x}
+                    y1={first.y}
+                    x2={last.x}
+                    y2={last.y}
+                    className="crux-player__bone"
+                    style={{
+                      stroke: displayOptions.skeletonColor,
+                      opacity: displayOptions.skeletonOpacity,
+                    }}
+                  />
+                );
+              })}
+            {displayOptions.showJoints &&
+              landmarks.map((point, index) =>
+                pointVisible(point) && isJointPartVisible(index, displayOptions) ? (
+                  <circle
+                    // biome-ignore lint/suspicious/noArrayIndexKey: Pose landmarks have stable joint indices.
+                    key={index}
+                    cx={point.x}
+                    cy={point.y}
+                    r="0.008"
+                    className="crux-player__joint"
+                    style={{ fill: displayOptions.jointColor }}
+                  />
+                ) : null,
+              )}
+            {displayOptions.showTorsoCenter && metrics?.torsoCenter && (
               <circle
                 cx={metrics.torsoCenter.x}
                 cy={metrics.torsoCenter.y}
                 r="0.018"
                 className="crux-player__center"
+                style={{ fill: displayOptions.torsoCenterColor }}
               />
             )}
           </svg>
@@ -277,6 +273,24 @@ function PoseVideoPlayer({
           <span className="crux-player__status">人物を検出できません</span>
         )}
       </div>
+      {showStartPosition && (
+        <label className="crux-start-position">
+          <span>
+            <span>{name} の開始位置</span>
+            <output>{formatTime(startPosition)}</output>
+          </span>
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            step="0.01"
+            value={Math.min(startPosition, duration || 0)}
+            aria-label={`${name}の開始位置`}
+            disabled={!duration}
+            onChange={(event) => onStartPositionChange(Number(event.currentTarget.value))}
+          />
+        </label>
+      )}
       {error && (
         <p className="inline-error" role="alert">
           {error}
@@ -318,6 +332,8 @@ export function CruxPage() {
   const [videos, setVideos] = useState<CruxVideo[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [comparisonId, setComparisonId] = useState("");
+  const [primaryStartTime, setPrimaryStartTime] = useState(0);
+  const [comparisonStartTime, setComparisonStartTime] = useState(0);
   const [selectedFile, setSelectedFile] = useState<Blob | null>(null);
   const [comparisonFile, setComparisonFile] = useState<Blob | null>(null);
   const [selectedUrl, setSelectedUrl] = useState("");
@@ -327,18 +343,59 @@ export function CruxPage() {
   const [error, setError] = useState("");
   const [analysisError, setAnalysisError] = useState("");
   const [analysisNotice, setAnalysisNotice] = useState("");
+  const [displayOptions, setDisplayOptions] = useState(defaultCruxDisplayOptions);
+  const [displayOptionsLoaded, setDisplayOptionsLoaded] = useState(false);
+  const [displayOptionsError, setDisplayOptionsError] = useState("");
   const [analysisStatus, setAnalysisStatus] = useState<"idle" | "loading" | "ready">("idle");
   const [poseLandmarker, setPoseLandmarker] = useState<PoseLandmarker | null>(null);
   const [comparisonLandmarker, setComparisonLandmarker] = useState<PoseLandmarker | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [comparisonDuration, setComparisonDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const videoRef = useRef<HTMLVideoElement>(null);
   const comparisonVideoRef = useRef<HTMLVideoElement>(null);
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const comparisonLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const mounted = useRef(true);
+
+  useEffect(() => {
+    try {
+      setDisplayOptions(
+        parseCruxDisplayOptions(window.localStorage.getItem(displayOptionsStorageKey)),
+      );
+    } catch (reason) {
+      setDisplayOptionsError(errorText(reason, "表示設定を読み込めませんでした。"));
+    } finally {
+      setDisplayOptionsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!displayOptionsLoaded) return;
+    try {
+      window.localStorage.setItem(displayOptionsStorageKey, JSON.stringify(displayOptions));
+    } catch (reason) {
+      setDisplayOptionsError(errorText(reason, "表示設定を保存できませんでした。"));
+    }
+  }, [displayOptions, displayOptionsLoaded]);
+
+  function updateDisplayOption<Key extends keyof CruxDisplayOptions>(
+    key: Key,
+    value: CruxDisplayOptions[Key],
+  ) {
+    setDisplayOptions((current) => ({ ...current, [key]: value }));
+    setDisplayOptionsError("");
+  }
+
+  function updateJointVisibility(key: (typeof poseJointLandmarks)[number]["key"], value: boolean) {
+    setDisplayOptions((current) => ({
+      ...current,
+      jointVisibility: { ...current.jointVisibility, [key]: value },
+    }));
+    setDisplayOptionsError("");
+  }
 
   useEffect(() => {
     mounted.current = true;
@@ -435,6 +492,8 @@ export function CruxPage() {
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    setPrimaryStartTime(0);
+    setComparisonStartTime(0);
     setSelectedId(id);
   }
 
@@ -471,6 +530,8 @@ export function CruxPage() {
       if (comparisonId === video.id) {
         stopAnalysis();
         setComparisonId("");
+        setComparisonStartTime(0);
+        setComparisonDuration(0);
       }
     } catch (reason) {
       setError(errorText(reason, "動画を削除できませんでした。"));
@@ -571,11 +632,14 @@ export function CruxPage() {
     if (!primary) return;
     const nextTime = Math.max(0, Math.min(time, Number.isFinite(duration) ? duration : time));
     primary.currentTime = nextTime;
-    if (comparisonVideoRef.current)
-      comparisonVideoRef.current.currentTime = Math.min(
+    if (comparisonVideoRef.current) {
+      comparisonVideoRef.current.currentTime = getSynchronizedTime(
         nextTime,
-        comparisonVideoRef.current.duration || nextTime,
+        primaryStartTime,
+        comparisonStartTime,
+        comparisonVideoRef.current.duration,
       );
+    }
     setCurrentTime(nextTime);
   }
 
@@ -585,12 +649,41 @@ export function CruxPage() {
     if (comparisonVideoRef.current) comparisonVideoRef.current.playbackRate = rate;
   }
 
-  function syncComparison(time: number) {
+  function syncComparison(
+    time: number,
+    primaryStart = primaryStartTime,
+    comparisonStart = comparisonStartTime,
+  ) {
     setCurrentTime(time);
     const comparison = comparisonVideoRef.current;
-    if (comparison && Math.abs(comparison.currentTime - time) > 0.15) {
-      comparison.currentTime = Math.min(time, comparison.duration || time);
+    if (comparison) {
+      const targetTime = getSynchronizedTime(
+        time,
+        primaryStart,
+        comparisonStart,
+        comparison.duration,
+      );
+      if (Math.abs(comparison.currentTime - targetTime) > 1 / 30) {
+        comparison.currentTime = targetTime;
+      }
     }
+  }
+
+  function changePrimaryStartTime(value: number) {
+    if (!Number.isFinite(value)) return;
+    const startTime = Math.max(0, Math.min(value, duration));
+    setPrimaryStartTime(startTime);
+    if (videoRef.current) videoRef.current.currentTime = startTime;
+    syncComparison(startTime, startTime, comparisonStartTime);
+  }
+
+  function changeComparisonStartTime(value: number) {
+    if (!Number.isFinite(value)) return;
+    const startTime = Math.max(0, Math.min(value, comparisonDuration));
+    setComparisonStartTime(startTime);
+    if (videoRef.current) videoRef.current.currentTime = primaryStartTime;
+    if (comparisonVideoRef.current) comparisonVideoRef.current.currentTime = startTime;
+    setCurrentTime(primaryStartTime);
   }
 
   const comparisonVideo = videos.find((video) => video.id === comparisonId);
@@ -674,6 +767,11 @@ export function CruxPage() {
               {error}
             </p>
           )}
+          {displayOptionsError && (
+            <p className="inline-error" role="alert">
+              {displayOptionsError}
+            </p>
+          )}
           {selectedUrl ? (
             <>
               <div className="crux-toolbar">
@@ -685,6 +783,9 @@ export function CruxPage() {
                     onChange={(event) => {
                       stopAnalysis();
                       setComparisonId(event.currentTarget.value);
+                      setPrimaryStartTime(0);
+                      setComparisonStartTime(0);
+                      setComparisonDuration(0);
                     }}
                   >
                     <option value="">比較しない</option>
@@ -728,6 +829,143 @@ export function CruxPage() {
                 </p>
               )}
 
+              <details className="crux-display-settings">
+                <summary>表示設定</summary>
+                <div className="crux-display-settings__content">
+                  <fieldset className="crux-display-settings__visibility">
+                    <legend>表示 / 非表示</legend>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={displayOptions.showVideo}
+                        onChange={(event) =>
+                          updateDisplayOption("showVideo", event.currentTarget.checked)
+                        }
+                      />
+                      背景動画
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={displayOptions.showSkeleton}
+                        onChange={(event) =>
+                          updateDisplayOption("showSkeleton", event.currentTarget.checked)
+                        }
+                      />
+                      骨格の線
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={displayOptions.showJoints}
+                        onChange={(event) =>
+                          updateDisplayOption("showJoints", event.currentTarget.checked)
+                        }
+                      />
+                      関節
+                    </label>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={displayOptions.showTorsoCenter}
+                        onChange={(event) =>
+                          updateDisplayOption("showTorsoCenter", event.currentTarget.checked)
+                        }
+                      />
+                      胴体中心
+                    </label>
+                  </fieldset>
+                  <fieldset className="crux-display-settings__joint-parts">
+                    <legend>関節の部位・ポイント別表示</legend>
+                    {poseJointGroups.map((group) => (
+                      <div className="crux-display-settings__joint-group" key={group.key}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={displayOptions[group.option]}
+                            onChange={(event) =>
+                              updateDisplayOption(group.option, event.currentTarget.checked)
+                            }
+                          />
+                          {group.label}
+                        </label>
+                        <details>
+                          <summary>個別に選択</summary>
+                          <div className="crux-display-settings__joint-list">
+                            {poseJointLandmarks
+                              .filter((joint) => joint.group === group.key)
+                              .map((joint) => (
+                                <label key={joint.key}>
+                                  <input
+                                    type="checkbox"
+                                    checked={displayOptions.jointVisibility[joint.key] !== false}
+                                    onChange={(event) =>
+                                      updateJointVisibility(joint.key, event.currentTarget.checked)
+                                    }
+                                  />
+                                  {joint.label}
+                                </label>
+                              ))}
+                          </div>
+                        </details>
+                      </div>
+                    ))}
+                  </fieldset>
+                  <fieldset className="crux-display-settings__appearance">
+                    <legend>色・透過度</legend>
+                    <label>
+                      骨格線の色
+                      <input
+                        type="color"
+                        value={displayOptions.skeletonColor}
+                        onChange={(event) =>
+                          updateDisplayOption("skeletonColor", event.currentTarget.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      骨格線の透過度
+                      <span>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={Math.round(displayOptions.skeletonOpacity * 100)}
+                          onChange={(event) =>
+                            updateDisplayOption(
+                              "skeletonOpacity",
+                              Number(event.currentTarget.value) / 100,
+                            )
+                          }
+                        />
+                        <output>{Math.round(displayOptions.skeletonOpacity * 100)}%</output>
+                      </span>
+                    </label>
+                    <label>
+                      関節の色
+                      <input
+                        type="color"
+                        value={displayOptions.jointColor}
+                        onChange={(event) =>
+                          updateDisplayOption("jointColor", event.currentTarget.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      胴体中心の色
+                      <input
+                        type="color"
+                        value={displayOptions.torsoCenterColor}
+                        onChange={(event) =>
+                          updateDisplayOption("torsoCenterColor", event.currentTarget.value)
+                        }
+                      />
+                    </label>
+                  </fieldset>
+                </div>
+              </details>
+
               <div className={`crux-players${comparisonUrl ? " crux-players--comparison" : ""}`}>
                 <PoseVideoPlayer
                   key={selectedId}
@@ -736,6 +974,11 @@ export function CruxPage() {
                   label="解析する動画"
                   poseLandmarker={poseLandmarker}
                   videoRef={videoRef}
+                  startPosition={primaryStartTime}
+                  duration={duration}
+                  showStartPosition={Boolean(comparisonUrl)}
+                  onStartPositionChange={changePrimaryStartTime}
+                  displayOptions={displayOptions}
                   onTimeUpdate={syncComparison}
                   onDurationChange={(nextDuration) => {
                     setDuration(nextDuration);
@@ -755,6 +998,19 @@ export function CruxPage() {
                     label="比較動画"
                     poseLandmarker={comparisonLandmarker}
                     videoRef={comparisonVideoRef}
+                    startPosition={comparisonStartTime}
+                    duration={comparisonDuration}
+                    showStartPosition
+                    onStartPositionChange={changeComparisonStartTime}
+                    displayOptions={displayOptions}
+                    onDurationChange={(nextDuration) => {
+                      setComparisonDuration(nextDuration);
+                      syncComparison(
+                        videoRef.current?.currentTime ?? currentTime,
+                        primaryStartTime,
+                        comparisonStartTime,
+                      );
+                    }}
                   />
                 )}
               </div>

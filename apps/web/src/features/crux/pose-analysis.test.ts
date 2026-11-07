@@ -1,8 +1,11 @@
 import type { Landmark, NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { describe, expect, it } from "vitest";
+import { defaultCruxDisplayOptions } from "./display-options";
 import {
   calculatePoseMetrics,
   createPoseTimestampGenerator,
+  getSynchronizedTime,
+  isJointPartVisible,
   minimumLandmarkVisibility,
   nextPoseTimestamp,
   poseLandmarkerModelUrl,
@@ -71,7 +74,40 @@ describe("nextPoseTimestamp", () => {
     expect(nextPoseTimestamp(2, 1.5)).toBe(1500);
     expect(nextPoseTimestamp(1500, 0.5)).toBe(1501);
   });
+});
 
+describe("getSynchronizedTime", () => {
+  it("keeps both selected start positions aligned and clamps to the comparison duration", () => {
+    expect(getSynchronizedTime(8, 3, 5, 20)).toBe(10);
+    expect(getSynchronizedTime(1, 3, 5, 20)).toBe(3);
+    expect(getSynchronizedTime(8, 3, 25, 20)).toBe(20);
+  });
+});
+
+describe("isJointPartVisible", () => {
+  it("filters individual landmarks without affecting other joints or parts", () => {
+    const options = {
+      ...defaultCruxDisplayOptions,
+      jointVisibility: { leftElbow: false },
+    };
+
+    expect(isJointPartVisible(13, options)).toBe(false);
+    expect(isJointPartVisible(11, options)).toBe(true);
+    expect(isJointPartVisible(14, options)).toBe(true);
+    expect(isJointPartVisible(15, options)).toBe(true);
+    expect(isJointPartVisible(33, options)).toBe(false);
+  });
+
+  it("lets a whole body region hide all of its landmarks", () => {
+    const options = { ...defaultCruxDisplayOptions, showLeftArmJoints: false };
+
+    expect(isJointPartVisible(13, options)).toBe(false);
+    expect(isJointPartVisible(15, options)).toBe(false);
+    expect(isJointPartVisible(14, options)).toBe(true);
+  });
+});
+
+describe("createPoseTimestampGenerator", () => {
   it("keeps timestamps independent for separate video streams", () => {
     const first = createPoseTimestampGenerator();
     const second = createPoseTimestampGenerator();
