@@ -108,11 +108,13 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   await page.getByLabel(/ジム名/).selectOption({ index: 1 });
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
-  await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
+  await expect(page.locator(".wall-title")).toContainText("E2E wall");
+  await expect(page.getByRole("button", { name: "壁名を変更" })).toHaveCount(0);
+  await expect(page.locator(".wall-title")).not.toHaveAttribute("role", "button");
   await page.getByRole("button", { name: "壁のリンクを共有" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-shared-url", /\/walls\//);
   await page.reload();
-  await expect(page.getByRole("button", { name: /E2E wall/ })).toBeVisible();
+  await expect(page.locator(".wall-title")).toContainText("E2E wall");
 
   const canvas = page.locator("canvas.wall-canvas");
   const bounds = await canvas.boundingBox();
@@ -205,9 +207,9 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   await page.getByRole("button", { name: "ルートを作成" }).click();
   await page.locator(".modal-panel").getByLabel("ルート名").fill("E2E route 2");
   await page.locator(".modal-panel").getByRole("button", { name: "ルートを作成" }).click();
-  await page.getByLabel("作成者").fill("E2E setter");
-  await page.getByRole("button", { name: "変更を保存" }).click();
-  await expect(page.getByLabel("作成者")).toHaveValue("E2E setter");
+  await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+  await page.getByRole("form", { name: "壁の設定" }).getByLabel("作成者").fill("E2E setter");
+  await page.getByRole("button", { name: "設定を保存" }).click();
 
   await expect(page.getByRole("button", { name: "E2E routeを複製" })).toBeVisible();
   await expect(page.getByRole("button", { name: "E2E routeを削除" })).toBeVisible();
@@ -215,9 +217,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   const pngDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "E2E routeのPNGを保存" }).click();
   expect((await pngDownload).suggestedFilename()).toBe("E2E route.png");
-  await page.getByRole("button", { name: "E2E routeを共有" }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-share-count", "1");
-  await expect(page.locator("html")).toHaveAttribute("data-shared-file", "E2E route.png");
+  await expect(page.getByRole("button", { name: "E2E routeを共有" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "E2E routeをDiscordに共有" })).toBeVisible();
 
   const routeActionLabels = page.locator(".route-card__tool span");
@@ -230,7 +230,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   for (const label of await routeActionLabels.all()) await expect(label).toBeHidden();
 });
 
-test("closes the mobile editor panel with a downward swipe", async ({ page }) => {
+test("edits creator and description from wall settings on mobile", async ({ page }) => {
   await authenticateAsE2eUser(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -246,30 +246,26 @@ test("closes the mobile editor panel with a downward swipe", async ({ page }) =>
   });
   await page.getByRole("button", { name: "壁を追加" }).click();
   await page.getByLabel("壁の写真").setInputFiles({
-    name: "mobile-panel.png",
+    name: "mobile-settings.png",
     mimeType: "image/png",
     buffer: Buffer.from(imageBase64, "base64"),
   });
-  await page.getByLabel("壁の名前").fill("Mobile panel");
+  await page.getByLabel("壁の名前").fill("Mobile settings");
   await page.getByLabel(/ジム名/).selectOption({ index: 1 });
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
 
-  const editorSidebar = page.locator("#editor-sidebar-panel");
-  await page.getByRole("button", { name: "ホールド", exact: true }).click();
-  await expect(editorSidebar).toHaveClass(/is-open/);
-  await expect(editorSidebar).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-  const panelHeading = page.locator(".mobile-editor-panel-heading");
-  const panelHeadingBounds = await panelHeading.boundingBox();
-  if (!panelHeadingBounds) throw new Error("Mobile editor panel heading is unavailable");
-  const dragStartX = panelHeadingBounds.x + panelHeadingBounds.width / 2;
-  const dragStartY = panelHeadingBounds.y + panelHeadingBounds.height / 2;
-  await page.mouse.move(dragStartX, dragStartY);
-  await page.mouse.down();
-  await page.mouse.move(dragStartX, dragStartY + 120, { steps: 4 });
-  await expect(editorSidebar).toHaveAttribute("style", /translateY\(120px\)/);
-  await page.mouse.up();
-  await expect(editorSidebar).not.toHaveClass(/is-open/);
+  await expect(page.locator("#editor-sidebar-panel")).toHaveCount(0);
+  const settings = page.getByRole("form", { name: "壁の設定" });
+  await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+  await settings.getByLabel("作成者").fill("E2E setter");
+  await settings.getByLabel("説明").fill("Mobile wall description");
+  await settings.getByRole("button", { name: "設定を保存" }).click();
+  await expect(settings).toHaveCount(0);
+  await page.reload();
+  await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+  await expect(settings.getByLabel("作成者")).toHaveValue("E2E setter");
+  await expect(settings.getByLabel("説明")).toHaveValue("Mobile wall description");
 });
 
 test("serves the local Worker API through the development proxy", async ({ request }) => {
@@ -322,9 +318,7 @@ test("reopens selected route text for editing instead of duplicating it", async 
             const routesRequest = transaction.objectStore("routes").getAll();
             routesRequest.onerror = () => reject(routesRequest.error);
             routesRequest.onsuccess = () => {
-              const route = routesRequest.result.find(
-                (item) => item.name === "Text editing route",
-              );
+              const route = routesRequest.result.find((item) => item.name === "Text editing route");
               resolve(route?.textAnnotations ?? []);
               database.close();
             };
@@ -395,22 +389,21 @@ test("reopens selected route text for editing instead of duplicating it", async 
   await page.mouse.click(textPoint.x + 2, textPoint.y);
   await expect(textInput).toHaveValue("Updated");
   await page.keyboard.press("Escape");
-  const resizeStart = await canvas.evaluate(
-    (element, anchor) => {
-      const fontSize = Math.max(
-        14,
-        24 * Math.min(element.clientWidth / 400, element.clientHeight / 400),
-      );
-      const textWidth = Math.max(fontSize, Array.from("Updated").length * fontSize * 0.7);
-      return { x: anchor.x + textWidth + 4, y: anchor.y + fontSize / 2 + 3 };
-    },
-    textPoint,
-  );
+  const resizeStart = await canvas.evaluate((element, anchor) => {
+    const fontSize = Math.max(
+      14,
+      24 * Math.min(element.clientWidth / 400, element.clientHeight / 400),
+    );
+    const textWidth = Math.max(fontSize, Array.from("Updated").length * fontSize * 0.7);
+    return { x: anchor.x + textWidth + 4, y: anchor.y + fontSize / 2 + 3 };
+  }, textPoint);
   await page.mouse.move(resizeStart.x, resizeStart.y);
   await page.mouse.down();
   await page.mouse.move(resizeStart.x + 30, resizeStart.y + 30, { steps: 3 });
   await page.mouse.up();
-  await expect.poll(async () => (await readTextAnnotations())[0]?.fontScale ?? 1).toBeGreaterThan(1);
+  await expect
+    .poll(async () => (await readTextAnnotations())[0]?.fontScale ?? 1)
+    .toBeGreaterThan(1);
   const desktopFontScale = (await readTextAnnotations())[0]?.fontScale ?? 1;
 
   const pinchPoints = await canvas.evaluate(

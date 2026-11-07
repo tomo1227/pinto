@@ -4,6 +4,16 @@ export type PhysicalDimensions = {
   unit: "cm" | "m";
 };
 
+export type WallEditorStyleDefaults = {
+  markerWidth?: number;
+  holdOutlineWidth?: number;
+  holdOutlineColor?: string;
+  textFontWeight?: number;
+  textFontFamily?: "sans-serif" | "serif" | "monospace";
+  textOutlineWidth?: number;
+  textOutlineColor?: string;
+};
+
 export type Wall = {
   id: string;
   name: string;
@@ -16,6 +26,9 @@ export type Wall = {
   tags?: WallPostTags;
   physicalDimensions?: PhysicalDimensions;
   inclination?: number;
+  autoDetectHolds?: boolean;
+  allowEllipses?: boolean;
+  editorStyleDefaults?: WallEditorStyleDefaults;
   createdAt: string;
   updatedAt: string;
 };
@@ -28,6 +41,10 @@ export type RouteText = {
   position: Point;
   color?: string;
   fontScale?: number;
+  fontWeight?: number;
+  fontFamily?: "sans-serif" | "serif" | "monospace";
+  outlineColor?: string;
+  outlineWidth?: number;
 };
 
 export type Hold = {
@@ -40,6 +57,8 @@ export type Hold = {
   color?: string;
   markerRadius?: number;
   markerWidth?: number;
+  outlineColor?: string;
+  outlineWidth?: number;
   markerScaleX?: number;
   markerScaleY?: number;
   confidence?: number;
@@ -58,6 +77,10 @@ export type Route = {
   startHoldIds: string[];
   finishHoldIds: string[];
   textAnnotations?: RouteText[];
+  lineColor?: string;
+  lineWidth?: number;
+  lineOutlineColor?: string;
+  lineOutlineWidth?: number;
   japaneseGrade?: string;
   vGrade?: string;
   grade?: string;

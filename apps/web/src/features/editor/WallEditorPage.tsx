@@ -8,14 +8,12 @@ import {
   WALL_POST_TAG_LABELS,
   WALL_POST_TAGS,
   type Wall,
+  type WallEditorStyleDefaults,
   type WallPostTags,
 } from "@pinto/shared";
 import { Link } from "@tanstack/react-router";
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
-  Check,
   Download,
   Eraser,
   Eye,
@@ -23,28 +21,17 @@ import {
   Hand,
   MapPin,
   MessageCircle,
-  Minus,
-  Pencil,
-  Plus,
   Redo2,
   RotateCcw,
   Route as RouteIcon,
   Save,
   Settings2,
-  Share2,
-  Trash2,
   Type,
   Undo2,
   Upload,
   X,
 } from "lucide-react";
-import {
-  type FormEvent,
-  type PointerEvent as ReactPointerEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { shareRoutePng } from "../../infrastructure/api/discord";
 import { exportRoutePng } from "../../infrastructure/export/route-png";
 import { getDiscordSettings, getImage, getWall } from "../../infrastructure/storage/database";
@@ -52,22 +39,27 @@ import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
 type Tool = "hold" | "route" | "pan" | "eraser" | "text";
-type RouteDraft = {
-  description: string;
-  author: string;
-};
-const blankDraft: RouteDraft = {
-  description: "",
-  author: "",
-};
 type WallSettingsDraft = {
   name: string;
   japaneseGrade: string;
   vGrade: string;
   gymName: string;
   tags: WallPostTags;
+  author: string;
+  description: string;
+  autoDetectHolds: boolean;
+  allowEllipses: boolean;
 };
 const emptyWallTags: WallPostTags = { hold: [], move: [], type: [] };
+const defaultEditorStyleDefaults: Required<WallEditorStyleDefaults> = {
+  markerWidth: 3,
+  holdOutlineWidth: 0,
+  holdOutlineColor: "#FFFEFA",
+  textFontWeight: 600,
+  textFontFamily: "sans-serif",
+  textOutlineWidth: 0,
+  textOutlineColor: "#FFFEFA",
+};
 const editorColors = [
   { name: "黒", value: "#202522" },
   { name: "白", value: "#FFFEFA" },
@@ -82,16 +74,14 @@ const editorColors = [
 function ColorPalette({
   value,
   label,
-  compact = false,
   onChange,
 }: {
   value: string;
   label: string;
-  compact?: boolean;
   onChange: (color: string) => void;
 }) {
   return (
-    <fieldset className={`color-palette${compact ? " color-palette--compact" : ""}`}>
+    <fieldset className="color-palette">
       <legend className="sr-only">{label}</legend>
       {editorColors.map((color) => (
         <button
@@ -109,23 +99,8 @@ function ColorPalette({
   );
 }
 
-function roleFor(route: ClimbingRoute, holdId: string): "start" | "normal" | "finish" {
-  if (route.startHoldIds.includes(holdId)) return "start";
-  if (route.finishHoldIds.includes(holdId)) return "finish";
-  return "normal";
-}
-
 function routePngFileName(name: string) {
   return `${name.replace(/[\\/:*?"<>|]/g, "-").trim() || "route"}.png`;
-}
-
-function canSharePng(file: File) {
-  if (typeof navigator.share !== "function") return false;
-  try {
-    return typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] });
-  } catch {
-    return false;
-  }
 }
 
 function downloadPng(file: File) {
@@ -152,7 +127,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const future = useWorkspaceStore((state) => state.future);
   const loadWalls = useWorkspaceStore((state) => state.loadWalls);
   const loadWall = useWorkspaceStore((state) => state.loadWall);
-  const renameWall = useWorkspaceStore((state) => state.renameWall);
   const addHold = useWorkspaceStore((state) => state.addHold);
   const moveHold = useWorkspaceStore((state) => state.moveHold);
   const updateHold = useWorkspaceStore((state) => state.updateHold);
@@ -161,46 +135,68 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const updateWall = useWorkspaceStore((state) => state.updateWall);
   const updateRoute = useWorkspaceStore((state) => state.updateRoute);
   const appendHold = useWorkspaceStore((state) => state.appendHold);
-  const removeRouteHold = useWorkspaceStore((state) => state.removeRouteHold);
-  const moveRouteHold = useWorkspaceStore((state) => state.moveRouteHold);
-  const setRouteRole = useWorkspaceStore((state) => state.setRouteRole);
   const undo = useWorkspaceStore((state) => state.undo);
   const redo = useWorkspaceStore((state) => state.redo);
   const notify = useWorkspaceStore((state) => state.notify);
   const [wall, setWall] = useState<Wall | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [wallName, setWallName] = useState("");
   const [tool, setTool] = useState<Tool>("hold");
   const [selectedItemColor, setSelectedItemColor] = useState("#202522");
   const [selectedHoldId, setSelectedHoldId] = useState<string | null>(null);
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
   const [showLines, setShowLines] = useState(true);
-  const [autoDetectHolds, setAutoDetectHolds] = useState(true);
-  const [allowEllipses, setAllowEllipses] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [draft, setDraft] = useState<RouteDraft>(blankDraft);
   const [wallSettingsDraft, setWallSettingsDraft] = useState<WallSettingsDraft>({
     name: "",
     japaneseGrade: "",
     vGrade: "",
     gymName: "",
     tags: emptyWallTags,
+    author: "",
+    description: "",
+    autoDetectHolds: true,
+    allowEllipses: true,
   });
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
+  const [wallSettingsSaving, setWallSettingsSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
-  const [renaming, setRenaming] = useState(false);
-  const [mobilePanel, setMobilePanel] = useState<"holds" | "route" | null>(null);
-  const [panelDragOffset, setPanelDragOffset] = useState(0);
-  const panelDragRef = useRef<{ pointerId: number; startY: number } | null>(null);
 
   const route = routes.find((item) => item.id === selectedRouteId);
+  const autoDetectHolds = wall?.autoDetectHolds ?? true;
+  const allowEllipses = wall?.allowEllipses ?? true;
   const selectedHold = holds.find((hold) => hold.id === selectedHoldId);
   const selectedText = route?.textAnnotations?.find(({ id }) => id === selectedTextId);
+  const editingLine = tool === "route";
+  const activeText = tool === "text" ? selectedText : undefined;
+  const activeHold = tool === "hold" ? selectedHold : undefined;
+  const editorStyleDefaults = {
+    ...defaultEditorStyleDefaults,
+    ...wall?.editorStyleDefaults,
+  };
+  const canEditStyle = editingLine ? Boolean(route) : tool === "text" || tool === "hold";
+  const styleWidth = editingLine
+    ? (route?.lineWidth ?? 4)
+    : tool === "text"
+      ? (activeText?.fontWeight ?? editorStyleDefaults.textFontWeight)
+      : (activeHold?.markerWidth ?? editorStyleDefaults.markerWidth);
+  const outlineWidth = editingLine
+    ? (route?.lineOutlineWidth ?? 2)
+    : (activeText?.outlineWidth ??
+      activeHold?.outlineWidth ??
+      (tool === "text"
+        ? editorStyleDefaults.textOutlineWidth
+        : editorStyleDefaults.holdOutlineWidth));
+  const outlineColor = editingLine
+    ? (route?.lineOutlineColor ?? "#202522")
+    : (activeText?.outlineColor ??
+      activeHold?.outlineColor ??
+      (tool === "text"
+        ? editorStyleDefaults.textOutlineColor
+        : editorStyleDefaults.holdOutlineColor));
 
   useEffect(() => {
-    const color = selectedText?.color ?? selectedHold?.color;
+    const color = activeText?.color ?? activeHold?.color;
     if (color) setSelectedItemColor(color);
-  }, [selectedHold?.color, selectedText?.color]);
+  }, [activeHold?.color, activeText?.color]);
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
@@ -290,7 +286,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       const legacyRoute = useWorkspaceStore.getState().routes[0];
       const legacyGrade = legacyRoute?.grade;
       setWall(record);
-      setWallName(record.name);
       setWallSettingsDraft({
         name: record.name,
         japaneseGrade:
@@ -309,6 +304,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
             : ""),
         gymName: record.gymName ?? legacyRoute?.gymName ?? "",
         tags: record.tags ?? emptyWallTags,
+        author: legacyRoute?.author ?? "",
+        description: legacyRoute?.description ?? "",
+        autoDetectHolds: record.autoDetectHolds ?? true,
+        allowEllipses: record.allowEllipses ?? true,
       });
       const image = await getImage(record.imageId);
       if (active && image) {
@@ -322,55 +321,44 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     };
   }, [wallId, loadWall, loadWalls]);
 
-  useEffect(() => {
-    const selected = routes.find((item) => item.id === selectedRouteId);
-    if (!selected) {
-      setDraft(blankDraft);
-      return;
-    }
-    setDraft({
-      description: selected.description ?? "",
-      author: selected.author ?? "",
-    });
-  }, [selectedRouteId, routes]);
-
   async function saveRouteDetails() {
     if (!route) return;
-    const { description, author } = draft;
+    const { description, author } = route;
     await updateRoute(route.id, {
-      description: description.trim() || undefined,
-      author: author.trim() || undefined,
+      description: description?.trim() || undefined,
+      author: author?.trim() || undefined,
     });
     notify("ルートを保存しました");
   }
 
   async function saveWallSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const updated = await updateWall(wallId, {
-      name: wallSettingsDraft.name.trim() || "名前のない壁",
-      japaneseGrade: wallSettingsDraft.japaneseGrade || undefined,
-      vGrade: wallSettingsDraft.vGrade || undefined,
-      gymName: wallSettingsDraft.gymName.trim() || undefined,
-      tags: wallSettingsDraft.tags,
-    });
-    setWall(updated);
-    setWallName(updated.name);
-    setWallSettingsOpen(false);
-    notify("壁の設定を保存しました");
-  }
-
-  async function saveWallName(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const name = wallName.trim();
-    if (!name) {
-      notify("壁の名前を入力してください。");
-      return;
+    if (wallSettingsSaving) return;
+    setWallSettingsSaving(true);
+    try {
+      if (route) {
+        await updateRoute(route.id, {
+          author: wallSettingsDraft.author.trim() || undefined,
+          description: wallSettingsDraft.description.trim() || undefined,
+        });
+      }
+      const updated = await updateWall(wallId, {
+        name: wallSettingsDraft.name.trim() || "名前のない壁",
+        japaneseGrade: wallSettingsDraft.japaneseGrade || undefined,
+        vGrade: wallSettingsDraft.vGrade || undefined,
+        gymName: wallSettingsDraft.gymName.trim() || undefined,
+        tags: wallSettingsDraft.tags,
+        autoDetectHolds: wallSettingsDraft.autoDetectHolds,
+        allowEllipses: wallSettingsDraft.allowEllipses,
+      });
+      setWall(updated);
+      setWallSettingsOpen(false);
+      notify("壁の設定を保存しました");
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : "壁の設定を保存できませんでした。");
+    } finally {
+      setWallSettingsSaving(false);
     }
-    await renameWall(wallId, name);
-    setWall((current) => (current ? { ...current, name } : current));
-    setWallName(name);
-    setWallSettingsDraft((current) => ({ ...current, name }));
-    setRenaming(false);
   }
 
   function addRouteText(position: Hold["position"], text: string) {
@@ -380,7 +368,12 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       text: text.trim(),
       position,
       color: selectedItemColor,
+      fontWeight: editorStyleDefaults.textFontWeight,
+      fontFamily: editorStyleDefaults.textFontFamily,
+      outlineWidth: editorStyleDefaults.textOutlineWidth,
+      outlineColor: editorStyleDefaults.textOutlineColor,
     };
+    setTool("text");
     setSelectedHoldId(null);
     setSelectedTextId(annotation.id);
     void updateRoute(route.id, {
@@ -424,39 +417,99 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   }
 
   function updateSelectedColor(color: string) {
-    setSelectedItemColor(color);
-    if (selectedHold) {
-      void updateHold(selectedHold.id, { color });
-      return;
+    if (!editingLine) setSelectedItemColor(color);
+    updateSelectedStyle({ color }, { color }, { lineColor: color });
+  }
+
+  function reportStyleError(reason: unknown) {
+    notify(reason instanceof Error ? reason.message : "見た目の設定を保存できませんでした。");
+  }
+
+  function updateSelectedStyle(
+    holdPatch: Partial<Hold>,
+    textPatch: Partial<RouteText>,
+    linePatch: Partial<ClimbingRoute>,
+  ) {
+    if (editingLine && route) {
+      void updateRoute(route.id, linePatch).catch(reportStyleError);
+    } else if (activeText && route) {
+      void updateRoute(route.id, {
+        textAnnotations: (route.textAnnotations ?? []).map((annotation) =>
+          annotation.id === activeText.id ? { ...annotation, ...textPatch } : annotation,
+        ),
+      }).catch(reportStyleError);
+      updateEditorStyleDefaults({
+        ...(textPatch.fontWeight === undefined ? {} : { textFontWeight: textPatch.fontWeight }),
+        ...(textPatch.fontFamily === undefined ? {} : { textFontFamily: textPatch.fontFamily }),
+        ...(textPatch.outlineWidth === undefined
+          ? {}
+          : { textOutlineWidth: textPatch.outlineWidth }),
+        ...(textPatch.outlineColor === undefined
+          ? {}
+          : { textOutlineColor: textPatch.outlineColor }),
+      });
+    } else if (activeHold) {
+      void updateHold(activeHold.id, holdPatch).catch(reportStyleError);
+      updateEditorStyleDefaults({
+        ...(holdPatch.markerWidth === undefined ? {} : { markerWidth: holdPatch.markerWidth }),
+        ...(holdPatch.outlineWidth === undefined
+          ? {}
+          : { holdOutlineWidth: holdPatch.outlineWidth }),
+        ...(holdPatch.outlineColor === undefined
+          ? {}
+          : { holdOutlineColor: holdPatch.outlineColor }),
+      });
+    } else if (tool === "text") {
+      updateEditorStyleDefaults({
+        ...(textPatch.fontWeight === undefined ? {} : { textFontWeight: textPatch.fontWeight }),
+        ...(textPatch.fontFamily === undefined ? {} : { textFontFamily: textPatch.fontFamily }),
+        ...(textPatch.outlineWidth === undefined
+          ? {}
+          : { textOutlineWidth: textPatch.outlineWidth }),
+        ...(textPatch.outlineColor === undefined
+          ? {}
+          : { textOutlineColor: textPatch.outlineColor }),
+      });
+    } else if (tool === "hold") {
+      updateEditorStyleDefaults({
+        ...(holdPatch.markerWidth === undefined ? {} : { markerWidth: holdPatch.markerWidth }),
+        ...(holdPatch.outlineWidth === undefined
+          ? {}
+          : { holdOutlineWidth: holdPatch.outlineWidth }),
+        ...(holdPatch.outlineColor === undefined
+          ? {}
+          : { holdOutlineColor: holdPatch.outlineColor }),
+      });
     }
-    if (!route || !selectedText) return;
-    void updateRoute(route.id, {
-      textAnnotations: (route.textAnnotations ?? []).map((annotation) =>
-        annotation.id === selectedText.id ? { ...annotation, color } : annotation,
-      ),
-    });
   }
 
-  function startPanelDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (event.pointerType === "mouse" && event.button !== 0) return;
-    if ((event.target as HTMLElement).closest("button")) return;
-    panelDragRef.current = { pointerId: event.pointerId, startY: event.clientY };
-    event.currentTarget.setPointerCapture(event.pointerId);
+  function updateEditorStyleDefaults(patch: Partial<WallEditorStyleDefaults>) {
+    if (!wall) return;
+    const editorStyleDefaults = {
+      ...defaultEditorStyleDefaults,
+      ...wall.editorStyleDefaults,
+      ...patch,
+    };
+    setWall((current) => (current ? { ...current, editorStyleDefaults } : current));
+    void updateWall(wall.id, { editorStyleDefaults }).catch(reportStyleError);
   }
 
-  function movePanelDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    const drag = panelDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    setPanelDragOffset(Math.max(0, event.clientY - drag.startY));
+  function resetStyleWidth() {
+    if (editingLine) updateSelectedStyle({}, {}, { lineWidth: 4 });
+    else if (tool === "text") updateSelectedStyle({}, { fontWeight: 600 }, {});
+    else if (tool === "hold") updateSelectedStyle({ markerWidth: 3 }, {}, {});
   }
 
-  function finishPanelDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    const drag = panelDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const shouldClose = event.type === "pointerup" && event.clientY - drag.startY > 80;
-    panelDragRef.current = null;
-    setPanelDragOffset(0);
-    if (shouldClose) setMobilePanel(null);
+  function resetOutlineWidth() {
+    if (editingLine) updateSelectedStyle({}, {}, { lineOutlineWidth: 2 });
+    else if (tool === "text") updateSelectedStyle({}, { outlineWidth: 0 }, {});
+    else if (tool === "hold") updateSelectedStyle({ outlineWidth: 0 }, {}, {});
+  }
+
+  function resetOutlineColor() {
+    if (editingLine) updateSelectedStyle({}, {}, { lineOutlineColor: "#202522" });
+    else if (tool === "text") updateSelectedStyle({}, { outlineColor: "#FFFEFA" }, {});
+    else if (tool === "hold") updateSelectedStyle({ outlineColor: "#FFFEFA" }, {}, {});
   }
 
   async function createRouteFile(routeToExport: ClimbingRoute) {
@@ -475,35 +528,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       downloadPng(file);
     } catch (reason) {
       notify(reason instanceof Error ? reason.message : "PNGを作成できませんでした。");
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
-  async function shareRoute(routeToShare: ClimbingRoute) {
-    if (actionBusy) return;
-    setActionBusy(true);
-    let file: File | null = null;
-    try {
-      file = await createRouteFile(routeToShare);
-      if (!canSharePng(file)) {
-        downloadPng(file);
-        notify("この端末は共有メニューに対応していないため、PNGをダウンロードしました。");
-        return;
-      }
-      await navigator.share({
-        files: [file],
-        title: wall?.name ?? "壁",
-        text: `${wall?.name ?? "壁"}${wallGrade ? ` (${wallGrade})` : ""}`,
-      });
-    } catch (reason) {
-      if (isNamedError(reason, "AbortError")) return;
-      if (file && isNamedError(reason, "NotAllowedError")) {
-        downloadPng(file);
-        notify("共有メニューを開けなかったため、PNGをダウンロードしました。");
-        return;
-      }
-      notify(reason instanceof Error ? reason.message : "共有できませんでした。");
     } finally {
       setActionBusy(false);
     }
@@ -542,10 +566,10 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   async function shareWallLink() {
     if (!wall) return;
     const url = new URL(`/walls/${encodeURIComponent(wallId)}`, window.location.origin).toString();
-    const shareText = `${wallName || wall.name}（壁データは同じ端末に保存されています）`;
+    const shareText = `${wall.name}（壁データは同じ端末に保存されています）`;
     try {
       if (typeof navigator.share === "function") {
-        await navigator.share({ title: wallName || wall.name, text: shareText, url });
+        await navigator.share({ title: wall.name, text: shareText, url });
         return;
       }
       if (!navigator.clipboard?.writeText) throw new Error("リンクをコピーできませんでした。");
@@ -567,35 +591,27 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   return (
     <main className="editor-page">
       <header className="editor-header">
-        <Link className="back-link" to="/">
+        <Link className="back-link" to="/" aria-label="壁一覧に戻る">
           <ArrowLeft size={17} />
-          <span>Walls</span>
         </Link>
-        <span className="header-divider" />
-        {renaming ? (
-          <form className="wall-rename-form" onSubmit={(event) => void saveWallName(event)}>
-            <input value={wallName} onChange={(event) => setWallName(event.currentTarget.value)} />
-            <button className="icon-button" type="submit" title="名前を保存">
-              <Check size={16} />
-            </button>
-          </form>
-        ) : (
-          <button
-            className="wall-title-button"
-            type="button"
-            title="壁名を変更"
-            onClick={() => setRenaming(true)}
-          >
-            <strong>{wall.name}</strong>
-            <Pencil size={13} />
-          </button>
-        )}
+        <div className="wall-title">
+          <strong>{wall.name}</strong>
+        </div>
         <button
           className="icon-button"
           type="button"
           title="壁の設定"
           aria-label="壁の設定"
-          onClick={() => setWallSettingsOpen(true)}
+          onClick={() => {
+            setWallSettingsDraft((current) => ({
+              ...current,
+              author: route?.author ?? "",
+              description: route?.description ?? "",
+              autoDetectHolds: wall?.autoDetectHolds ?? true,
+              allowEllipses: wall?.allowEllipses ?? true,
+            }));
+            setWallSettingsOpen(true);
+          }}
         >
           <Settings2 size={16} />
         </button>
@@ -619,16 +635,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               onClick={() => void exportPng(route)}
             >
               <Download size={14} />
-            </button>
-            <button
-              className="icon-button route-card__tool route-card__tool--share"
-              type="button"
-              title={`${wall.name}を共有`}
-              aria-label={`${wall.name}を共有`}
-              disabled={actionBusy}
-              onClick={() => void shareRoute(route)}
-            >
-              <Share2 size={14} />
             </button>
             <button
               className="icon-button route-card__tool"
@@ -671,166 +677,240 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           disabled={!route}
           onClick={() => void saveRouteDetails()}
         >
-          <Save size={15} /> 保存
+          <Save size={15} /> 投稿
         </button>
       </header>
 
       <div className="editor-layout">
         <section className="canvas-column">
-          <div className="editor-toolbar">
-            <fieldset className="tool-segment">
-              <legend className="sr-only">キャンバスツール</legend>
-              <button
-                className={tool === "pan" ? "is-active" : ""}
-                type="button"
-                title="画像を移動"
-                aria-label="画像を移動"
-                onClick={() => setTool("pan")}
-              >
-                <Hand size={17} />
-              </button>
-              <button
-                className={tool === "hold" ? "is-active" : ""}
-                type="button"
-                title="ホールド追加・移動"
-                aria-label="ホールド追加・移動"
-                onClick={() => setTool("hold")}
-              >
-                <MapPin size={17} />
-              </button>
-              <button
-                className={tool === "route" ? "is-active" : ""}
-                type="button"
-                title="ルートに追加"
-                aria-label="ルートに追加"
-                onClick={() => setTool("route")}
-              >
-                <RouteIcon size={17} />
-              </button>
-              <button
-                className={tool === "text" ? "is-active" : ""}
-                type="button"
-                title="文字を入力して配置"
-                aria-label="文字を入力して配置"
-                aria-pressed={tool === "text"}
-                disabled={!route}
-                onClick={() => setTool("text")}
-              >
-                <Type size={17} />
-              </button>
-              <button
-                className={tool === "eraser" ? "is-active" : ""}
-                type="button"
-                title="ホールドを消去"
-                aria-label="ホールドを消去"
-                onClick={() => setTool("eraser")}
-              >
-                <Eraser size={17} />
-              </button>
-              <div className="editor-settings-wrap">
+          <div className="editor-controls-row">
+            <nav className="editor-tool-nav" aria-label="キャンバスツール">
+              <fieldset className="tool-segment">
+                <legend className="sr-only">キャンバスツール</legend>
                 <button
-                  className={`tool-settings-button ${settingsOpen ? "is-active" : ""}`}
+                  className={tool === "pan" ? "is-active" : ""}
                   type="button"
-                  title="ホールド設定"
-                  aria-label="ホールド設定"
-                  aria-expanded={settingsOpen}
-                  onClick={() => setSettingsOpen((open) => !open)}
+                  title="画像を移動"
+                  aria-label="画像を移動"
+                  onClick={() => setTool("pan")}
                 >
-                  <Settings2 size={17} />
+                  <Hand size={17} />
                 </button>
-                {settingsOpen && (
-                  <div className="editor-settings-popover" role="dialog" aria-label="ホールド設定">
-                    <button
-                      className={`auto-detect-control ${autoDetectHolds ? "is-on" : ""}`}
-                      type="button"
-                      role="switch"
-                      aria-label="ホールド輪郭の自動検出"
-                      aria-checked={autoDetectHolds}
-                      onClick={() => setAutoDetectHolds((enabled) => !enabled)}
+                <button
+                  className={tool === "hold" ? "is-active" : ""}
+                  type="button"
+                  title="ホールド追加・移動"
+                  aria-label="ホールド追加・移動"
+                  onClick={() => setTool("hold")}
+                >
+                  <MapPin size={17} />
+                </button>
+                <button
+                  className={tool === "route" ? "is-active" : ""}
+                  type="button"
+                  title="ルートに追加"
+                  aria-label="ルートに追加"
+                  onClick={() => setTool("route")}
+                >
+                  <RouteIcon size={17} />
+                </button>
+                <button
+                  className={tool === "text" ? "is-active" : ""}
+                  type="button"
+                  title="文字を入力して配置"
+                  aria-label="文字を入力して配置"
+                  aria-pressed={tool === "text"}
+                  disabled={!route}
+                  onClick={() => setTool("text")}
+                >
+                  <Type size={17} />
+                </button>
+                <button
+                  className={tool === "eraser" ? "is-active" : ""}
+                  type="button"
+                  title="ホールドを消去"
+                  aria-label="ホールドを消去"
+                  onClick={() => setTool("eraser")}
+                >
+                  <Eraser size={17} />
+                </button>
+              </fieldset>
+            </nav>
+            <div className="editor-toolbar">
+              <span className="toolbar-separator" />
+              <label className="line-toggle">
+                <input
+                  type="checkbox"
+                  checked={showLines}
+                  onChange={(event) => setShowLines(event.currentTarget.checked)}
+                />
+                <span>
+                  {showLines ? <Eye size={16} /> : <EyeOff size={16} />}
+                  <span>線</span>
+                </span>
+              </label>
+              <div className="selected-object-style">
+                <div
+                  className="selected-object-color"
+                  title="選択中の色、または次に配置するホールド・文字の色"
+                >
+                  <ColorPalette
+                    value={editingLine ? (route?.lineColor ?? "#f2d13d") : selectedItemColor}
+                    label="選択中の色、または次に配置するホールド・文字の色"
+                    onChange={updateSelectedColor}
+                  />
+                </div>
+                <div className="selected-object-style__controls">
+                  <label htmlFor="selected-object-width">
+                    太さ
+                    {tool === "text" ? (
+                      <select
+                        id="selected-object-width"
+                        className="text-input text-input--compact"
+                        aria-label="文字の太さ"
+                        value={styleWidth}
+                        disabled={!canEditStyle}
+                        onDoubleClick={() => updateSelectedStyle({}, { fontWeight: 600 }, {})}
+                        onChange={(event) =>
+                          updateSelectedStyle(
+                            {},
+                            { fontWeight: Number(event.currentTarget.value) },
+                            {},
+                          )
+                        }
+                      >
+                        <option value={300}>細字</option>
+                        <option value={400}>標準</option>
+                        <option value={600}>やや太字</option>
+                        <option value={700}>太字</option>
+                        <option value={900}>極太</option>
+                      </select>
+                    ) : (
+                      <>
+                        <input
+                          id="selected-object-width"
+                          type="range"
+                          aria-label={editingLine ? "線の太さ" : "丸の太さ"}
+                          min={1}
+                          max={20}
+                          step={1}
+                          value={styleWidth}
+                          disabled={!canEditStyle}
+                          onDoubleClick={resetStyleWidth}
+                          onChange={(event) => {
+                            const width = Number(event.currentTarget.value);
+                            updateSelectedStyle({ markerWidth: width }, {}, { lineWidth: width });
+                          }}
+                        />
+                        <output>{styleWidth}px</output>
+                      </>
+                    )}
+                  </label>
+                  <label>
+                    枠線
+                    <input
+                      type="range"
+                      aria-label="枠線の太さ"
+                      min={0}
+                      max={10}
+                      step={1}
+                      value={outlineWidth}
+                      disabled={!canEditStyle}
+                      onDoubleClick={resetOutlineWidth}
+                      onChange={(event) => {
+                        const width = Number(event.currentTarget.value);
+                        updateSelectedStyle(
+                          { outlineWidth: width },
+                          { outlineWidth: width },
+                          { lineOutlineWidth: width },
+                        );
+                      }}
+                    />
+                    <output>{outlineWidth}px</output>
+                  </label>
+                  <label>
+                    枠線の色
+                    <input
+                      type="color"
+                      aria-label="枠線の色"
+                      value={outlineColor}
+                      disabled={!canEditStyle}
+                      onDoubleClick={resetOutlineColor}
+                      onChange={(event) => {
+                        const color = event.currentTarget.value;
+                        updateSelectedStyle(
+                          { outlineColor: color },
+                          { outlineColor: color },
+                          { lineOutlineColor: color },
+                        );
+                      }}
+                    />
+                  </label>
+                  <label
+                    className={tool === "text" ? undefined : "font-control-reserved"}
+                    aria-hidden={tool !== "text"}
+                  >
+                    フォント
+                    <select
+                      className="text-input text-input--compact"
+                      aria-label="文字のフォント"
+                      value={activeText?.fontFamily ?? editorStyleDefaults.textFontFamily}
+                      disabled={tool !== "text" || !canEditStyle}
+                      onDoubleClick={() =>
+                        updateSelectedStyle({}, { fontFamily: "sans-serif" }, {})
+                      }
+                      onChange={(event) => {
+                        const family = event.currentTarget.value;
+                        if (
+                          family === "sans-serif" ||
+                          family === "serif" ||
+                          family === "monospace"
+                        ) {
+                          updateSelectedStyle({}, { fontFamily: family }, {});
+                        }
+                      }}
                     >
-                      <span className="auto-detect-control__label">輪郭検出</span>
-                      <span className="auto-detect-control__track" aria-hidden="true">
-                        <span />
-                      </span>
-                      <span className="auto-detect-control__status">
-                        {autoDetectHolds ? "ON" : "OFF"}
-                      </span>
-                    </button>
-                    <button
-                      className={`auto-detect-control ${allowEllipses ? "is-on" : ""}`}
-                      type="button"
-                      role="switch"
-                      aria-label="楕円を許可"
-                      aria-checked={allowEllipses}
-                      onClick={() => setAllowEllipses((enabled) => !enabled)}
-                    >
-                      <span className="auto-detect-control__label">楕円を許可</span>
-                      <span className="auto-detect-control__track" aria-hidden="true">
-                        <span />
-                      </span>
-                      <span className="auto-detect-control__status">
-                        {allowEllipses ? "ON" : "OFF"}
-                      </span>
-                    </button>
-                  </div>
-                )}
+                      <option value="sans-serif">ゴシック体</option>
+                      <option value="serif">明朝体</option>
+                      <option value="monospace">等幅</option>
+                    </select>
+                  </label>
+                </div>
               </div>
-            </fieldset>
-            <span className="toolbar-separator" />
-            <label className="line-toggle">
-              <input
-                type="checkbox"
-                checked={showLines}
-                onChange={(event) => setShowLines(event.currentTarget.checked)}
-              />
-              <span>
-                {showLines ? <Eye size={16} /> : <EyeOff size={16} />}
-                <span>線</span>
-              </span>
-            </label>
-            <div
-              className="selected-object-color"
-              title="選択中の色、または次に配置するホールド・文字の色"
-            >
-              <ColorPalette
-                value={selectedItemColor}
-                label="選択中の色、または次に配置するホールド・文字の色"
-                onChange={updateSelectedColor}
-              />
-            </div>
-            <button
-              className="icon-button danger-text editor-reset"
-              type="button"
-              title="全リセット"
-              aria-label="全リセット"
-              disabled={
-                holds.length === 0 &&
-                !routes.some((item) => (item.textAnnotations?.length ?? 0) > 0)
-              }
-              onClick={() => {
-                if (
-                  !window.confirm(
-                    "この壁のホールドと配置した文字をすべて削除し、ルートのホールド設定を空にします。ルート自体は残ります。よろしいですか？",
+              <button
+                className="icon-button danger-text editor-reset"
+                type="button"
+                title="全リセット"
+                aria-label="全リセット"
+                disabled={
+                  holds.length === 0 &&
+                  !routes.some((item) => (item.textAnnotations?.length ?? 0) > 0)
+                }
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "この壁のホールドと配置した文字をすべて削除し、ルートのホールド設定を空にします。ルート自体は残ります。よろしいですか？",
+                    )
                   )
-                )
-                  return;
-                void clearHolds()
-                  .then(() => {
-                    setSelectedHoldId(null);
-                    setSelectedTextId(null);
-                  })
-                  .catch((reason: unknown) =>
-                    notify(
-                      reason instanceof Error
-                        ? reason.message
-                        : "ホールドをリセットできませんでした。",
-                    ),
-                  );
-              }}
-            >
-              <RotateCcw size={16} />
-            </button>
-            <span className="toolbar-spacer" />
+                    return;
+                  void clearHolds()
+                    .then(() => {
+                      setSelectedHoldId(null);
+                      setSelectedTextId(null);
+                    })
+                    .catch((reason: unknown) =>
+                      notify(
+                        reason instanceof Error
+                          ? reason.message
+                          : "ホールドをリセットできませんでした。",
+                      ),
+                    );
+                }}
+              >
+                <RotateCcw size={16} />
+              </button>
+              <span className="toolbar-spacer" />
+            </div>
           </div>
           <div className="canvas-frame">
             <WallCanvas
@@ -842,12 +922,21 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               selectedTextId={selectedTextId}
               tool={tool}
               textColor={selectedItemColor}
+              textFontWeight={editorStyleDefaults.textFontWeight}
+              textFontFamily={editorStyleDefaults.textFontFamily}
+              textOutlineWidth={editorStyleDefaults.textOutlineWidth}
+              textOutlineColor={editorStyleDefaults.textOutlineColor}
               showLines={showLines}
               autoDetectHolds={autoDetectHolds}
               allowEllipses={allowEllipses}
               onAddHold={(position, markerRadius, bounds, shape) =>
-                void addHold(position, markerRadius, selectedItemColor, bounds, shape)
+                void addHold(position, markerRadius, selectedItemColor, bounds, shape, {
+                  markerWidth: editorStyleDefaults.markerWidth,
+                  outlineWidth: editorStyleDefaults.holdOutlineWidth,
+                  outlineColor: editorStyleDefaults.holdOutlineColor,
+                })
                   .then((hold) => {
+                    setTool("hold");
                     setSelectedTextId(null);
                     setSelectedHoldId(hold.id);
                   })
@@ -871,6 +960,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                   );
               }}
               onSelectHold={(id) => {
+                if (id) setTool("hold");
                 setSelectedTextId(null);
                 setSelectedHoldId(id);
               }}
@@ -879,7 +969,13 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               onEditText={editRouteText}
               onMoveText={moveRouteText}
               onResizeText={resizeRouteText}
-              onSelectText={setSelectedTextId}
+              onSelectText={(id) => {
+                if (id) {
+                  setTool("text");
+                  setSelectedHoldId(null);
+                }
+                setSelectedTextId(id);
+              }}
               onRemoveText={removeRouteText}
             />
             <div className="canvas-caption">
@@ -890,308 +986,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
             </div>
           </div>
         </section>
-
-        <aside
-          id="editor-sidebar-panel"
-          className={`editor-sidebar${mobilePanel ? " is-open" : ""}${panelDragOffset > 0 ? " is-dragging" : ""}`}
-          style={
-            panelDragOffset > 0 ? { transform: `translateY(${panelDragOffset}px)` } : undefined
-          }
-        >
-          <div
-            className="mobile-editor-panel-heading"
-            onPointerDown={startPanelDrag}
-            onPointerMove={movePanelDrag}
-            onPointerUp={finishPanelDrag}
-            onPointerCancel={finishPanelDrag}
-          >
-            <strong>{mobilePanel === "route" ? "ルート" : "ホールド"}</strong>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label="パネルを閉じる"
-              onClick={() => setMobilePanel(null)}
-            >
-              <X size={17} />
-            </button>
-          </div>
-          <div className="sidebar-content" data-mobile-panel={mobilePanel ?? ""}>
-            {!route && <p className="sidebar-empty">ルートを読み込んでいます。</p>}
-            {route && route.holdIds.length > 0 && (
-              <div className="route-sequence editor-mobile-route-panel">
-                {route.holdIds.map((id, index) => {
-                  const hold = holds.find((item) => item.id === id);
-                  if (!hold) return null;
-                  return (
-                    <RouteHoldRow
-                      key={id}
-                      hold={hold}
-                      route={route}
-                      index={index}
-                      count={route.holdIds.length}
-                      onRole={(role) => void setRouteRole(id, role)}
-                      onMove={(delta) => void moveRouteHold(id, delta)}
-                      onRemove={() => void removeRouteHold(id)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-            <div className="route-list-heading editor-mobile-holds-panel">
-              <span>登録済みホールド</span>
-              <span className="tool-hint">{tool === "hold" ? "編集" : "選択"}</span>
-              {selectedHold && (
-                <button
-                  className="icon-button danger-text"
-                  type="button"
-                  aria-label="ホールドを削除"
-                  title="ホールドを削除"
-                  onClick={() => {
-                    if (window.confirm("このホールドを削除しますか？")) {
-                      void removeHold(selectedHold.id);
-                      setSelectedHoldId(null);
-                    }
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-            {holds.length === 0 ? (
-              <p className="sidebar-empty editor-mobile-holds-panel">ホールドはまだありません。</p>
-            ) : (
-              <div className="hold-list editor-mobile-holds-panel">
-                {holds.map((hold, index) => (
-                  <button
-                    key={hold.id}
-                    type="button"
-                    className={`hold-list-item ${selectedHoldId === hold.id ? "is-selected" : ""}`}
-                    onClick={() => {
-                      setSelectedTextId(null);
-                      setSelectedHoldId(hold.id);
-                    }}
-                  >
-                    <span
-                      className="hold-list-marker"
-                      style={{ background: hold.color ?? "#f2d13d" }}
-                    />
-                    <span>Hold {String(index + 1).padStart(2, "0")}</span>
-                    <span className="hold-list-coordinate">
-                      {Math.round(hold.position.x * 100)}%, {Math.round(hold.position.y * 100)}%
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {selectedHold && (
-              <div className="hold-properties editor-mobile-holds-panel">
-                <label className="field-label">
-                  種類
-                  <input
-                    className="text-input text-input--compact"
-                    value={selectedHold.type ?? ""}
-                    onChange={(event) =>
-                      void updateHold(selectedHold.id, {
-                        type: event.currentTarget.value || undefined,
-                      })
-                    }
-                    placeholder="例: crimp"
-                    maxLength={40}
-                  />
-                </label>
-                <label className="field-label">
-                  円の半径（画像px）
-                  <span className="hold-range-value hold-range-value--steps">
-                    <button
-                      className="hold-size-step"
-                      type="button"
-                      title="円を小さく"
-                      aria-label="円を小さく"
-                      disabled={(selectedHold.markerRadius ?? 48) <= 4}
-                      onClick={() =>
-                        void updateHold(selectedHold.id, {
-                          markerRadius: Math.max(4, (selectedHold.markerRadius ?? 48) - 4),
-                        })
-                      }
-                    >
-                      <Minus size={13} />
-                    </button>
-                    <input
-                      className="hold-range"
-                      type="range"
-                      min="4"
-                      max="300"
-                      step="1"
-                      value={selectedHold.markerRadius ?? 48}
-                      onChange={(event) =>
-                        void updateHold(selectedHold.id, {
-                          markerRadius: Number(event.currentTarget.value),
-                        })
-                      }
-                    />
-                    <output>{Math.round(selectedHold.markerRadius ?? 48)} px</output>
-                    <button
-                      className="hold-size-step"
-                      type="button"
-                      title="円を大きく"
-                      aria-label="円を大きく"
-                      disabled={(selectedHold.markerRadius ?? 48) >= 300}
-                      onClick={() =>
-                        void updateHold(selectedHold.id, {
-                          markerRadius: Math.min(300, (selectedHold.markerRadius ?? 48) + 4),
-                        })
-                      }
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </span>
-                </label>
-                <label className="field-label">
-                  横方向（楕円）
-                  <span className="hold-range-value">
-                    <input
-                      className="hold-range"
-                      type="range"
-                      min="0.5"
-                      max="2.5"
-                      step="0.05"
-                      value={allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1}
-                      disabled={!allowEllipses}
-                      onChange={(event) =>
-                        void updateHold(selectedHold.id, {
-                          markerScaleX: Number(event.currentTarget.value),
-                        })
-                      }
-                    />
-                    <output>
-                      {(allowEllipses ? (selectedHold.markerScaleX ?? 1) : 1).toFixed(2)}×
-                    </output>
-                  </span>
-                </label>
-                <label className="field-label">
-                  縦方向（楕円）
-                  <span className="hold-range-value">
-                    <input
-                      className="hold-range"
-                      type="range"
-                      min="0.5"
-                      max="2.5"
-                      step="0.05"
-                      value={allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1}
-                      disabled={!allowEllipses}
-                      onChange={(event) =>
-                        void updateHold(selectedHold.id, {
-                          markerScaleY: Number(event.currentTarget.value),
-                        })
-                      }
-                    />
-                    <output>
-                      {(allowEllipses ? (selectedHold.markerScaleY ?? 1) : 1).toFixed(2)}×
-                    </output>
-                  </span>
-                </label>
-                <label className="field-label">
-                  線幅（画面px）
-                  <span className="hold-range-value">
-                    <input
-                      className="hold-range"
-                      type="range"
-                      min="1"
-                      max="10"
-                      step="0.5"
-                      value={selectedHold.markerWidth ?? 2}
-                      onChange={(event) =>
-                        void updateHold(selectedHold.id, {
-                          markerWidth: Number(event.currentTarget.value),
-                        })
-                      }
-                    />
-                    <output>{selectedHold.markerWidth ?? 2} px</output>
-                  </span>
-                </label>
-                <div className="field-label">
-                  <span>色</span>
-                  <div className="color-input-row">
-                    <ColorPalette
-                      value={selectedHold.color ?? "#f2d13d"}
-                      label="ホールドの色"
-                      compact
-                      onChange={(color) => void updateHold(selectedHold.id, { color })}
-                    />
-                    <span>{selectedHold.color ?? "#f2d13d"}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            {route && (
-              <div className="route-details-form editor-mobile-route-panel">
-                <label className="field-label">
-                  作成者
-                  <input
-                    className="text-input text-input--compact"
-                    value={draft.author}
-                    onChange={(event) => {
-                      const author = event.currentTarget.value;
-                      setDraft((current) => ({ ...current, author }));
-                    }}
-                    maxLength={80}
-                  />
-                </label>
-                <label className="field-label">
-                  説明
-                  <textarea
-                    className="text-input text-input--compact textarea-input"
-                    value={draft.description}
-                    onChange={(event) => {
-                      const description = event.currentTarget.value;
-                      setDraft((current) => ({ ...current, description }));
-                    }}
-                    rows={2}
-                    maxLength={500}
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-        </aside>
       </div>
-
-      {mobilePanel && (
-        <button
-          className="mobile-editor-backdrop"
-          type="button"
-          aria-label="パネルを閉じる"
-          onClick={() => setMobilePanel(null)}
-        />
-      )}
-      <nav className="mobile-editor-nav" aria-label="エディタパネル">
-        <button
-          className={mobilePanel === "holds" ? "is-active" : ""}
-          type="button"
-          aria-expanded={mobilePanel === "holds"}
-          aria-controls="editor-sidebar-panel"
-          onClick={() => {
-            setTool("hold");
-            setMobilePanel((current) => (current === "holds" ? null : "holds"));
-          }}
-        >
-          <MapPin size={18} />
-          <span>ホールド</span>
-        </button>
-        <button
-          className={mobilePanel === "route" ? "is-active" : ""}
-          type="button"
-          aria-expanded={mobilePanel === "route"}
-          aria-controls="editor-sidebar-panel"
-          onClick={() => {
-            setTool("route");
-            setMobilePanel((current) => (current === "route" ? null : "route"));
-          }}
-        >
-          <RouteIcon size={18} />
-          <span>ルート</span>
-        </button>
-      </nav>
 
       {wallSettingsOpen && (
         <div className="modal-backdrop" role="presentation">
@@ -1209,6 +1004,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 className="icon-button"
                 type="button"
                 aria-label="閉じる"
+                disabled={wallSettingsSaving}
                 onClick={() => setWallSettingsOpen(false)}
               >
                 <X size={18} />
@@ -1219,12 +1015,13 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               <input
                 className="text-input"
                 value={wallSettingsDraft.name}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const name = event.currentTarget.value;
                   setWallSettingsDraft((current) => ({
                     ...current,
-                    name: event.currentTarget.value,
-                  }))
-                }
+                    name,
+                  }));
+                }}
                 maxLength={80}
                 required
               />
@@ -1235,12 +1032,13 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <select
                   className="text-input text-input--compact"
                   value={wallSettingsDraft.japaneseGrade}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const japaneseGrade = event.currentTarget.value;
                     setWallSettingsDraft((current) => ({
                       ...current,
-                      japaneseGrade: event.currentTarget.value,
-                    }))
-                  }
+                      japaneseGrade,
+                    }));
+                  }}
                 >
                   <option value="">未設定</option>
                   {JAPANESE_CLIMBING_LEVELS.map((level) => (
@@ -1255,12 +1053,13 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <select
                   className="text-input text-input--compact"
                   value={wallSettingsDraft.vGrade}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const vGrade = event.currentTarget.value;
                     setWallSettingsDraft((current) => ({
                       ...current,
-                      vGrade: event.currentTarget.value,
-                    }))
-                  }
+                      vGrade,
+                    }));
+                  }}
                 >
                   <option value="">未設定</option>
                   {V_CLIMBING_LEVELS.map((level) => (
@@ -1276,15 +1075,96 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               <input
                 className="text-input"
                 value={wallSettingsDraft.gymName}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const gymName = event.currentTarget.value;
                   setWallSettingsDraft((current) => ({
                     ...current,
-                    gymName: event.currentTarget.value,
-                  }))
-                }
+                    gymName,
+                  }));
+                }}
                 maxLength={80}
               />
             </label>
+            <label className="field-label">
+              作成者
+              <input
+                className="text-input"
+                value={wallSettingsDraft.author}
+                disabled={!route || wallSettingsSaving}
+                onChange={(event) => {
+                  const author = event.currentTarget.value;
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    author,
+                  }));
+                }}
+                maxLength={80}
+              />
+            </label>
+            <label className="field-label">
+              説明
+              <textarea
+                className="text-input textarea-input"
+                value={wallSettingsDraft.description}
+                disabled={!route || wallSettingsSaving}
+                onChange={(event) => {
+                  const description = event.currentTarget.value;
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    description,
+                  }));
+                }}
+                rows={3}
+                maxLength={500}
+              />
+            </label>
+            <fieldset className="wall-editor-options">
+              <legend className="field-label">キャンバス設定</legend>
+              <button
+                className={`auto-detect-control ${wallSettingsDraft.autoDetectHolds ? "is-on" : ""}`}
+                type="button"
+                role="switch"
+                aria-label="ホールド輪郭の自動検出"
+                aria-checked={wallSettingsDraft.autoDetectHolds}
+                disabled={wallSettingsSaving}
+                onClick={() =>
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    autoDetectHolds: !current.autoDetectHolds,
+                  }))
+                }
+              >
+                <span className="auto-detect-control__label">ホールド輪郭の自動検出</span>
+                <span className="auto-detect-control__track" aria-hidden="true">
+                  <span />
+                </span>
+                <span className="auto-detect-control__status">
+                  {wallSettingsDraft.autoDetectHolds ? "ON" : "OFF"}
+                </span>
+              </button>
+              <button
+                className={`auto-detect-control ${wallSettingsDraft.allowEllipses ? "is-on" : ""}`}
+                type="button"
+                role="switch"
+                aria-label="楕円を許可"
+                aria-checked={wallSettingsDraft.allowEllipses}
+                disabled={wallSettingsSaving}
+                onClick={() =>
+                  setWallSettingsDraft((current) => ({
+                    ...current,
+                    allowEllipses: !current.allowEllipses,
+                  }))
+                }
+              >
+                <span className="auto-detect-control__label">楕円を許可</span>
+                <span className="auto-detect-control__track" aria-hidden="true">
+                  <span />
+                </span>
+                <span className="auto-detect-control__status">
+                  {wallSettingsDraft.allowEllipses ? "ON" : "OFF"}
+                </span>
+              </button>
+            </fieldset>
             <div className="field-label wall-tag-field">
               <span>タイプ・タグ</span>
               <div className="wall-tag-groups">
@@ -1325,6 +1205,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 <button
                   className="button button--outline button--small"
                   type="button"
+                  disabled={wallSettingsSaving}
                   onClick={() => {
                     setTool("hold");
                     setWallSettingsOpen(false);
@@ -1338,11 +1219,16 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               <button
                 className="button button--quiet"
                 type="button"
+                disabled={wallSettingsSaving}
                 onClick={() => setWallSettingsOpen(false)}
               >
                 キャンセル
               </button>
-              <button className="button button--primary" type="submit">
+              <button
+                className="button button--primary"
+                type="submit"
+                disabled={wallSettingsSaving}
+              >
                 <Save size={15} /> 設定を保存
               </button>
             </div>
@@ -1350,69 +1236,5 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
         </div>
       )}
     </main>
-  );
-}
-
-function RouteHoldRow({
-  hold,
-  route,
-  index,
-  count,
-  onRole,
-  onMove,
-  onRemove,
-}: {
-  hold: Hold;
-  route: ClimbingRoute;
-  index: number;
-  count: number;
-  onRole: (role: "start" | "normal" | "finish") => void;
-  onMove: (delta: -1 | 1) => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="sequence-row">
-      <span className={`sequence-number ${roleFor(route, hold.id)}`}>{index + 1}</span>
-      <span className="sequence-name">Hold {index + 1}</span>
-      <select
-        className="role-select"
-        aria-label={`Hold ${index + 1}の役割`}
-        value={roleFor(route, hold.id)}
-        onChange={(event) => onRole(event.currentTarget.value as "start" | "normal" | "finish")}
-      >
-        <option value="start">Start</option>
-        <option value="normal">Normal</option>
-        <option value="finish">Finish</option>
-      </select>
-      <button
-        className="icon-button sequence-move"
-        type="button"
-        title="上へ"
-        aria-label="順序を上げる"
-        disabled={index === 0}
-        onClick={() => onMove(-1)}
-      >
-        <ArrowUp size={13} />
-      </button>
-      <button
-        className="icon-button sequence-move"
-        type="button"
-        title="下へ"
-        aria-label="順序を下げる"
-        disabled={index === count - 1}
-        onClick={() => onMove(1)}
-      >
-        <ArrowDown size={13} />
-      </button>
-      <button
-        className="icon-button sequence-remove"
-        type="button"
-        title="ルートから外す"
-        aria-label="ルートから外す"
-        onClick={onRemove}
-      >
-        <X size={14} />
-      </button>
-    </div>
   );
 }

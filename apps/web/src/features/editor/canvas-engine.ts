@@ -123,13 +123,18 @@ export function hitTestRouteText(
 
 export function getRouteTextGeometry(annotation: RouteText, rect: ImageRect): RouteTextGeometry {
   const position = normalizedToCanvas(annotation.position, rect);
-  const fontSize =
-    Math.max(14, 24 * rect.scale) * clampRouteTextScale(annotation.fontScale ?? 1);
+  const fontSize = Math.max(14, 24 * rect.scale) * clampRouteTextScale(annotation.fontScale ?? 1);
   const textWidth = Math.max(
     fontSize,
     Array.from(annotation.text).reduce(
       (total, character) =>
-        total + fontSize * ((character.codePointAt(0) ?? 0) > 0x2e80 ? 1 : 0.7),
+        total +
+        fontSize *
+          ((character.codePointAt(0) ?? 0) > 0x2e80
+            ? 1
+            : annotation.fontFamily === "monospace"
+              ? 0.6
+              : 0.7),
       0,
     ),
   );
@@ -138,10 +143,10 @@ export function getRouteTextGeometry(annotation: RouteText, rect: ImageRect): Ro
     fontSize,
     textWidth,
     frame: {
-      x: position.x - 4,
-      y: position.y - fontSize / 2 - 3,
-      width: textWidth + 8,
-      height: fontSize + 6,
+      x: position.x - 4 - (annotation.outlineWidth ?? 0),
+      y: position.y - fontSize / 2 - 3 - (annotation.outlineWidth ?? 0),
+      width: textWidth + 8 + (annotation.outlineWidth ?? 0) * 2,
+      height: fontSize + 6 + (annotation.outlineWidth ?? 0) * 2,
     },
   };
 }
@@ -214,8 +219,8 @@ export function getHoldMarkerGeometry(
     center,
     radiusX,
     radiusY,
-    outlineRadiusX: radiusX + lineWidth / 2,
-    outlineRadiusY: radiusY + lineWidth / 2,
+    outlineRadiusX: radiusX + lineWidth / 2 + (hold.outlineWidth ?? 0),
+    outlineRadiusY: radiusY + lineWidth / 2 + (hold.outlineWidth ?? 0),
   };
 }
 
@@ -310,11 +315,15 @@ export function drawScene(
     context.lineJoin = "round";
     context.shadowColor = "rgba(25, 30, 25, .65)";
     context.shadowBlur = 5;
-    context.strokeStyle = "#202522";
-    context.lineWidth = 8;
-    context.stroke();
-    context.strokeStyle = "#f2d13d";
-    context.lineWidth = 4;
+    const lineWidth = route?.lineWidth ?? 4;
+    const outlineWidth = route?.lineOutlineWidth ?? 2;
+    if (outlineWidth > 0) {
+      context.strokeStyle = route?.lineOutlineColor ?? "#202522";
+      context.lineWidth = lineWidth + outlineWidth * 2;
+      context.stroke();
+    }
+    context.strokeStyle = route?.lineColor ?? "#f2d13d";
+    context.lineWidth = lineWidth;
     context.stroke();
     context.shadowBlur = 0;
   }
@@ -387,6 +396,11 @@ export function drawScene(
       context.fillStyle = "#ee795a";
       context.fill();
     }
+    if ((hold.outlineWidth ?? 0) > 0) {
+      context.strokeStyle = hold.outlineColor ?? "#FFFEFA";
+      context.lineWidth = lineWidth + (hold.outlineWidth ?? 0) * 2;
+      context.stroke();
+    }
     context.strokeStyle = hold.color ?? (isStart ? "#79c7a2" : isInRoute ? "#202522" : "#49534e");
     context.lineWidth = lineWidth;
     context.stroke();
@@ -402,10 +416,16 @@ export function drawScene(
   for (const annotation of route?.textAnnotations ?? []) {
     const geometry = getRouteTextGeometry(annotation, rect);
     const { position, fontSize, frame } = geometry;
-    context.font = `600 ${fontSize}px sans-serif`;
+    context.font = `${annotation.fontWeight ?? 600} ${fontSize}px ${annotation.fontFamily ?? "sans-serif"}`;
     context.textAlign = "left";
     context.textBaseline = "middle";
     context.fillStyle = annotation.color ?? "#202522";
+    if ((annotation.outlineWidth ?? 0) > 0) {
+      context.lineJoin = "round";
+      context.strokeStyle = annotation.outlineColor ?? "#FFFEFA";
+      context.lineWidth = (annotation.outlineWidth ?? 0) * 2;
+      context.strokeText(annotation.text, position.x, position.y);
+    }
     context.fillText(annotation.text, position.x, position.y);
     if (selectedTextId === annotation.id) {
       context.strokeStyle = "#1673e6";

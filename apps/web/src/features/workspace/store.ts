@@ -28,6 +28,24 @@ import {
 } from "../../infrastructure/storage/database";
 
 const pendingNotifications = new Set<string>();
+const holdSaveQueues = new Map<string, Promise<void>>();
+const routeSaveQueues = new Map<string, Promise<void>>();
+const wallSaveQueues = new Map<string, Promise<void>>();
+
+function saveInOrder<T extends { id: string }>(
+  queues: Map<string, Promise<void>>,
+  save: (record: T) => Promise<void>,
+  record: T,
+): Promise<void> {
+  const previous = queues.get(record.id) ?? Promise.resolve();
+  const write = previous.catch(() => {}).then(() => save(record));
+  queues.set(record.id, write);
+  const clearQueue = () => {
+    if (queues.get(record.id) === write) queues.delete(record.id);
+  };
+  void write.then(clearQueue, clearQueue);
+  return write;
+}
 
 type EditorSnapshot = {
   holds: Hold[];
@@ -78,6 +96,7 @@ type WorkspaceState = {
     color?: string,
     bounds?: Hold["bounds"],
     shape?: Hold["shape"],
+    style?: Pick<Hold, "markerWidth" | "outlineWidth" | "outlineColor">,
   ) => Promise<Hold>;
   moveHold: (holdId: string, position: Hold["position"]) => Promise<void>;
   updateHold: (holdId: string, patch: Partial<Hold>) => Promise<void>;
@@ -293,15 +312,16 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     await get().updateWall(wallId, { name: name.trim() });
   },
   async updateWall(wallId, patch) {
-    const state = get();
-    const wall = state.walls.find((item) => item.id === wallId);
+    const wall = get().walls.find((item) => item.id === wallId);
     if (!wall) throw new Error("壁が見つかりません。");
     const updated = { ...wall, ...patch, updatedAt: new Date().toISOString() };
-    await saveWall(updated);
-    set({ walls: state.walls.map((item) => (item.id === wallId ? updated : item)) });
+    set((state) => ({
+      walls: state.walls.map((item) => (item.id === wallId ? updated : item)),
+    }));
+    await saveInOrder(wallSaveQueues, saveWall, updated);
     return updated;
   },
-  async addHold(position, markerRadius, color, bounds, shape) {
+  async addHold(position, markerRadius, color, bounds, shape, style) {
     const state = get();
     const wallId = state.selectedWallId;
     if (!wallId) throw new Error("編集する壁を選択してください。");
@@ -313,6 +333,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
       ...(markerRadius === undefined ? {} : { markerRadius }),
       ...(bounds ? { bounds } : {}),
       ...(shape ? { shape } : {}),
+      ...style,
       detectionSource: "manual",
       ...(color === undefined ? {} : { color }),
       createdAt: now,
@@ -357,7 +378,10 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     const routes = touchRoutesForHold(state.routes, holdId);
     const updatedRoutes = routes.filter((route) => updatedRouteIds.has(route.id));
     set({ holds, routes, past: nextHistory(state.past, snapshot(state)), future: [] });
-    await Promise.all([saveHold(updated), ...updatedRoutes.map(saveRoute)]);
+    await Promise.all([
+      saveInOrder(holdSaveQueues, saveHold, updated),
+      ...updatedRoutes.map((route) => saveInOrder(routeSaveQueues, saveRoute, route)),
+    ]);
     updatedRoutes.forEach(
       (route) => void notifyDiscord(route, "update", (message) => get().notify(message)),
     );
@@ -471,7 +495,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
     if (!updated) return;
     assertRouteIntegrity(updated, new Set(state.holds.map((hold) => hold.id)));
     set({ routes, past: nextHistory(state.past, snapshot(state)), future: [] });
-    await saveRoute(updated);
+    await saveInOrder(routeSaveQueues, saveRoute, updated);
     void notifyDiscord(updated, "update", (message) => get().notify(message));
   },
   async removeRoute(routeId) {

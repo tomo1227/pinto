@@ -52,7 +52,9 @@ pnpm --filter @pinto/worker exec wrangler d1 migrations apply pinto-db-productio
 
 - 壁画像の登録とライブラリ管理
 - Canvas上でのホールド配置、移動、属性編集
-- ルート作成、順序・グレード・Setterなどの管理
+- ツールボタン（ホールド・文字・ルート）で設定対象を判別し、色パレット付近で丸・文字・ルート線の太さと縁取り（枠線の色・太さ）を変更。文字選択時はウェイトとフォント（ゴシック体・明朝体・等幅）も変更でき、保存・Undo/Redo・PNG出力に反映
+- ホールド輪郭の自動検出と楕円の許可は、壁ごとの設定で切り替え（既定はON）
+- サイドバーのないCanvas中心の編集画面。グレード・作成者・説明は「壁の設定」から編集
 - Undo/Redo、PNG書き出し
 - IndexedDBへのローカル保存とPWA対応
 - Google OAuthログインとD1コミュニティ投稿
