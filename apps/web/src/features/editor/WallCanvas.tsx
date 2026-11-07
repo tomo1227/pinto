@@ -1,26 +1,21 @@
 import type { Route as ClimbingRoute, Hold, Wall } from "@pinto/shared";
 import { Trash2 } from "lucide-react";
-import {
-  type PointerEvent as ReactPointerEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import {
   canvasToNormalized,
   clampRouteTextScale,
   drawScene,
   getHoldMarkerGeometry,
   getImageRect,
+  getResizeHandleAt,
   getRouteTextGeometry,
   getRouteTextResizeHandleAt,
-  getResizeHandleAt,
   type HoldResizeHandle,
-  type RouteTextResizeHandle,
   hitTestHold,
   hitTestRouteText,
   isInsideHoldMarker,
   normalizedToCanvas,
+  type RouteTextResizeHandle,
   type Viewport,
 } from "./canvas-engine";
 import { detectHoldOutline, detectHoldRadius } from "./hold-detection";
@@ -445,7 +440,9 @@ export function WallCanvas({
       viewport,
     );
     const selectedText = route?.textAnnotations?.find(({ id }) => id === selectedTextId);
-    const selectedTextGeometry = selectedText ? getRouteTextGeometry(selectedText, rect) : undefined;
+    const selectedTextGeometry = selectedText
+      ? getRouteTextGeometry(selectedText, rect)
+      : undefined;
     const textResizeHandle =
       tool === "text" && selectedTextGeometry
         ? getRouteTextResizeHandleAt(point, selectedTextGeometry)
@@ -486,7 +483,7 @@ export function WallCanvas({
           scaleX: selectedHold.markerScaleX ?? 1,
           scaleY: selectedHold.markerScaleY ?? 1,
           imageScale: rect.scale,
-          lineWidth: selectedHold.markerWidth ?? 3,
+          lineWidth: (selectedHold.markerWidth ?? 3) + (selectedHold.outlineWidth ?? 0),
           patch: {},
         };
         return;
@@ -942,8 +939,8 @@ export function WallCanvas({
   }
 
   const canvas = canvasRef.current;
-  const activeTextScale =
-    route?.textAnnotations?.find(({ id }) => id === textInputDraft?.id)?.fontScale ?? 1;
+  const editingText = route?.textAnnotations?.find(({ id }) => id === textInputDraft?.id);
+  const activeTextScale = editingText?.fontScale ?? 1;
   const textFontSize = canvas
     ? Math.max(
         14,
@@ -980,6 +977,12 @@ export function WallCanvas({
             top: textInputDraft.y,
             color: textColor,
             fontSize: textFontSize,
+            fontWeight: editingText?.fontWeight ?? 600,
+            fontFamily: editingText?.fontFamily ?? "sans-serif",
+            WebkitTextStroke:
+              `${(editingText?.outlineWidth ?? 0) * 2}px ` +
+              (editingText?.outlineColor ?? "#FFFEFA"),
+            paintOrder: "stroke fill",
             width: Math.min(
               240,
               Math.max(100, (canvasRef.current?.clientWidth ?? 240) - textInputDraft.x - 16),

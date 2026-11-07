@@ -5,9 +5,9 @@ import {
   drawScene,
   getHoldMarkerGeometry,
   getImageRect,
+  getResizeHandleAt,
   getRouteTextGeometry,
   getRouteTextResizeHandleAt,
-  getResizeHandleAt,
   hitTestHold,
   hitTestRouteText,
   normalizedToCanvas,
@@ -60,6 +60,126 @@ function createCanvasContext(): CanvasRenderingContext2D {
 }
 
 describe("canvas coordinate engine", () => {
+  it("draws custom line and marker widths with an outer outline", () => {
+    const context = createCanvasContext();
+    const strokes: { width: number; color: string | CanvasGradient | CanvasPattern }[] = [];
+    vi.mocked(context.stroke).mockImplementation(() => {
+      strokes.push({ width: context.lineWidth, color: context.strokeStyle });
+    });
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [
+          { ...hold, color: "#2589C7", markerWidth: 6, outlineWidth: 3, outlineColor: "#FFFEFA" },
+          nextHold,
+        ],
+        route: {
+          ...route,
+          holdIds: [hold.id, nextHold.id],
+          lineWidth: 10,
+          lineColor: "#E55050",
+          lineOutlineWidth: 4,
+          lineOutlineColor: "#202522",
+        },
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+    expect(strokes).toEqual([
+      { width: 18, color: "#202522" },
+      { width: 10, color: "#E55050" },
+      { width: 12, color: "#FFFEFA" },
+      { width: 6, color: "#2589C7" },
+      { width: 2, color: "#202522" },
+    ]);
+    const geometry = getHoldMarkerGeometry(
+      { ...hold, markerWidth: 6, outlineWidth: 3 },
+      400,
+      400,
+      rect,
+    );
+    expect(geometry.outlineRadiusX).toBe(18);
+    expect(
+      hitTestHold(
+        { x: 525, y: 400 },
+        [{ ...hold, markerWidth: 6, outlineWidth: 3 }],
+        rect,
+        24,
+        400,
+        400,
+      ),
+    ).toEqual(expect.objectContaining({ id: hold.id }));
+  });
+
+  it("draws text in its saved font and weight with an outline before its fill", () => {
+    const context = createCanvasContext();
+    const draws: string[] = [];
+    vi.mocked(context.strokeText).mockImplementation(() => {
+      draws.push("outline");
+      expect(context.lineWidth).toBe(6);
+      expect(context.strokeStyle).toBe("#FFFEFA");
+    });
+    vi.mocked(context.fillText).mockImplementation(() => draws.push("fill"));
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [],
+        route: {
+          ...route,
+          holdIds: [],
+          textAnnotations: [
+            {
+              id: "text-1",
+              text: "Text",
+              position: hold.position,
+              fontFamily: "serif",
+              fontWeight: 900,
+              outlineWidth: 3,
+              outlineColor: "#FFFEFA",
+            },
+          ],
+        },
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+    expect(context.font).toBe("900 14px serif");
+    expect(draws).toEqual(["outline", "fill"]);
+  });
+
+  it("disables line outlines at zero and preserves legacy text styling", () => {
+    const context = createCanvasContext();
+    drawScene(
+      context,
+      {
+        image: {} as CanvasImageSource,
+        imageWidth: 400,
+        imageHeight: 400,
+        holds: [hold, nextHold],
+        route: {
+          ...route,
+          holdIds: [hold.id, nextHold.id],
+          lineOutlineWidth: 0,
+          textAnnotations: [{ id: "text-1", text: "Text", position: hold.position }],
+        },
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      100,
+      100,
+    );
+    expect(context.stroke).toHaveBeenCalledTimes(3);
+    expect(context.strokeText).not.toHaveBeenCalled();
+    expect(context.font).toBe("600 14px sans-serif");
+  });
+
   it("preserves image aspect ratio and transforms between viewport and normalized space", () => {
     expect(rect).toEqual({ x: 100, y: 0, width: 800, height: 800, scale: 2 });
     const center = normalizedToCanvas({ x: 0.5, y: 0.5 }, rect);
