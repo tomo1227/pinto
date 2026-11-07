@@ -5,7 +5,7 @@ import {
   WALL_POST_TAG_LABELS,
   type WallPostTags,
 } from "@pinto/shared";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   Bookmark,
   Heart,
@@ -348,16 +348,16 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
               ? (walls.find((wall) => wall.id === post.wallId)?.name ?? post.wallName)
               : post.wallName;
             const wallImage = <WallFeedImage post={post} viewerId={viewerId} wallName={wallName} />;
-            const postDetailsHref = `/?post=${encodeURIComponent(post.id)}`;
             return (
               <article className="route-post" key={post.id}>
-                <a
+                <Link
                   className="route-post__wall-image-link"
-                  href={postDetailsHref}
+                  to="/"
+                  search={{ post: post.id }}
                   aria-label={`${wallName}の投稿詳細を開く`}
                 >
                   {wallImage}
-                </a>
+                </Link>
                 <div className="route-post__body">
                   <div className="route-post__author">
                     {post.avatar ? (
@@ -391,9 +391,9 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     )}
                   </div>
                   <h3>
-                    <a className="route-post__wall-title-link" href={postDetailsHref}>
+                    <Link className="route-post__wall-title-link" to="/" search={{ post: post.id }}>
                       {wallName}
-                    </a>
+                    </Link>
                   </h3>
                   <p className="route-post__meta">
                     <MapPin size={13} /> {post.gymName}
@@ -480,8 +480,9 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
 }
 
 export function DashboardPage() {
-  const postId =
-    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("post");
+  const postId = useLocation({
+    select: (location) => new URLSearchParams(location.searchStr).get("post"),
+  });
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const sessionUserId = session?.user.id;
   const createWall = useWorkspaceStore((state) => state.createWall);

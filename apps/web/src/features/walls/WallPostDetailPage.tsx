@@ -110,7 +110,7 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
 
   return (
     <main className="page-shell wall-post-detail-page">
-      <Link className="text-link wall-post-detail__back" to="/">
+      <Link className="text-link wall-post-detail__back" to="/" search={{}}>
         <ArrowLeft size={15} /> 壁の投稿一覧
       </Link>
       {(error || imageError) && (

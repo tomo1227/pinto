@@ -55,6 +55,9 @@ test("opens another climber's wall post details and shares the post without edit
   await expect(page.locator(".route-post__meta").first()).toContainText("3級 · V4");
   await expect(page.getByText("作成者: Setter")).toHaveCount(0);
   await expect(page.getByText("A steep competition wall.")).toHaveCount(0);
+  await page.evaluate(() => {
+    document.documentElement.dataset.navigationSession = "same-document";
+  });
   await page.getByRole("link", { name: "Competition Wallの投稿詳細を開く" }).click();
 
   await expect(page).toHaveURL(/\/\?post=shared-wall-post$/);
@@ -79,6 +82,20 @@ test("opens another climber's wall post details and shares the post without edit
     "data-shared-url",
     /\/\?post=shared-wall-post$/,
   );
+  await expect(page.locator("html")).toHaveAttribute("data-navigation-session", "same-document");
+  await page.getByRole("link", { name: "壁の投稿一覧", exact: true }).click();
+  await expect(page).toHaveURL(new URL("/", page.url()).href);
+  await expect(page.getByRole("heading", { name: "投稿された壁" })).toBeVisible();
+  await expect(page.locator(".wall-post-detail")).toHaveCount(0);
+  await expect(page.locator("html")).toHaveAttribute("data-navigation-session", "same-document");
+  await page.goBack();
+  await expect(page.getByRole("heading", { name: "Competition Wall" })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("heading", { name: "投稿された壁" })).toBeVisible();
+  await expect(page.locator(".wall-post-detail")).toHaveCount(0);
+  await page.getByRole("link", { name: "Competition Wall", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Competition Wall" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-navigation-session", "same-document");
 });
 
 test("opens an own post's details when its wall is not stored on this device", async ({ page }) => {
