@@ -996,6 +996,14 @@ export function WallCanvas({
               Math.max(100, (canvasRef.current?.clientWidth ?? 240) - textInputDraft.x - 16),
             ),
           }}
+          onBlur={(event) => {
+            if (
+              event.relatedTarget instanceof HTMLButtonElement &&
+              event.relatedTarget.closest(".editor-header")
+            ) {
+              commitTextInput();
+            }
+          }}
           onPointerDown={(event) => event.stopPropagation()}
           onChange={(event) => {
             const text = event.currentTarget.value;

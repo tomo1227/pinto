@@ -40,6 +40,13 @@ function makeEnv(postExists = true) {
             run: vi.fn().mockResolvedValue({ success: true }),
           };
         }
+        if (sql.includes("SELECT id FROM community_wall_post WHERE wallId = ? AND userId = ?")) {
+          return {
+            first: vi.fn().mockResolvedValue(postExists ? { id: "post-1" } : null),
+            all: vi.fn().mockResolvedValue({ results: [] }),
+            run: vi.fn().mockResolvedValue({ success: true }),
+          };
+        }
         if (sql.includes("SELECT COUNT(*) AS likeCount")) {
           return {
             first: vi.fn().mockResolvedValue({ likeCount: 3 }),
@@ -176,6 +183,68 @@ describe("wall post edits", () => {
     );
     expect(forbiddenUpdate.status).toBe(404);
     expect(notOwner.statements).toHaveLength(1);
+  });
+
+  describe("wall post annotated images", () => {
+    it("updates the shared image and route data for the wall owner", async () => {
+      const { env, statements, boundValues } = makeEnv();
+      const image = "data:image/webp;base64,AA==";
+      const routes = [{ id: "route-1", name: "Blue Problem", grade: "V4", description: "" }];
+      const response = await routePostRoutes.request(
+        "/wall/wall-1/image",
+        {
+          method: "PUT",
+          headers: originHeaders,
+          body: JSON.stringify({ image, routes }),
+        },
+        env,
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ updated: true });
+      const updateIndex = statements.findIndex((sql) =>
+        sql.includes("UPDATE community_wall_post SET image = ?, routes = ?"),
+      );
+      expect(boundValues[updateIndex]).toEqual(
+        expect.arrayContaining([image, JSON.stringify(routes), "post-1", "viewer-1"]),
+      );
+    });
+
+    it("does not update another user's post and rejects invalid images", async () => {
+      const missing = makeEnv(false);
+      const notOwnerResponse = await routePostRoutes.request(
+        "/wall/wall-1/image",
+        {
+          method: "PUT",
+          headers: originHeaders,
+          body: JSON.stringify({
+            image: "data:image/webp;base64,AA==",
+            routes: [],
+          }),
+        },
+        missing.env,
+      );
+      expect(notOwnerResponse.status).toBe(200);
+      expect(await notOwnerResponse.json()).toEqual({ updated: false });
+      expect(missing.statements.some((sql) => sql.includes("UPDATE community_wall_post"))).toBe(
+        false,
+      );
+
+      const invalid = makeEnv();
+      const invalidResponse = await routePostRoutes.request(
+        "/wall/wall-1/image",
+        {
+          method: "PUT",
+          headers: originHeaders,
+          body: JSON.stringify({ image: "not-an-image", routes: [] }),
+        },
+        invalid.env,
+      );
+      expect(invalidResponse.status).toBe(400);
+      expect(invalid.statements.some((sql) => sql.includes("UPDATE community_wall_post"))).toBe(
+        false,
+      );
+    });
   });
 
   it("rejects invalid metadata without updating the post", async () => {

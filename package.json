@@ -6,6 +6,7 @@
     "node": ">=26"
   },
   "scripts": {
+    "login": "pnpm --filter @pinto/worker exec wrangler login --callback-host 0.0.0.0",
     "dev": "concurrently -k -n web,worker \"pnpm --filter @pinto/web dev -- --host 0.0.0.0\" \"pnpm --filter @pinto/worker dev -- --ip 0.0.0.0\"",
     "build": "pnpm --filter @pinto/web build && pnpm --filter @pinto/worker build",
     "preview": "pnpm build && pnpm --filter @pinto/worker preview",

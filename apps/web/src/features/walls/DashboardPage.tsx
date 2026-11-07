@@ -380,10 +380,6 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     )}
                     <span>{post.routes.length} ルート</span>
                   </p>
-                  {post.author && <p className="route-post__description">作成者: {post.author}</p>}
-                  {post.description && (
-                    <p className="route-post__description">{post.description}</p>
-                  )}
                   {WALL_POST_TAG_CATEGORIES.some((category) => post.tags[category].length > 0) && (
                     <div className="route-post__tags">
                       {WALL_POST_TAG_CATEGORIES.flatMap((category) =>

@@ -85,6 +85,8 @@ export type WallPostUpdateInput = Pick<
   "wallName" | "gymName" | "japaneseGrade" | "vGrade" | "author" | "description" | "tags"
 >;
 
+export type WallPostImageUpdateInput = Pick<WallPost, "routes" | "image">;
+
 export type WallPostFeed = {
   posts: WallPost[];
   gyms: string[];
@@ -201,6 +203,17 @@ export async function updateWallPost(id: string, input: WallPostUpdateInput) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
   });
+}
+
+export async function updateWallPostImage(wallId: string, input: WallPostImageUpdateInput) {
+  return requestJson<{ updated: boolean; postId: string | null }>(
+    `/api/community/posts/wall/${encodeURIComponent(wallId)}/image`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
 }
 
 export async function deleteWallPost(id: string) {

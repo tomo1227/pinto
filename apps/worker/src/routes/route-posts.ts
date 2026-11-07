@@ -72,6 +72,30 @@ function parseWallPostTags(value: unknown): WallPostTags | null {
   return { hold, move, type };
 }
 
+function parseWallPostRoutes(routeValues: unknown): WallPostRoute[] | null {
+  if (!Array.isArray(routeValues) || routeValues.length > 100) return null;
+  const routes: WallPostRoute[] = [];
+  for (const value of routeValues) {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+    const item = value as Record<string, unknown>;
+    const routeId = typeof item.id === "string" ? item.id : "";
+    const name = typeof item.name === "string" ? item.name.trim() : "";
+    const grade = typeof item.grade === "string" ? item.grade.trim() : "";
+    const description = typeof item.description === "string" ? item.description.trim() : "";
+    if (
+      !/^[\w-]{1,64}$/.test(routeId) ||
+      !name ||
+      name.length > 80 ||
+      grade.length > 20 ||
+      description.length > 500
+    ) {
+      return null;
+    }
+    routes.push({ id: routeId, name, grade, description });
+  }
+  return routes;
+}
+
 export const routePostRoutes = new Hono<{ Bindings: AuthBindings }>();
 
 async function getSession(request: Request, env: AuthBindings) {
@@ -397,31 +421,9 @@ routePostRoutes.post("/", async (context) => {
   ) {
     return context.json({ error: "説明は500文字以内で入力してください。" }, 400);
   }
-  if (!Array.isArray(input.routes) || input.routes.length > 100) {
-    return context.json({ error: "ルート一覧の形式が無効です。" }, 400);
-  }
   if (!tags) return context.json({ error: "タグの選択内容が無効です。" }, 400);
-  const routes: WallPostRoute[] = [];
-  for (const value of input.routes) {
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      return context.json({ error: "ルート一覧の形式が無効です。" }, 400);
-    }
-    const item = value as Record<string, unknown>;
-    const routeId = typeof item.id === "string" ? item.id : "";
-    const name = typeof item.name === "string" ? item.name.trim() : "";
-    const grade = typeof item.grade === "string" ? item.grade.trim() : "";
-    const description = typeof item.description === "string" ? item.description.trim() : "";
-    if (
-      !/^[\w-]{1,64}$/.test(routeId) ||
-      !name ||
-      name.length > 80 ||
-      grade.length > 20 ||
-      description.length > 500
-    ) {
-      return context.json({ error: "ルート情報の入力内容を確認してください。" }, 400);
-    }
-    routes.push({ id: routeId, name, grade, description });
-  }
+  const routes = parseWallPostRoutes(input.routes);
+  if (!routes) return context.json({ error: "ルート一覧の形式が無効です。" }, 400);
   if (image.length > 700_000 || !/^data:image\/(webp|png|jpeg);base64,/.test(image)) {
     return context.json({ error: "投稿画像が無効か、サイズ上限を超えています。" }, 400);
   }
@@ -473,6 +475,46 @@ routePostRoutes.post("/", async (context) => {
       tags,
     },
   });
+});
+
+routePostRoutes.put("/wall/:wallId/image", async (context) => {
+  if (!hasTrustedOrigin(context.req.raw, context.env)) {
+    return context.json({ error: "投稿元を確認できません。" }, 403);
+  }
+  const session = await getSession(context.req.raw, context.env);
+  if (!session) return context.json({ error: "ログインが必要です。" }, 401);
+
+  const wallId = context.req.param("wallId");
+  if (!/^[\w-]{1,64}$/.test(wallId)) return context.json({ error: "壁IDが無効です。" }, 400);
+
+  let input: Record<string, unknown>;
+  try {
+    input = await context.req.json<Record<string, unknown>>();
+  } catch {
+    return context.json({ error: "投稿画像の形式が無効です。" }, 400);
+  }
+
+  const image = typeof input.image === "string" ? input.image : "";
+  const routes = parseWallPostRoutes(input.routes);
+  if (image.length > 700_000 || !/^data:image\/(webp|png|jpeg);base64,/.test(image)) {
+    return context.json({ error: "投稿画像が無効か、サイズ上限を超えています。" }, 400);
+  }
+  if (!routes) return context.json({ error: "ルート一覧の形式が無効です。" }, 400);
+
+  const post = await context.env.DB.prepare(
+    "SELECT id FROM community_wall_post WHERE wallId = ? AND userId = ?",
+  )
+    .bind(wallId, session.user.id)
+    .first<{ id: string }>();
+  if (!post) return context.json({ updated: false, postId: null });
+
+  await context.env.DB.prepare(
+    `UPDATE community_wall_post SET image = ?, routes = ?, updatedAt = ?
+     WHERE id = ? AND userId = ?`,
+  )
+    .bind(image, JSON.stringify(routes), Date.now(), post.id, session.user.id)
+    .run();
+  return context.json({ updated: true, postId: post.id });
 });
 
 routePostRoutes.put("/:id", async (context) => {

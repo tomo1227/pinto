@@ -53,8 +53,8 @@ test("opens another climber's wall post details and shares the post without edit
 
   await page.goto("/");
   await expect(page.locator(".route-post__meta").first()).toContainText("3級 · V4");
-  await expect(page.getByText("作成者: Setter")).toBeVisible();
-  await expect(page.getByText("A steep competition wall.")).toBeVisible();
+  await expect(page.getByText("作成者: Setter")).toHaveCount(0);
+  await expect(page.getByText("A steep competition wall.")).toHaveCount(0);
   await page.getByRole("link", { name: "Competition Wallの投稿詳細を開く" }).click();
 
   await expect(page).toHaveURL(/\/\?post=shared-wall-post$/);

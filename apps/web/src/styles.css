@@ -2153,21 +2153,6 @@ a {
   padding: 0 11px;
   font-size: 11px;
 }
-.editor-preview {
-  min-height: 33px;
-  padding: 0 10px;
-  font-size: 11px;
-}
-.editor-preview-modal {
-  width: min(880px, 100%);
-}
-.editor-preview-modal__image {
-  display: block;
-  width: 100%;
-  max-height: calc(100dvh - 170px);
-  object-fit: contain;
-  background: #d7d9d0;
-}
 .editor-history-button {
   min-height: 31px;
   gap: 5px;
@@ -2961,10 +2946,6 @@ a {
     display: none;
   }
   .editor-save {
-    min-height: 34px;
-    padding: 0 7px;
-  }
-  .editor-preview {
     min-height: 34px;
     padding: 0 7px;
   }

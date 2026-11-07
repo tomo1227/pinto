@@ -1,5 +1,6 @@
 import {
   type Route as ClimbingRoute,
+  formatRouteGrade,
   type Hold,
   JAPANESE_CLIMBING_LEVELS,
   type RouteText,
@@ -11,7 +12,7 @@ import {
   type WallEditorStyleDefaults,
   type WallPostTags,
 } from "@pinto/shared";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Download,
@@ -32,8 +33,11 @@ import {
   X,
 } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
+import { authClient } from "../../infrastructure/api/auth";
+import { updateWallPostImage } from "../../infrastructure/api/community";
 import { shareRoutePng } from "../../infrastructure/api/discord";
 import { exportRoutePng } from "../../infrastructure/export/route-png";
+import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
 import { getDiscordSettings, getImage, getWall } from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
@@ -120,6 +124,8 @@ function isNamedError(reason: unknown, name: string) {
 }
 
 export function WallEditorPage({ wallId }: { wallId: string }) {
+  const navigate = useNavigate();
+  const { data: session } = authClient.useSession();
   const holds = useWorkspaceStore((state) => state.holds);
   const routes = useWorkspaceStore((state) => state.routes);
   const selectedRouteId = useWorkspaceStore((state) => state.selectedRouteId);
@@ -159,7 +165,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [wallSettingsSaving, setWallSettingsSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const autoDetectHolds = wall?.autoDetectHolds ?? true;
@@ -322,18 +327,62 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     };
   }, [wallId, loadWall, loadWalls]);
 
-  useEffect(() => {
-    if (!previewImageUrl) return;
-    return () => URL.revokeObjectURL(previewImageUrl);
-  }, [previewImageUrl]);
-
   async function saveRouteDetails() {
-    if (!route) return;
-    const { description, author } = route;
-    await updateRoute(route.id, {
-      description: description?.trim() || undefined,
-      author: author?.trim() || undefined,
-    });
+    if (!route || !wall) return;
+    const savedRoute = {
+      ...route,
+      description: route.description?.trim() || undefined,
+      author: route.author?.trim() || undefined,
+    };
+    try {
+      await updateRoute(route.id, {
+        description: savedRoute.description,
+        author: savedRoute.author,
+      });
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : "ルートを保存できませんでした。");
+      return;
+    }
+
+    if (session?.user) {
+      try {
+        const image = await getImage(wall.imageId);
+        if (!image) throw new Error("壁画像が見つかりません。");
+        const imageWithRoute = await exportRoutePng(
+          image.blob,
+          wall.width,
+          wall.height,
+          holds.filter((hold) => hold.wallId === wall.id),
+          savedRoute,
+        );
+        const postRoutes = routes
+          .filter((item) => item.wallId === wall.id)
+          .map((item) => {
+            const currentRoute = item.id === savedRoute.id ? savedRoute : item;
+            return {
+              id: currentRoute.id,
+              name: currentRoute.name,
+              grade: formatRouteGrade(currentRoute),
+              description: currentRoute.description ?? "",
+            };
+          });
+        const result = await updateWallPostImage(wall.id, {
+          image: await encodeWallPostPreview(imageWithRoute),
+          routes: postRoutes,
+        });
+        notify(result.updated ? "ルートと投稿画像を保存しました" : "ルートを保存しました");
+        if (result.updated && result.postId) {
+          await navigate({ to: "/", search: { post: result.postId } });
+        }
+        return;
+      } catch (reason) {
+        notify(
+          `ルートは保存しましたが、投稿画像を更新できませんでした: ${reason instanceof Error ? reason.message : "通信エラー"}`,
+        );
+        return;
+      }
+    }
+
     notify("ルートを保存しました");
   }
 
@@ -539,19 +588,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     }
   }
 
-  async function previewRoute(routeToPreview: ClimbingRoute) {
-    if (actionBusy) return;
-    setActionBusy(true);
-    try {
-      const file = await createRouteFile(routeToPreview);
-      setPreviewImageUrl(URL.createObjectURL(file));
-    } catch (reason) {
-      notify(reason instanceof Error ? reason.message : "投稿プレビューを作成できませんでした。");
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
   async function shareRouteToDiscord(routeToShare: ClimbingRoute) {
     if (!wall || actionBusy) return;
     setActionBusy(true);
@@ -691,18 +727,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           <Redo2 size={15} /> <span>進む</span>
         </button>
         <button
-          className="button button--outline button--small editor-preview"
-          type="button"
-          aria-label="投稿をプレビュー"
-          title="投稿をプレビュー"
-          disabled={!route || actionBusy}
-          onClick={() => {
-            if (route) void previewRoute(route);
-          }}
-        >
-          <Eye size={15} /> <span>プレビュー</span>
-        </button>
-        <button
           className="button button--primary editor-save"
           type="button"
           disabled={!route}
@@ -711,37 +735,6 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           <Save size={15} /> 投稿
         </button>
       </header>
-
-      {previewImageUrl && (
-        <div className="modal-backdrop" role="presentation">
-          <section
-            className="modal-panel editor-preview-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="editor-preview-title"
-          >
-            <div className="modal-heading">
-              <div>
-                <p className="eyebrow">ROUTE PREVIEW</p>
-                <h2 id="editor-preview-title">投稿プレビュー</h2>
-              </div>
-              <button
-                className="icon-button"
-                type="button"
-                aria-label="プレビューを閉じる"
-                onClick={() => setPreviewImageUrl(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <img
-              className="editor-preview-modal__image"
-              src={previewImageUrl}
-              alt={`${wall.name} ${route?.name ?? ""}の投稿プレビュー`}
-            />
-          </section>
-        </div>
-      )}
 
       <div className="editor-layout">
         <section className="canvas-column">

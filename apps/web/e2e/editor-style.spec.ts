@@ -114,7 +114,7 @@ async function openTestEditor(page: Page) {
           holdIds: ["style-hold", "style-hold-2"],
           startHoldIds: [],
           finishHoldIds: [],
-          textAnnotations: [{ id: "style-text", text: "Font", position: { x: 0.25, y: 0.3 } }],
+          textAnnotations: [{ id: "style-text", text: "Crux", position: { x: 0.25, y: 0.3 } }],
           source: "manual",
           createdAt: now,
           updatedAt: now,
@@ -374,6 +374,7 @@ test("edits selected circle, text and line styles and persists them on desktop a
   await expect(page.getByLabel("線の太さ", { exact: true })).toHaveValue("12");
   await expect(page.getByLabel("枠線の太さ")).toHaveValue("4");
   await expect(page.getByLabel("枠線の色")).toHaveValue("#ffffff");
+
   await page.getByRole("button", { name: "ホールド追加・移動" }).click();
   await selectCanvasObject(page, 0.25, 0.65);
   await expect(page.getByLabel("丸の太さ")).toHaveValue("8");
@@ -390,6 +391,92 @@ test("edits selected circle, text and line styles and persists them on desktop a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
+});
+
+test("saves the annotated route image to the shared wall post", async ({ page }) => {
+  const now = new Date().toISOString();
+  await page.route("**/api/auth/get-session**", (route) =>
+    route.fulfill({
+      json: {
+        session: {
+          id: "viewer-session",
+          userId: "viewer",
+          token: "viewer-token",
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        user: {
+          id: "viewer",
+          name: "Viewer",
+          email: "viewer@example.com",
+          emailVerified: true,
+          image: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/community/profile", (route) =>
+    route.fulfill({
+      json: {
+        profile: {
+          id: "viewer",
+          handle: "viewer",
+          username: "Viewer",
+          bio: "",
+          climbingLevel: "",
+          japaneseClimbingLevel: "",
+          vClimbingLevel: "",
+          homeGym: "",
+          homeGyms: [],
+          residence: "",
+          age: null,
+          avatar: null,
+          isPrivate: false,
+          followerCount: 0,
+          followingCount: 0,
+        },
+      },
+    }),
+  );
+
+  let updatePayload: {
+    image: string;
+    routes: { id: string; name: string; grade: string }[];
+  } | null = null;
+  await page.route("**/api/community/posts/wall/style-wall/image", async (route) => {
+    updatePayload = route.request().postDataJSON();
+    await route.fulfill({ json: { updated: true } });
+  });
+
+  await openTestEditor(page);
+  await page.getByRole("button", { name: "投稿", exact: true }).click();
+
+  await expect.poll(() => updatePayload?.image).toMatch(/^data:image\/webp;base64,/);
+  const darkAnnotationPixels = await page.evaluate(async (src) => {
+    const image = new Image();
+    image.src = src;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is unavailable");
+    context.drawImage(image, 0, 0);
+    const pixels = context.getImageData(88, 100, 100, 40).data;
+    let count = 0;
+    for (let index = 0; index < pixels.length; index += 4) {
+      if (pixels[index] < 70 && pixels[index + 1] < 70 && pixels[index + 2] < 70) count += 1;
+    }
+    return count;
+  }, updatePayload?.image ?? "");
+  expect(darkAnnotationPixels).toBeGreaterThan(10);
+  expect(updatePayload?.routes).toEqual([
+    { id: "style-route", name: "Style route", grade: "", description: "Existing description" },
+  ]);
+  await expect(page.getByText("ルートと投稿画像を保存しました")).toBeVisible();
 });
 
 test("keeps editor toolbar height stable when switching to text mode", async ({ page }) => {
