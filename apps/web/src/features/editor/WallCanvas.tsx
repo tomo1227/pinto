@@ -75,6 +75,7 @@ type Props = {
   showLines: boolean;
   autoDetectHolds: boolean;
   allowEllipses: boolean;
+  onImageScaleChange: (scale: number) => void;
   onAddHold: (
     position: Hold["position"],
     markerRadius: number,
@@ -172,6 +173,7 @@ export function WallCanvas({
   showLines,
   autoDetectHolds,
   allowEllipses,
+  onImageScaleChange,
   onAddHold,
   onMoveHold,
   onResizeHold,
@@ -252,7 +254,11 @@ export function WallCanvas({
             ),
           }
         : route;
-    const render = () =>
+    const render = () => {
+      const bounds = canvas.getBoundingClientRect();
+      onImageScaleChange(
+        getImageRect(bounds.width, bounds.height, wall.width, wall.height, viewport).scale,
+      );
       renderCanvasScene(
         canvas,
         image,
@@ -265,6 +271,7 @@ export function WallCanvas({
         allowEllipses,
         viewport,
       );
+    };
     render();
     const observer = new ResizeObserver(render);
     observer.observe(canvas);
@@ -280,6 +287,7 @@ export function WallCanvas({
     showLines,
     allowEllipses,
     viewport,
+    onImageScaleChange,
   ]);
 
   function canvasPoint(event: ReactPointerEvent<HTMLCanvasElement>) {

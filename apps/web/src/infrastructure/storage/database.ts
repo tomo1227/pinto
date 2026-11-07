@@ -78,7 +78,10 @@ export async function saveWall(wall: Wall): Promise<void> {
 
 export async function deleteWall(id: string): Promise<void> {
   const database = await getDatabase();
-  const transaction = database.transaction(["walls", "holds", "routes", "images"], "readwrite");
+  const transaction = database.transaction(
+    ["walls", "holds", "routes", "images", "settings"],
+    "readwrite",
+  );
   const holds = await transaction.objectStore("holds").index("by-wall").getAllKeys(id);
   const routes = await transaction.objectStore("routes").index("by-wall").getAllKeys(id);
   const wall = await transaction.objectStore("walls").get(id);
@@ -86,6 +89,7 @@ export async function deleteWall(id: string): Promise<void> {
     ...holds.map((holdId) => transaction.objectStore("holds").delete(holdId)),
     ...routes.map((routeId) => transaction.objectStore("routes").delete(routeId)),
     transaction.objectStore("walls").delete(id),
+    transaction.objectStore("settings").delete(wallPngKey(id)),
     ...(wall ? [transaction.objectStore("images").delete(wall.imageId)] : []),
   ]);
   await transaction.done;
@@ -175,6 +179,18 @@ export async function getSetting<T>(key: string): Promise<T | undefined> {
 
 export async function saveSetting(key: string, value: unknown): Promise<void> {
   await (await getDatabase()).put("settings", { key, value });
+}
+
+function wallPngKey(wallId: string) {
+  return `wall-png:${wallId}`;
+}
+
+export async function getWallPng(wallId: string): Promise<Blob | undefined> {
+  return getSetting<Blob>(wallPngKey(wallId));
+}
+
+export async function saveWallPng(wallId: string, png: Blob): Promise<void> {
+  await saveSetting(wallPngKey(wallId), png);
 }
 
 export async function getDiscordSettings(): Promise<DiscordSettings | undefined> {

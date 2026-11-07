@@ -1,5 +1,11 @@
-import { type Route as ClimbingRoute, formatRouteGrade, type Hold } from "@pinto/shared";
+import type { Route as ClimbingRoute, Hold } from "@pinto/shared";
 import { drawScene } from "../../features/editor/canvas-engine";
+
+type RoutePngOptions = {
+  imageScale?: number;
+  showLines?: boolean;
+  allowEllipses?: boolean;
+};
 
 export async function exportRoutePng(
   imageBlob: Blob,
@@ -7,38 +13,42 @@ export async function exportRoutePng(
   height: number,
   holds: Hold[],
   route: ClimbingRoute,
+  { imageScale = 1, showLines, allowEllipses }: RoutePngOptions = {},
 ): Promise<Blob> {
+  if (!Number.isFinite(imageScale) || imageScale <= 0) {
+    throw new Error("画像の描画倍率が不正です。");
+  }
   const image = await createImageBitmap(imageBlob);
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("PNG canvas is unavailable.");
-  drawScene(
-    context,
-    {
-      image,
-      imageWidth: width,
-      imageHeight: height,
-      holds,
-      route,
-      viewport: { zoom: 1, panX: 0, panY: 0 },
-    },
-    width,
-    height,
-  );
-  context.fillStyle = "rgba(25, 31, 27, 0.78)";
-  context.fillRect(0, height - 90, width, 90);
-  context.fillStyle = "#fff";
-  context.font = '700 32px "DM Sans", sans-serif';
-  context.textBaseline = "middle";
-  const grade = formatRouteGrade(route);
-  context.fillText(`${route.name}${grade ? `  ·  ${grade}` : ""}`, 32, height - 45);
-  image.close();
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("PNGの作成に失敗しました。"))),
-      "image/png",
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("PNG canvas is unavailable.");
+    // Render in the editor's coordinate space, then scale to the original image resolution.
+    context.setTransform(1 / imageScale, 0, 0, 1 / imageScale, 0, 0);
+    drawScene(
+      context,
+      {
+        image,
+        imageWidth: width,
+        imageHeight: height,
+        holds,
+        route,
+        showLines,
+        allowEllipses,
+        viewport: { zoom: 1, panX: 0, panY: 0 },
+      },
+      width * imageScale,
+      height * imageScale,
     );
-  });
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => (blob ? resolve(blob) : reject(new Error("PNGの作成に失敗しました。"))),
+        "image/png",
+      );
+    });
+  } finally {
+    image.close();
+  }
 }

@@ -32,13 +32,18 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { authClient } from "../../infrastructure/api/auth";
 import { updateWallPostImage } from "../../infrastructure/api/community";
 import { shareRoutePng } from "../../infrastructure/api/discord";
 import { exportRoutePng } from "../../infrastructure/export/route-png";
 import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
-import { getDiscordSettings, getImage, getWall } from "../../infrastructure/storage/database";
+import {
+  getDiscordSettings,
+  getImage,
+  getWall,
+  saveWallPng,
+} from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
@@ -165,6 +170,15 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [wallSettingsSaving, setWallSettingsSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const imageScaleRef = useRef<number | null>(null);
+  const handleImageScaleChange = useCallback((scale: number) => {
+    imageScaleRef.current = scale;
+  }, []);
+
+  function pngOptions() {
+    if (imageScaleRef.current === null) throw new Error("壁画像を読み込んでいます。");
+    return { imageScale: imageScaleRef.current, showLines, allowEllipses };
+  }
 
   const route = routes.find((item) => item.id === selectedRouteId);
   const autoDetectHolds = wall?.autoDetectHolds ?? true;
@@ -328,14 +342,17 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   }, [wallId, loadWall, loadWalls]);
 
   async function saveRouteDetails() {
-    if (!route || !wall) return;
+    const currentRoute = useWorkspaceStore
+      .getState()
+      .routes.find((item) => item.id === selectedRouteId);
+    if (!currentRoute || !wall) return;
     const savedRoute = {
-      ...route,
-      description: route.description?.trim() || undefined,
-      author: route.author?.trim() || undefined,
+      ...currentRoute,
+      description: currentRoute.description?.trim() || undefined,
+      author: currentRoute.author?.trim() || undefined,
     };
     try {
-      await updateRoute(route.id, {
+      await updateRoute(savedRoute.id, {
         description: savedRoute.description,
         author: savedRoute.author,
       });
@@ -346,15 +363,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
 
     if (session?.user) {
       try {
-        const image = await getImage(wall.imageId);
-        if (!image) throw new Error("壁画像が見つかりません。");
-        const imageWithRoute = await exportRoutePng(
-          image.blob,
-          wall.width,
-          wall.height,
-          holds.filter((hold) => hold.wallId === wall.id),
-          savedRoute,
-        );
+        const imageWithRoute = await createRouteFile(savedRoute);
         const postRoutes = routes
           .filter((item) => item.wallId === wall.id)
           .map((item) => {
@@ -571,7 +580,18 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     if (!wall) throw new Error("壁が見つかりません。");
     const image = await getImage(wall.imageId);
     if (!image) throw new Error("壁画像が見つかりません。");
-    const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, routeToExport);
+    const currentRoute =
+      useWorkspaceStore.getState().routes.find((item) => item.id === routeToExport.id) ??
+      routeToExport;
+    const png = await exportRoutePng(
+      image.blob,
+      wall.width,
+      wall.height,
+      holds,
+      currentRoute,
+      pngOptions(),
+    );
+    await saveWallPng(wall.id, png);
     return new File([png], routePngFileName(wall.name), { type: "image/png" });
   }
 
@@ -596,7 +616,17 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       const webhook = await getDiscordSettings();
       if (!image || !webhook?.webhookUrl)
         throw new Error("SettingsでDiscord Webhookを設定してください。");
-      const png = await exportRoutePng(image.blob, wall.width, wall.height, holds, routeToShare);
+      const currentRoute =
+        useWorkspaceStore.getState().routes.find((item) => item.id === routeToShare.id) ??
+        routeToShare;
+      const png = await exportRoutePng(
+        image.blob,
+        wall.width,
+        wall.height,
+        holds,
+        currentRoute,
+        pngOptions(),
+      );
       const message = await shareRoutePng(
         webhook.webhookUrl,
         {
@@ -1021,6 +1051,7 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
               }}
               onAppendHold={(id) => void appendHold(id)}
               onAddText={addRouteText}
+              onImageScaleChange={handleImageScaleChange}
               onEditText={editRouteText}
               onMoveText={moveRouteText}
               onResizeText={resizeRouteText}

@@ -8,19 +8,24 @@ import {
   setWallPostSaved,
   type WallPost,
 } from "../../infrastructure/api/community";
-import { getWall } from "../../infrastructure/storage/database";
+import { useWallPng } from "./use-wall-png";
 
 export function WallPostDetailPage({ postId }: { postId: string }) {
   const { data: session } = authClient.useSession();
   const [post, setPost] = useState<WallPost | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hasLocalWall, setHasLocalWall] = useState(false);
   const [pendingAction, setPendingAction] = useState<"like" | "save" | null>(null);
   const [error, setError] = useState("");
   const [shareNotice, setShareNotice] = useState("");
   const postWallId = post?.wallId;
   const postUserId = post?.userId;
   const viewerUserId = session?.user?.id;
+  const {
+    hasLocalWall,
+    url: localPngUrl,
+    error: imageError,
+  } = useWallPng(postUserId === viewerUserId ? postWallId : undefined);
+  const imageUrl = localPngUrl ?? post?.image;
 
   useEffect(() => {
     let active = true;
@@ -43,30 +48,6 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
       active = false;
     };
   }, [postId, session?.user]);
-
-  useEffect(() => {
-    if (!postWallId || postUserId !== viewerUserId) {
-      setHasLocalWall(false);
-      return;
-    }
-
-    let active = true;
-    void getWall(postWallId)
-      .then((wall) => {
-        if (active) setHasLocalWall(Boolean(wall));
-      })
-      .catch((reason: unknown) => {
-        if (active) {
-          setHasLocalWall(false);
-          setError(
-            reason instanceof Error ? reason.message : "ローカルの壁を確認できませんでした。",
-          );
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [postWallId, postUserId, viewerUserId]);
 
   async function toggleLike() {
     if (!post || !session?.user) return;
@@ -132,9 +113,9 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
       <Link className="text-link wall-post-detail__back" to="/">
         <ArrowLeft size={15} /> 壁の投稿一覧
       </Link>
-      {error && (
+      {(error || imageError) && (
         <p className="community-status" role="alert">
-          {error}
+          {error || imageError}
         </p>
       )}
       {loading ? (
@@ -152,14 +133,14 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
             >
               <img
                 className="wall-post-detail__image"
-                src={post.image}
+                src={imageUrl}
                 alt={`${post.wallName}の壁画像`}
               />
             </Link>
           ) : (
             <img
               className="wall-post-detail__image"
-              src={post.image}
+              src={imageUrl}
               alt={`${post.wallName}の壁画像`}
             />
           )}
@@ -214,33 +195,6 @@ export function WallPostDetailPage({ postId }: { postId: string }) {
                 ))}
               </div>
             )}
-
-            <section className="wall-post-detail__routes" aria-labelledby="wall-post-routes-title">
-              <h2 id="wall-post-routes-title">登録ルート</h2>
-              {post.routes.length ? (
-                <ul className="route-post__routes">
-                  {post.routes.map((route) => (
-                    <li key={route.id}>
-                      <div>
-                        <strong>{route.name}</strong>
-                        {route.description && (
-                          <p className="route-post__description">{route.description}</p>
-                        )}
-                      </div>
-                      {(route.japaneseGrade || route.vGrade || route.grade) && (
-                        <strong className="wall-post-detail__grade">
-                          {route.japaneseGrade || route.vGrade
-                            ? [route.japaneseGrade, route.vGrade].filter(Boolean).join(" · ")
-                            : route.grade}
-                        </strong>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="empty-copy">ルートはまだ登録されていません。</p>
-              )}
-            </section>
 
             <div className="wall-post-detail__actions">
               {session?.user?.id === post.userId && hasLocalWall && (

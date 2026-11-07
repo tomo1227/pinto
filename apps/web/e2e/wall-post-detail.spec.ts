@@ -64,8 +64,10 @@ test("opens another climber's wall post details and shares the post without edit
   );
   await expect(page.getByText("作成者: Setter")).toBeVisible();
   await expect(page.getByText("A steep competition wall.")).toBeVisible();
-  await expect(page.getByText("Blue Problem")).toBeVisible();
-  await expect(page.getByText("Start on the lower hold.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "登録ルート" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "登録ルート" })).toHaveCount(0);
+  await expect(page.getByText("Blue Problem")).toHaveCount(0);
+  await expect(page.getByText("Start on the lower hold.")).toHaveCount(0);
   await expect(page.locator("canvas.wall-canvas")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "壁を編集" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Competition Wallを編集" })).toHaveCount(0);
@@ -163,6 +165,8 @@ test("opens an own post's details when its wall is not stored on this device", a
 
   await expect(page).toHaveURL(/\/\?post=local-wall-post$/);
   await expect(page.getByRole("heading", { name: "Shared Wall" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "登録ルート" })).toHaveCount(0);
+  await expect(page.getByText("ルートはまだ登録されていません。")).toHaveCount(0);
   await expect(page.getByText("投稿を読み込んでいます...")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Shared Wallを編集" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "投稿情報を編集" })).toHaveCount(0);

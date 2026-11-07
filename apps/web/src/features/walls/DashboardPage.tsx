@@ -30,16 +30,40 @@ import {
   publishWallPost,
   setWallPostLike,
   setWallPostSaved,
+  type WallPost,
   type WallPostFeed,
 } from "../../infrastructure/api/community";
 import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
 import { getImage } from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "../workspace/store";
+import { useWallPng } from "./use-wall-png";
 import { WallPostDetailPage } from "./WallPostDetailPage";
 import { WallTagPicker } from "./WallTagPicker";
 
 const emptyFeed: WallPostFeed = { posts: [], gyms: [], grades: [] };
 const emptyWallPostTags: WallPostTags = { hold: [], move: [], type: [] };
+
+function WallFeedImage({
+  post,
+  viewerId,
+  wallName,
+}: {
+  post: WallPost;
+  viewerId: string;
+  wallName: string;
+}) {
+  const { url, error } = useWallPng(post.userId === viewerId ? post.wallId : undefined);
+  return (
+    <>
+      <img className="route-post__image" src={url ?? post.image} alt={`${wallName}の壁画像`} />
+      {error && (
+        <p className="community-status" role="alert">
+          {error}
+        </p>
+      )}
+    </>
+  );
+}
 
 export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
   const { data: session } = authClient.useSession();
@@ -323,9 +347,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
             const wallName = isOwnPost
               ? (walls.find((wall) => wall.id === post.wallId)?.name ?? post.wallName)
               : post.wallName;
-            const wallImage = (
-              <img className="route-post__image" src={post.image} alt={`${wallName}の壁画像`} />
-            );
+            const wallImage = <WallFeedImage post={post} viewerId={viewerId} wallName={wallName} />;
             const postDetailsHref = `/?post=${encodeURIComponent(post.id)}`;
             return (
               <article className="route-post" key={post.id}>

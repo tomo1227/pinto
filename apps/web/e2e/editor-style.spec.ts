@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { Hold, Route, Wall } from "@pinto/shared";
 import { expect, type Page, test } from "@playwright/test";
 
@@ -38,7 +39,7 @@ async function selectCanvasObject(page: Page, x: number, y: number) {
   await page.mouse.click(point.x, point.y);
 }
 
-async function openTestEditor(page: Page) {
+async function openTestEditor(page: Page, imageSize = 400) {
   await page.goto("/walls/style-wall");
   await expect
     .poll(() =>
@@ -49,14 +50,14 @@ async function openTestEditor(page: Page) {
       ),
     )
     .toBe(true);
-  await page.evaluate(async () => {
+  await page.evaluate(async (size) => {
     const canvas = document.createElement("canvas");
-    canvas.width = 400;
-    canvas.height = 400;
+    canvas.width = size;
+    canvas.height = size;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas is unavailable");
     context.fillStyle = "#2f7a68";
-    context.fillRect(0, 0, 400, 400);
+    context.fillRect(0, 0, size, size);
     const blob = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((value) => {
         if (value) resolve(value);
@@ -77,8 +78,8 @@ async function openTestEditor(page: Page) {
           id: "style-wall",
           name: "Style wall",
           imageId: "style-image",
-          width: 400,
-          height: 400,
+          width: size,
+          height: size,
           createdAt: now,
           updatedAt: now,
         });
@@ -86,8 +87,8 @@ async function openTestEditor(page: Page) {
           id: "style-image",
           blob,
           mimeType: "image/png",
-          width: 400,
-          height: 400,
+          width: size,
+          height: size,
           size: blob.size,
           createdAt: now,
         });
@@ -99,7 +100,7 @@ async function openTestEditor(page: Page) {
             id,
             wallId: "style-wall",
             position: { x, y: 0.65 },
-            markerRadius: 20,
+            markerRadius: size / 20,
             detectionSource: "manual",
             createdAt: now,
             updatedAt: now,
@@ -126,9 +127,129 @@ async function openTestEditor(page: Page) {
         transaction.onerror = () => reject(transaction.error);
       };
     });
-  });
+  }, imageSize);
   await page.goto("/walls/style-wall");
   await expect(page.locator("canvas.wall-canvas")).toBeVisible();
+}
+
+for (const viewport of [
+  { width: 1280, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`preserves annotation thickness and bottom text in a high-resolution PNG at ${viewport.width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await openTestEditor(page, 2400);
+    await selectCanvasObject(page, 0.25, 0.65);
+    await page.getByLabel("丸の太さ").fill("8");
+    await page.getByRole("button", { name: "ルートに追加" }).click();
+    await page.getByLabel("線の太さ", { exact: true }).fill("12");
+    await page.getByRole("button", { name: "文字を入力して配置" }).click();
+    await selectCanvasObject(page, 0.25, 0.95);
+    await page.getByLabel("壁面に配置する文字").fill("下端の文字");
+    await page.getByLabel("壁面に配置する文字").press("Enter");
+    await expect.poll(async () => (await readStyles(page)).route.textAnnotations?.length).toBe(2);
+
+    const editorPixels = await page.locator("canvas.wall-canvas").evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      const ratio = element.width / bounds.width;
+      const size = Math.min(bounds.width, bounds.height) * ratio;
+      const canvas = document.createElement("canvas");
+      const sampleSize = Math.floor(Math.min(bounds.width, bounds.height));
+      canvas.width = sampleSize;
+      canvas.height = sampleSize;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Canvas is unavailable");
+      context.drawImage(
+        element,
+        (element.width - size) / 2,
+        (element.height - size) / 2,
+        size,
+        size,
+        0,
+        0,
+        sampleSize,
+        sampleSize,
+      );
+      return { src: canvas.toDataURL(), size: sampleSize };
+    });
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Style wallのPNGを保存" }).click();
+    const download = await downloadPromise;
+    const path = await download.path();
+    if (!path) throw new Error("Downloaded PNG is unavailable");
+    const pngSrc = `data:image/png;base64,${(await readFile(path)).toString("base64")}`;
+    const samples = await page.evaluate(
+      async ({ editorSrc, pngSrc, sampleSize }) => {
+        const regions = [
+          { x: 0.45, y: 0.55, width: 0.1, height: 0.2, yellow: true },
+          { x: 0.18, y: 0.58, width: 0.14, height: 0.14, yellow: false },
+          { x: 0.24, y: 0.24, width: 0.5, height: 0.12, yellow: false },
+          { x: 0.24, y: 0.9, width: 0.6, height: 0.1, yellow: false },
+        ];
+        async function countPixels(src: string, imageHeight?: number) {
+          const image = new Image();
+          image.src = src;
+          await image.decode();
+          const canvas = document.createElement("canvas");
+          canvas.width = sampleSize;
+          canvas.height = sampleSize;
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("Canvas is unavailable");
+          context.drawImage(
+            image,
+            0,
+            0,
+            image.naturalWidth,
+            imageHeight ?? image.naturalHeight,
+            0,
+            0,
+            sampleSize,
+            sampleSize,
+          );
+          return regions.map((region) => {
+            const pixels = context.getImageData(
+              region.x * sampleSize,
+              region.y * sampleSize,
+              region.width * sampleSize,
+              region.height * sampleSize,
+            ).data;
+            let count = 0;
+            for (let index = 0; index < pixels.length; index += 4) {
+              if (
+                region.yellow
+                  ? pixels[index] > 180 && pixels[index + 1] > 150 && pixels[index + 2] < 100
+                  : pixels[index] < 70 && pixels[index + 1] < 70 && pixels[index + 2] < 70
+              ) {
+                count += 1;
+              }
+            }
+            return count;
+          });
+        }
+        const image = new Image();
+        image.src = pngSrc;
+        await image.decode();
+        return {
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+          editor: await countPixels(editorSrc),
+          png: await countPixels(pngSrc, 2400),
+        };
+      },
+      { editorSrc: editorPixels.src, pngSrc, sampleSize: editorPixels.size },
+    );
+    expect(samples.width).toBe(2400);
+    expect(samples.height).toBe(2400);
+    for (let index = 0; index < samples.editor.length; index += 1) {
+      expect(samples.editor[index]).toBeGreaterThan(10);
+      expect(samples.png[index]).toBeGreaterThan(10);
+      if (index === 3) continue;
+      expect(samples.png[index] / samples.editor[index], `region ${index}`).toBeGreaterThan(0.8);
+      expect(samples.png[index] / samples.editor[index], `region ${index}`).toBeLessThan(1.2);
+    }
+  });
 }
 
 test("edits selected circle, text and line styles and persists them on desktop and mobile", async ({
@@ -448,16 +569,144 @@ test("saves the annotated route image to the shared wall post", async ({ page })
   } | null = null;
   await page.route("**/api/community/posts/wall/style-wall/image", async (route) => {
     updatePayload = route.request().postDataJSON();
-    await route.fulfill({ json: { updated: true } });
+    await route.fulfill({ json: { updated: true, postId: "style-post" } });
   });
+  await page.route("**/api/community/posts/style-post**", (route) =>
+    route.fulfill({
+      json: {
+        post: {
+          id: "style-post",
+          userId: "viewer",
+          username: "Viewer",
+          handle: "viewer",
+          avatar: null,
+          wallId: "style-wall",
+          wallName: "Style wall",
+          gymName: "",
+          japaneseGrade: "",
+          vGrade: "",
+          author: "",
+          description: "",
+          routes: updatePayload?.routes ?? [],
+          tags: { hold: [], move: [], type: [] },
+          image: updatePayload?.image,
+          createdAt: Date.now(),
+          likeCount: 0,
+          likedByMe: false,
+          savedByMe: false,
+        },
+      },
+    }),
+  );
+  const remoteImage =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==";
+  await page.route("**/api/community/posts?**", (route) =>
+    route.fulfill({
+      json: {
+        posts: [
+          {
+            id: "style-post",
+            userId: "viewer",
+            username: "Viewer",
+            handle: "viewer",
+            avatar: null,
+            wallId: "style-wall",
+            wallName: "Style wall",
+            gymName: "",
+            routes: [],
+            tags: { hold: [], move: [], type: [] },
+            image: remoteImage,
+            createdAt: Date.now(),
+            likeCount: 0,
+            likedByMe: false,
+            savedByMe: false,
+          },
+          {
+            id: "other-post",
+            userId: "other-user",
+            username: "Other Climber",
+            handle: "other-climber",
+            avatar: null,
+            wallId: "style-wall",
+            wallName: "Other wall",
+            gymName: "",
+            routes: [],
+            tags: { hold: [], move: [], type: [] },
+            image: remoteImage,
+            createdAt: Date.now(),
+            likeCount: 0,
+            likedByMe: false,
+            savedByMe: false,
+          },
+        ],
+        gyms: [],
+        grades: [],
+      },
+    }),
+  );
 
-  await openTestEditor(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openTestEditor(page, 2400);
+  await page.getByRole("button", { name: "文字を入力して配置" }).click();
+  await selectCanvasObject(page, 0.25, 0.95);
+  await page.getByLabel("壁面に配置する文字").fill("下端の文字");
+  await page.getByLabel("壁面に配置する文字").press("Enter");
+  await expect.poll(async () => (await readStyles(page)).route.textAnnotations?.length).toBe(2);
+  await selectCanvasObject(page, 0.25, 0.45);
+  await page.getByLabel("壁面に配置する文字").fill("送信直前の文字");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Style wallのPNGを保存" }).click();
+  const downloadPath = await (await downloadPromise).path();
+  if (!downloadPath) throw new Error("Downloaded PNG is unavailable");
+  const exportedPng = `data:image/png;base64,${(await readFile(downloadPath)).toString("base64")}`;
+  await page.goto("/?post=style-post");
+  const exportedDetailImage = page.locator(".wall-post-detail__image");
+  await expect(exportedDetailImage).toHaveAttribute("src", /^blob:/);
+  const displayedPng = await exportedDetailImage.evaluate(async (image) => {
+    const blob = await (await fetch(image.src)).blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  });
+  expect(displayedPng).toBe(exportedPng);
+  expect(updatePayload).toBeNull();
+  await page.goto("/");
+  const feedImage = page.getByRole("img", { name: "Style wallの壁画像", exact: true });
+  await expect(feedImage).toHaveAttribute("src", /^blob:/);
+  const displayedFeedPng = await feedImage.evaluate(async (image) => {
+    const blob = await (await fetch(image.src)).blob();
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  });
+  expect(displayedFeedPng).toBe(exportedPng);
+  await expect(page.getByRole("img", { name: "Other wallの壁画像", exact: true })).toHaveAttribute(
+    "src",
+    remoteImage,
+  );
+  await page.getByRole("button", { name: "リスト表示", exact: true }).click();
+  await expect(feedImage).toHaveAttribute("src", /^blob:/);
+  await page.reload();
+  await expect(feedImage).toHaveAttribute("src", /^blob:/);
+  await page.getByRole("link", { name: "Style wallの投稿詳細を開く" }).click();
+  await expect(page.locator(".wall-post-detail__image")).toHaveAttribute("src", /^blob:/);
+  await page.reload();
+  await expect(page.locator(".wall-post-detail__image")).toHaveAttribute("src", /^blob:/);
+  await page.getByRole("link", { name: "Style wallを編集" }).click();
+  await expect(page.locator("canvas.wall-canvas")).toBeVisible();
   await page.getByRole("button", { name: "投稿", exact: true }).click();
 
   await expect.poll(() => updatePayload?.image).toMatch(/^data:image\/webp;base64,/);
-  const darkAnnotationPixels = await page.evaluate(async (src) => {
-    const image = new Image();
-    image.src = src;
+  await expect(page).toHaveURL(/\/\?post=style-post$/);
+  const detailImage = page.locator(".wall-post-detail__image");
+  await expect(detailImage).toHaveAttribute("src", /^blob:/);
+  const samples = await detailImage.evaluate(async (image) => {
     await image.decode();
     const canvas = document.createElement("canvas");
     canvas.width = image.naturalWidth;
@@ -465,14 +714,27 @@ test("saves the annotated route image to the shared wall post", async ({ page })
     const context = canvas.getContext("2d");
     if (!context) throw new Error("Canvas is unavailable");
     context.drawImage(image, 0, 0);
-    const pixels = context.getImageData(88, 100, 100, 40).data;
-    let count = 0;
-    for (let index = 0; index < pixels.length; index += 4) {
-      if (pixels[index] < 70 && pixels[index + 1] < 70 && pixels[index + 2] < 70) count += 1;
-    }
-    return count;
-  }, updatePayload?.image ?? "");
-  expect(darkAnnotationPixels).toBeGreaterThan(10);
+    const counts = [0.3, 0.45, 0.95].map((y) => {
+      const pixels = context.getImageData(
+        image.naturalWidth * 0.24,
+        2400 * (y - 0.04),
+        image.naturalWidth * 0.6,
+        2400 * 0.08,
+      ).data;
+      let count = 0;
+      for (let index = 0; index < pixels.length; index += 4) {
+        if (pixels[index] < 70 && pixels[index + 1] < 70 && pixels[index + 2] < 70) count += 1;
+      }
+      return count;
+    });
+    return { width: image.naturalWidth, height: image.naturalHeight, counts };
+  });
+  expect(samples.width).toBe(2400);
+  expect(samples.height).toBe(2400);
+  for (const count of samples.counts) expect(count).toBeGreaterThan(10);
+  await expect
+    .poll(async () => (await readStyles(page)).route.textAnnotations?.at(-1)?.text)
+    .toBe("送信直前の文字");
   expect(updatePayload?.routes).toEqual([
     { id: "style-route", name: "Style route", grade: "", description: "Existing description" },
   ]);

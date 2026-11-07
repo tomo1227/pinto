@@ -1,4 +1,5 @@
 import "fake-indexeddb/auto";
+import { Blob as NodeBlob } from "node:buffer";
 import type { Hold, ImageAsset, Route, Wall } from "@pinto/shared";
 import { openDB } from "idb";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,12 +7,14 @@ import {
   closeDatabase,
   deleteWall,
   getDiscordSettings,
+  getWallPng,
   listHolds,
   listRoutes,
   saveHold,
   saveImage,
   saveRoute,
   saveWall,
+  saveWallPng,
 } from "./database";
 
 const now = "2026-01-01T00:00:00.000Z";
@@ -59,6 +62,17 @@ afterEach(async () => {
 });
 
 describe("IndexedDB repository", () => {
+  it("persists the latest generated PNG separately for each wall", async () => {
+    expect(await getWallPng(wall.id)).toBeUndefined();
+    const png = new NodeBlob(["png"], { type: "image/png" });
+    await saveWallPng(wall.id, png);
+    await closeDatabase();
+    const stored = await getWallPng(wall.id);
+    expect(stored?.type).toBe("image/png");
+    expect(await stored?.arrayBuffer()).toEqual(await png.arrayBuffer());
+    expect(await getWallPng("other-wall")).toBeUndefined();
+  });
+
   it("stores walls, image blobs, holds and routes independently", async () => {
     await saveImage(image);
     await saveWall(wall);
@@ -98,8 +112,10 @@ describe("IndexedDB repository", () => {
     await saveWall(wall);
     await saveHold(hold);
     await saveRoute(route);
+    await saveWallPng(wall.id, image.blob);
     await deleteWall(wall.id);
     expect(await listHolds(wall.id)).toEqual([]);
     expect(await listRoutes(wall.id)).toEqual([]);
+    expect(await getWallPng(wall.id)).toBeUndefined();
   });
 });
