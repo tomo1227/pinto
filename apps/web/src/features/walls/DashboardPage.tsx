@@ -34,6 +34,7 @@ import {
 import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
 import { getImage } from "../../infrastructure/storage/database";
 import { useWorkspaceStore } from "../workspace/store";
+import { WallPostDetailPage } from "./WallPostDetailPage";
 
 const emptyFeed: WallPostFeed = { posts: [], gyms: [], grades: [] };
 const emptyWallPostTags: WallPostTags = { hold: [], move: [], type: [] };
@@ -361,6 +362,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
             const wallImage = (
               <img className="route-post__image" src={post.image} alt={`${wallName}の壁画像`} />
             );
+            const postDetailsHref = `/?post=${encodeURIComponent(post.id)}`;
             return (
               <article className="route-post" key={post.id}>
                 {isOwnPost ? (
@@ -373,7 +375,13 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                     {wallImage}
                   </Link>
                 ) : (
-                  wallImage
+                  <a
+                    className="route-post__wall-image-link"
+                    href={postDetailsHref}
+                    aria-label={`${wallName}の投稿詳細を開く`}
+                  >
+                    {wallImage}
+                  </a>
                 )}
                 <div className="route-post__body">
                   <div className="route-post__author">
@@ -417,7 +425,9 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                         {wallName}
                       </Link>
                     ) : (
-                      wallName
+                      <a className="route-post__wall-title-link" href={postDetailsHref}>
+                        {wallName}
+                      </a>
                     )}
                   </h3>
                   <p className="route-post__meta">
@@ -502,6 +512,8 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
 }
 
 export function DashboardPage() {
+  const postId =
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("post");
   const { data: session, isPending: sessionPending } = authClient.useSession();
   const sessionUserId = session?.user.id;
   const createWall = useWorkspaceStore((state) => state.createWall);
@@ -589,6 +601,8 @@ export function DashboardPage() {
       notify(reason instanceof Error ? reason.message : "Googleログインに失敗しました。");
     }
   }
+
+  if (postId) return <WallPostDetailPage postId={postId} />;
 
   return (
     <main className="page-shell dashboard-page">

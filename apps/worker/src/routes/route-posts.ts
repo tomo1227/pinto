@@ -206,6 +206,38 @@ routePostRoutes.get("/", async (context) => {
   });
 });
 
+routePostRoutes.get("/:id", async (context) => {
+  context.header("Cache-Control", "private, no-store");
+  const session = await getSession(context.req.raw, context.env);
+  const viewerId = session?.user.id ?? "";
+  const row = await context.env.DB.prepare(
+    `SELECT post.id, post.userId, profile.username, profile.handle, profile.avatar,
+            post.wallId, post.wallName, post.gymName, post.routes, post.tags, post.image, post.createdAt,
+            (SELECT COUNT(*) FROM community_wall_post_like AS likes WHERE likes.postId = post.id) AS likeCount,
+            (viewer_like.userId IS NOT NULL) AS likedByMe,
+            (viewer_save.userId IS NOT NULL) AS savedByMe
+     FROM community_wall_post AS post
+     JOIN community_profile AS profile ON profile.userId = post.userId
+     LEFT JOIN community_wall_post_like AS viewer_like
+       ON viewer_like.postId = post.id AND viewer_like.userId = ?
+     LEFT JOIN community_wall_post_save AS viewer_save
+       ON viewer_save.postId = post.id AND viewer_save.userId = ?
+     WHERE post.id = ? AND ${canSeeProfileSql()}`,
+  )
+    .bind(viewerId, viewerId, context.req.param("id"), viewerId, viewerId)
+    .first<WallPostRow>();
+  if (!row) return context.json({ error: "投稿が見つかりません。" }, 404);
+
+  const post: WallPost = {
+    ...row,
+    routes: JSON.parse(row.routes) as WallPostRoute[],
+    tags: JSON.parse(row.tags) as WallPostTags,
+    likedByMe: Boolean(row.likedByMe),
+    savedByMe: Boolean(row.savedByMe),
+  };
+  return context.json({ post });
+});
+
 async function updatePostReaction(
   context: Context<{ Bindings: AuthBindings }>,
   kind: "like" | "save",

@@ -1,0 +1,240 @@
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Bookmark, Heart, MapPin, Share2, UserRound } from "lucide-react";
+import { useEffect, useState } from "react";
+import { authClient } from "../../infrastructure/api/auth";
+import {
+  getWallPost,
+  setWallPostLike,
+  setWallPostSaved,
+  type WallPost,
+} from "../../infrastructure/api/community";
+
+export function WallPostDetailPage({ postId }: { postId: string }) {
+  const { data: session } = authClient.useSession();
+  const [post, setPost] = useState<WallPost | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [pendingAction, setPendingAction] = useState<"like" | "save" | null>(null);
+  const [error, setError] = useState("");
+  const [shareNotice, setShareNotice] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    void getWallPost(postId, Boolean(session?.user))
+      .then((result) => {
+        if (active) setPost(result);
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setPost(null);
+          setError(reason instanceof Error ? reason.message : "投稿を読み込めませんでした。");
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [postId, session?.user]);
+
+  async function toggleLike() {
+    if (!post || !session?.user) return;
+    setPendingAction("like");
+    setError("");
+    try {
+      const result = await setWallPostLike(post.id, !post.likedByMe);
+      setPost((current) =>
+        current ? { ...current, likedByMe: result.active, likeCount: result.likeCount } : current,
+      );
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "いいねを更新できませんでした。");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function toggleSaved() {
+    if (!post || !session?.user) return;
+    setPendingAction("save");
+    setError("");
+    try {
+      const result = await setWallPostSaved(post.id, !post.savedByMe);
+      setPost((current) => (current ? { ...current, savedByMe: result.active } : current));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "保存状態を更新できませんでした。");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function sharePost() {
+    if (!post) return;
+    setError("");
+    setShareNotice("");
+    const url = new URL(`/?post=${encodeURIComponent(post.id)}`, window.location.origin).toString();
+    try {
+      if (typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            title: post.wallName,
+            text: `${post.wallName} · ${post.gymName}`,
+            url,
+          });
+          return;
+        } catch (reason) {
+          if (reason instanceof Error && reason.name === "AbortError") return;
+          if (!navigator.clipboard?.writeText) throw reason;
+        }
+      }
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("このブラウザーではリンクを共有できません。");
+      }
+      await navigator.clipboard.writeText(url);
+      setShareNotice("投稿リンクをコピーしました。");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "リンクを共有できませんでした。");
+    }
+  }
+
+  return (
+    <main className="page-shell wall-post-detail-page">
+      <Link className="text-link wall-post-detail__back" to="/">
+        <ArrowLeft size={15} /> 壁の投稿一覧
+      </Link>
+      {error && (
+        <p className="community-status" role="alert">
+          {error}
+        </p>
+      )}
+      {loading ? (
+        <p className="empty-copy">投稿を読み込んでいます...</p>
+      ) : !post ? (
+        <p className="empty-copy">投稿が見つからないか、閲覧できません。</p>
+      ) : (
+        <article className="wall-post-detail">
+          <img
+            className="wall-post-detail__image"
+            src={post.image}
+            alt={`${post.wallName}の壁画像`}
+          />
+          <div className="wall-post-detail__body">
+            <header className="wall-post-detail__heading">
+              <div className="route-post__author">
+                {post.avatar ? (
+                  <img src={post.avatar} alt="" />
+                ) : (
+                  <span>
+                    <UserRound size={15} aria-hidden="true" />
+                  </span>
+                )}
+                <Link
+                  className="route-post__author-link"
+                  to="/community/$handle"
+                  params={{ handle: post.handle }}
+                >
+                  {post.username}
+                </Link>
+                <small>@{post.handle}</small>
+              </div>
+              <p className="eyebrow">WALL POST</p>
+              <h1 className="display-title">{post.wallName}</h1>
+              <p className="route-post__meta">
+                <MapPin size={14} /> {post.gymName}
+                <span>{post.routes.length} ルート</span>
+              </p>
+              <time dateTime={new Date(post.createdAt).toISOString()}>
+                {new Intl.DateTimeFormat("ja-JP", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(post.createdAt)}
+              </time>
+            </header>
+
+            {post.tags && (
+              <div className="route-post__tags">
+                {post.tags.hold.map((tag) => (
+                  <span key={`hold-${tag}`}>ホールド: {tag}</span>
+                ))}
+                {post.tags.move.map((tag) => (
+                  <span key={`move-${tag}`}>ムーブ: {tag}</span>
+                ))}
+                {post.tags.type.map((tag) => (
+                  <span key={`type-${tag}`}>タイプ: {tag}</span>
+                ))}
+              </div>
+            )}
+
+            <section className="wall-post-detail__routes" aria-labelledby="wall-post-routes-title">
+              <h2 id="wall-post-routes-title">登録ルート</h2>
+              {post.routes.length ? (
+                <ul className="route-post__routes">
+                  {post.routes.map((route) => (
+                    <li key={route.id}>
+                      <div>
+                        <strong>{route.name}</strong>
+                        {route.description && (
+                          <p className="route-post__description">{route.description}</p>
+                        )}
+                      </div>
+                      {(route.japaneseGrade || route.vGrade || route.grade) && (
+                        <strong className="wall-post-detail__grade">
+                          {route.japaneseGrade || route.vGrade
+                            ? [route.japaneseGrade, route.vGrade].filter(Boolean).join(" · ")
+                            : route.grade}
+                        </strong>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="empty-copy">ルートはまだ登録されていません。</p>
+              )}
+            </section>
+
+            <div className="wall-post-detail__actions">
+              <button
+                className={`route-post__action ${post.likedByMe ? "is-active" : ""}`}
+                type="button"
+                aria-label={`${post.wallName}にいいね`}
+                aria-pressed={post.likedByMe}
+                disabled={!session?.user || pendingAction !== null}
+                onClick={() => void toggleLike()}
+              >
+                <Heart size={16} fill={post.likedByMe ? "currentColor" : "none"} />
+                <span>{post.likeCount}</span>
+              </button>
+              <button
+                className={`route-post__action ${post.savedByMe ? "is-active" : ""}`}
+                type="button"
+                aria-label={`${post.wallName}を保存`}
+                aria-pressed={post.savedByMe}
+                disabled={!session?.user || pendingAction !== null}
+                onClick={() => void toggleSaved()}
+              >
+                <Bookmark size={16} fill={post.savedByMe ? "currentColor" : "none"} />
+                <span>{post.savedByMe ? "保存済み" : "保存"}</span>
+              </button>
+              <button
+                className="route-post__action"
+                type="button"
+                aria-label="投稿を共有"
+                onClick={() => void sharePost()}
+              >
+                <Share2 size={16} />
+                <span>共有</span>
+              </button>
+            </div>
+            {shareNotice && (
+              <p className="field-hint" role="status">
+                {shareNotice}
+              </p>
+            )}
+            {!session?.user && <p className="field-hint">いいね・保存にはログインが必要です。</p>}
+          </div>
+        </article>
+      )}
+    </main>
+  );
+}

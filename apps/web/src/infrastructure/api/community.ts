@@ -155,6 +155,14 @@ export async function getWallPostFeed(
   });
 }
 
+export async function getWallPost(id: string, authenticated = false) {
+  const result = await requestJson<{ post: WallPost }>(
+    `/api/community/posts/${encodeURIComponent(id)}`,
+    { cache: authenticated ? "no-store" : "default" },
+  );
+  return result.post;
+}
+
 export async function publishWallPost(input: WallPostInput) {
   return requestJson<{
     post: Pick<WallPost, "id" | "wallId" | "wallName" | "gymName" | "routes" | "tags">;
