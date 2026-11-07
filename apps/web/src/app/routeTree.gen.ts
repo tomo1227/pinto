@@ -16,7 +16,9 @@ import { Route as GymsRouteImport } from './routes/gyms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as CommunityHandleRouteImport } from './routes/community.$handle'
+import { Route as ToolsCruxRouteImport } from './routes/tools.crux'
 import { Route as WallsWallIdRouteImport } from './routes/walls.$wallId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -54,10 +56,20 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsRoute = ToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CommunityHandleRoute = CommunityHandleRouteImport.update({
   id: '/$handle',
   path: '/$handle',
   getParentRoute: () => CommunityRoute,
+} as any)
+const ToolsCruxRoute = ToolsCruxRouteImport.update({
+  id: '/crux',
+  path: '/crux',
+  getParentRoute: () => ToolsRoute,
 } as any)
 const WallsWallIdRoute = WallsWallIdRouteImport.update({
   id: '/walls/$wallId',
@@ -73,7 +85,9 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/tools': typeof ToolsRouteWithChildren
   '/community/$handle': typeof CommunityHandleRoute
+  '/tools/crux': typeof ToolsCruxRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRoutesByTo {
@@ -84,7 +98,9 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/tools': typeof ToolsRouteWithChildren
   '/community/$handle': typeof CommunityHandleRoute
+  '/tools/crux': typeof ToolsCruxRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRoutesById {
@@ -96,7 +112,9 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/terms': typeof TermsRoute
+  '/tools': typeof ToolsRouteWithChildren
   '/community/$handle': typeof CommunityHandleRoute
+  '/tools/crux': typeof ToolsCruxRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +127,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/settings'
     | '/terms'
+    | '/tools'
     | '/community/$handle'
+    | '/tools/crux'
     | '/walls/$wallId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +140,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/settings'
     | '/terms'
+    | '/tools'
     | '/community/$handle'
+    | '/tools/crux'
     | '/walls/$wallId'
   id:
     | '__root__'
@@ -131,7 +153,9 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/settings'
     | '/terms'
+    | '/tools'
     | '/community/$handle'
+    | '/tools/crux'
     | '/walls/$wallId'
   fileRoutesById: FileRoutesById
 }
@@ -143,6 +167,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   TermsRoute: typeof TermsRoute
+  ToolsRoute: typeof ToolsRouteWithChildren
   WallsWallIdRoute: typeof WallsWallIdRoute
 }
 
@@ -197,12 +222,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools': {
+      id: '/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof ToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/community/$handle': {
       id: '/community/$handle'
       path: '/$handle'
       fullPath: '/community/$handle'
       preLoaderRoute: typeof CommunityHandleRouteImport
       parentRoute: typeof CommunityRoute
+    }
+    '/tools/crux': {
+      id: '/tools/crux'
+      path: '/crux'
+      fullPath: '/tools/crux'
+      preLoaderRoute: typeof ToolsCruxRouteImport
+      parentRoute: typeof ToolsRoute
     }
     '/walls/$wallId': {
       id: '/walls/$wallId'
@@ -226,6 +265,16 @@ const CommunityRouteWithChildren = CommunityRoute._addFileChildren(
   CommunityRouteChildren,
 )
 
+interface ToolsRouteChildren {
+  ToolsCruxRoute: typeof ToolsCruxRoute
+}
+
+const ToolsRouteChildren: ToolsRouteChildren = {
+  ToolsCruxRoute: ToolsCruxRoute,
+}
+
+const ToolsRouteWithChildren = ToolsRoute._addFileChildren(ToolsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CommunityRoute: CommunityRouteWithChildren,
@@ -234,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   TermsRoute: TermsRoute,
+  ToolsRoute: ToolsRouteWithChildren,
   WallsWallIdRoute: WallsWallIdRoute,
 }
 export const routeTree = rootRouteImport

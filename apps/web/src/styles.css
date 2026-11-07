@@ -423,8 +423,673 @@ a {
 .community-page {
   padding: 58px 0 90px;
 }
-.gym-directory-page {
+.gym-directory-page,
+.tools-page {
   padding: 58px 0 90px;
+}
+.crux-page {
+  padding: 45px 0 90px;
+}
+.crux-heading {
+  padding-bottom: 23px;
+  border-bottom: 1px solid var(--line);
+}
+.crux-heading .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.crux-heading .eyebrow {
+  margin-bottom: 7px;
+}
+.crux-heading .display-title {
+  font-size: 38px;
+}
+.crux-heading .intro-copy {
+  margin-bottom: 0;
+}
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px;
+}
+.tools-card {
+  min-height: 190px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+.tools-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--moss);
+}
+.tools-card__icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--moss);
+  background: color-mix(in srgb, var(--moss) 12%, var(--surface));
+  border-radius: 5px;
+}
+.tools-card__body .eyebrow {
+  margin: 0 0 6px;
+}
+.tools-card__body h2 {
+  margin: 0;
+  font:
+    600 24px "Space Grotesk",
+    sans-serif;
+}
+.tools-card__body > p:not(.eyebrow) {
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.tools-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--moss);
+  font-size: 10px;
+  font-weight: 700;
+}
+.tools-card__arrow {
+  margin-top: 5px;
+  color: var(--muted);
+}
+.tools-grid__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.crux-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+  padding-top: 24px;
+}
+.crux-library {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+}
+.crux-library__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+.crux-library__heading .eyebrow {
+  margin: 0 0 4px;
+}
+.crux-library__heading h2 {
+  margin: 0;
+  font:
+    600 20px "Space Grotesk",
+    sans-serif;
+}
+.crux-library__heading > svg {
+  color: var(--moss);
+}
+.crux-import {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+.crux-import input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.crux-library__list {
+  display: grid;
+  gap: 5px;
+  max-height: 480px;
+  overflow: auto;
+  padding: 0;
+  margin: 14px 0 0;
+  list-style: none;
+}
+.crux-library__list li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 4px;
+}
+.crux-library__list li.is-selected {
+  background: color-mix(in srgb, var(--moss) 12%, var(--surface));
+}
+.crux-library__select {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px;
+  border: 0;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+}
+.crux-library__select > svg {
+  flex: 0 0 auto;
+  color: var(--moss);
+}
+.crux-library__select span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.crux-library__select strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crux-library__select small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.crux-library__delete {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+.crux-library__empty {
+  margin: 14px 0 2px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+.crux-workspace {
+  min-width: 0;
+}
+.crux-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.crux-toolbar .button {
+  flex: 0 0 auto;
+}
+.crux-compare-select {
+  width: min(100%, 320px);
+  margin: 0;
+}
+.crux-notice {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-size: 11px;
+}
+.crux-display-settings {
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.crux-display-settings summary {
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crux-display-settings__content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+.crux-display-settings__content fieldset {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 9px 14px;
+  padding: 10px;
+  margin: 0;
+  border: 1px solid var(--line);
+}
+.crux-display-settings__content legend {
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.crux-display-settings__content .crux-display-settings__confidence {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.crux-display-settings__confidence > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.crux-display-settings__confidence label {
+  display: grid;
+  grid-template-columns: minmax(70px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 10px;
+}
+.crux-display-settings__confidence label > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.crux-display-settings__confidence input[type="range"] {
+  min-width: 0;
+  flex: 1;
+  accent-color: var(--moss);
+}
+.crux-display-settings__confidence output {
+  width: 34px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.crux-display-settings__visibility label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink);
+  font-size: 10px;
+}
+.crux-display-settings__joint-parts label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink);
+  font-size: 10px;
+}
+.crux-display-settings__joint-group {
+  display: grid;
+  grid-template-columns: minmax(56px, auto) minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+.crux-display-settings__joint-group > details > summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+.crux-display-settings__joint-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 0;
+}
+.crux-display-settings__visibility input {
+  margin: 0;
+  accent-color: var(--moss);
+}
+.crux-display-settings__joint-parts input {
+  margin: 0;
+  accent-color: var(--moss);
+}
+.crux-display-settings__content .crux-display-settings__appearance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.crux-display-settings__appearance label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 10px;
+}
+.crux-display-settings__appearance input[type="color"] {
+  width: 38px;
+  height: 26px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.crux-display-settings__appearance label > span {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.crux-display-settings__appearance input[type="range"] {
+  min-width: 0;
+  flex: 1;
+  accent-color: var(--moss);
+}
+.crux-display-settings__appearance output {
+  width: 34px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.crux-players {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.crux-players--comparison {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.crux-player {
+  min-width: 0;
+}
+.crux-player__heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.crux-player__heading svg {
+  flex: 0 0 auto;
+  color: var(--moss);
+}
+.crux-player__heading span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crux-start-position {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.crux-start-position > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.crux-start-position output {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.crux-start-position input {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--moss);
+}
+.crux-player__screen {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #101312;
+}
+.crux-player__screen video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.crux-player__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.crux-player__bone {
+  stroke: #ffe15c;
+  stroke-linecap: round;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 1px 2px #101312);
+}
+.crux-player__joint {
+  fill: #fffefa;
+  stroke: #2f7a68;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+.crux-player__center {
+  fill: #e96d4d;
+  stroke: #fffefa;
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+.crux-player__status {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 5px 8px;
+  color: #fff;
+  background: #101312bd;
+  font-size: 10px;
+}
+.crux-player__3d-toggle {
+  width: 100%;
+  justify-content: center;
+  margin-top: 8px;
+}
+.crux-3d-preview {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.crux-3d-preview__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 11px;
+}
+.crux-3d-preview__heading .button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.crux-3d-preview__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #101312;
+  cursor: grab;
+  touch-action: none;
+}
+.crux-3d-preview__canvas:active {
+  cursor: grabbing;
+}
+.crux-3d-preview__hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.crux-3d-preview__coordinates {
+  min-width: 0;
+}
+.crux-3d-preview__coordinates > summary {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.crux-3d-preview__coordinates > p {
+  margin: 5px 0;
+  color: var(--muted);
+  font-size: 9px;
+}
+.crux-3d-preview__table-scroll {
+  max-height: 220px;
+  overflow: auto;
+}
+.crux-3d-preview__coordinates table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.crux-3d-preview__coordinates th,
+.crux-3d-preview__coordinates td {
+  padding: 4px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.crux-3d-preview__coordinates thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--muted);
+}
+.crux-3d-preview__coordinates th:first-child {
+  text-align: left;
+}
+.crux-3d-preview__coordinates tbody th {
+  color: var(--ink);
+  font-weight: 500;
+}
+.crux-3d-preview__coordinates .crux-3d-preview__low-confidence {
+  opacity: 0.5;
+}
+.crux-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
+  padding: 9px 0;
+  margin: 0;
+}
+.crux-metrics > div {
+  min-width: 0;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.crux-metrics dt {
+  color: var(--muted);
+  font-size: 9px;
+}
+.crux-metrics dd {
+  margin: 3px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.crux-controls {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.crux-controls legend {
+  padding: 0 5px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.crux-controls__play {
+  min-width: 92px;
+}
+.crux-controls__time {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.crux-controls__seek {
+  min-width: 40px;
+  flex: 1;
+  accent-color: var(--moss);
+}
+.crux-controls__speed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.crux-controls__speed .text-input {
+  width: 68px;
+  min-height: 32px;
+  padding: 4px 6px;
+  font-size: 11px;
+}
+.crux-empty {
+  margin-top: 2px;
+}
+.crux-footnote {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+@media (max-width: 760px) {
+  .crux-page {
+    padding-top: 38px;
+  }
+  .crux-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .crux-players--comparison {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .crux-player__screen {
+    max-height: none;
+  }
+}
+@media (max-width: 480px) {
+  .crux-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .crux-compare-select {
+    width: 100%;
+  }
+  .crux-controls {
+    flex-wrap: wrap;
+  }
+  .crux-controls__time {
+    margin-left: auto;
+  }
+  .crux-controls__seek {
+    order: 2;
+    flex-basis: 100%;
+  }
+  .crux-controls__speed {
+    margin-left: auto;
+  }
+  .crux-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .gym-directory-heading {
   display: flex;
@@ -2757,7 +3422,8 @@ a {
   .community-page {
     padding-top: 38px;
   }
-  .gym-directory-page {
+  .gym-directory-page,
+  .tools-page {
     padding-top: 38px;
   }
   .gym-directory-controls {
