@@ -13,7 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CommunityRouteImport } from './routes/community'
 import { Route as GymRequestsRouteImport } from './routes/gym-requests'
 import { Route as GymsRouteImport } from './routes/gyms'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as CommunityHandleRouteImport } from './routes/community.$handle'
 import { Route as WallsWallIdRouteImport } from './routes/walls.$wallId'
 
@@ -37,9 +39,19 @@ const GymsRoute = GymsRouteImport.update({
   path: '/gyms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CommunityHandleRoute = CommunityHandleRouteImport.update({
@@ -58,7 +70,9 @@ export interface FileRoutesByFullPath {
   '/community': typeof CommunityRouteWithChildren
   '/gym-requests': typeof GymRequestsRoute
   '/gyms': typeof GymsRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
@@ -67,7 +81,9 @@ export interface FileRoutesByTo {
   '/community': typeof CommunityRouteWithChildren
   '/gym-requests': typeof GymRequestsRoute
   '/gyms': typeof GymsRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
@@ -77,7 +93,9 @@ export interface FileRoutesById {
   '/community': typeof CommunityRouteWithChildren
   '/gym-requests': typeof GymRequestsRoute
   '/gyms': typeof GymsRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
+  '/terms': typeof TermsRoute
   '/community/$handle': typeof CommunityHandleRoute
   '/walls/$wallId': typeof WallsWallIdRoute
 }
@@ -88,7 +106,9 @@ export interface FileRouteTypes {
     | '/community'
     | '/gym-requests'
     | '/gyms'
+    | '/privacy'
     | '/settings'
+    | '/terms'
     | '/community/$handle'
     | '/walls/$wallId'
   fileRoutesByTo: FileRoutesByTo
@@ -97,7 +117,9 @@ export interface FileRouteTypes {
     | '/community'
     | '/gym-requests'
     | '/gyms'
+    | '/privacy'
     | '/settings'
+    | '/terms'
     | '/community/$handle'
     | '/walls/$wallId'
   id:
@@ -106,7 +128,9 @@ export interface FileRouteTypes {
     | '/community'
     | '/gym-requests'
     | '/gyms'
+    | '/privacy'
     | '/settings'
+    | '/terms'
     | '/community/$handle'
     | '/walls/$wallId'
   fileRoutesById: FileRoutesById
@@ -116,7 +140,9 @@ export interface RootRouteChildren {
   CommunityRoute: typeof CommunityRouteWithChildren
   GymRequestsRoute: typeof GymRequestsRoute
   GymsRoute: typeof GymsRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
+  TermsRoute: typeof TermsRoute
   WallsWallIdRoute: typeof WallsWallIdRoute
 }
 
@@ -150,11 +176,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GymsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/community/$handle': {
@@ -191,7 +231,9 @@ const rootRouteChildren: RootRouteChildren = {
   CommunityRoute: CommunityRouteWithChildren,
   GymRequestsRoute: GymRequestsRoute,
   GymsRoute: GymsRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
+  TermsRoute: TermsRoute,
   WallsWallIdRoute: WallsWallIdRoute,
 }
 export const routeTree = rootRouteImport

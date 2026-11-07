@@ -464,6 +464,13 @@ function RootLayout() {
       ) : (
         <Outlet />
       )}
+      <footer className="site-footer">
+        <span>© 2026 Tomoki Ota</span>
+        <nav aria-label="サイト情報">
+          <Link to="/privacy">プライバシーポリシー</Link>
+          <Link to="/terms">利用規約</Link>
+        </nav>
+      </footer>
       {error && (
         <div className="toast-message" role="status">
           {error}
