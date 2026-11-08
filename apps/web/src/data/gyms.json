@@ -1,12 +1,2132 @@
 [
   {
-    "id": "bouldering-gym-mushrooming",
-    "name": "ボルダリングジム マッシュルーミング",
+    "id": "shugakuso-asahikawa",
+    "name": "ハヤウチマンウォール（秀岳荘 旭川店）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "guts-wall",
+    "name": "Wall of Early Morning Light [Guts Wall]（ガッツウォール）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "nac-niseko",
+    "name": "NAC ニセコクライミング",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "wonderwall-obihiro",
+    "name": "WONDER WALL（ワンダーウォール）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "kitwall",
+    "name": "きっとうぉ～る",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "d-kushiro",
+    "name": "ディーボルダリング 釧路",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "north-cave",
+    "name": "North Cave Gym（ノースケイブジム）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "rainbow-cliff",
+    "name": "スポーツクライミングジム Rainbow Cliff（レインボークリフ）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "akalaclimb",
+    "name": "アカラクライム",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "signal-climbing-gym",
+    "name": "SIGNAL（シグナル） クライミングジム",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "whipper",
+    "name": "Whipper Snapper Gym（ウィップス）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "nobonobo",
+    "name": "クライミングランド のぼのぼ",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "clutch",
+    "name": "クライミングスペース CLUTCH（クラッチ）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "orange-slab",
+    "name": "ボルダリングジム ORANGE SLAB（オレンジスラブ）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "kunneppu",
+    "name": "訓子府町スポーツセンター",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "senbiri",
+    "name": "ボルダリング仙美里",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "red-point",
+    "name": "ボルダリングジム RED POINT（レッドポイント）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "sport-climbing-tokachi",
+    "name": "スポーツクライミングジム十勝",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "xtreme",
+    "name": "ボルダリングジム エクストリーム",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "homie",
+    "name": "HOMIE（ホーミー）",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "bibai",
+    "name": "美唄市体育センター",
+    "prefectureCode": "JP-01"
+  },
+  {
+    "id": "rat-aomori",
+    "name": "RAT 青森ボルダー",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "glide-climbing",
+    "name": "glide（グライド）クライミング",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "taiiku",
+    "name": "TAiiKU ( タイイク )",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "ratwall-hirosaki",
+    "name": "RAT Wall 弘前",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "2nd-wally",
+    "name": "2ND WALLY Bouldering",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "mutsu-arena",
+    "name": "むつマエダアリーナ",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "north-rock",
+    "name": "クライミングジム ノースロック",
+    "prefectureCode": "JP-02"
+  },
+  {
+    "id": "cragers-oshumizusawa",
+    "name": "Crager’s（クレイガーズ） 奥州水沢",
+    "prefectureCode": "JP-03"
+  },
+  {
+    "id": "clambon-climbing",
+    "name": "Clambon Climbing（クラムボン クライミング）",
+    "prefectureCode": "JP-03"
+  },
+  {
+    "id": "onemove",
+    "name": "クライミングスポット ONE MOVE（ワンムーブ）",
+    "prefectureCode": "JP-03"
+  },
+  {
+    "id": "the-stone-session",
+    "name": "THE STONE SESSION",
+    "prefectureCode": "JP-03"
+  },
+  {
+    "id": "iwate-kenei",
+    "name": "岩手県営運動公園",
+    "prefectureCode": "JP-03"
+  },
+  {
+    "id": "matsu",
+    "name": "クライミングジム マツ",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "the-rock",
+    "name": "The ROCK（ザ・ロック）",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "bnuts-osakifurukawa",
+    "name": "クライミングジム B’nuts（ビーナッツ） 大崎古川店",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "bnuts",
+    "name": "クライミングジム B’nuts（ビーナッツ） 仙台店",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "bolz",
+    "name": "クライミングジム BOLZ（ボルズ）",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "moment-izumi",
+    "name": "クライミングジム MOMENT（モーメント） 泉店",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "bolz-nakanosakae",
+    "name": "ボルダリング教室BOLZ（ボルズ） 中野栄店",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "db-sendai",
+    "name": "ディーボルダリング仙台長町",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "genki",
+    "name": "元気フィールド仙台",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "kotih",
+    "name": "クライミングジム Kotih（コーティ）",
+    "prefectureCode": "JP-04"
+  },
+  {
+    "id": "garapaka",
+    "name": "GARAPAKA（ガラパカ） クライミングジム",
+    "prefectureCode": "JP-05"
+  },
+  {
+    "id": "todo",
+    "name": "TODOクライミング",
+    "prefectureCode": "JP-05"
+  },
+  {
+    "id": "freaky",
+    "name": "CAMP & CLIMBING FREAKY（フリーキー）",
+    "prefectureCode": "JP-05"
+  },
+  {
+    "id": "un-rocher",
+    "name": "CLIMBING & CAFE WAREHOUSE -UN ROCHER-（アンロシェ）",
+    "prefectureCode": "JP-05"
+  },
+  {
+    "id": "indoor-sports-park-sunbow",
+    "name": "indoor sports park SUNBOW（インドアスポーツパークサンボー）",
+    "prefectureCode": "JP-05"
+  },
+  {
+    "id": "taka",
+    "name": "TAKAクライミングジム",
+    "prefectureCode": "JP-05"
+  },
+  {
+    "id": "nobaria-climbing-gym",
+    "name": "NOBARIA CLIMBING GYM（ノバリアクライミングジム）",
+    "prefectureCode": "JP-06"
+  },
+  {
+    "id": "bouldering-house-358",
+    "name": "ボルダリングハウス 358",
+    "prefectureCode": "JP-06"
+  },
+  {
+    "id": "flat-bouldering",
+    "name": "FLAT bouldering",
+    "prefectureCode": "JP-06"
+  },
+  {
+    "id": "actionpark-yonezawa",
+    "name": "鷹山（ようざん）ウォール NPO法人 アクションパーク米沢 クライミング部会",
+    "prefectureCode": "JP-06"
+  },
+  {
+    "id": "gen-darmes-iwaki",
+    "name": "ジャンダルム いわき店",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "drop-in",
+    "name": "クライミングパーク Drop in（ドロップイン）",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "romanov",
+    "name": "ロマノフ クライミングジム",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "movement",
+    "name": "MOVEMENT Climbing Space",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "nanashino",
+    "name": "クライミングジム NANASHINO（ナナシノ）",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "trailrock",
+    "name": "クライミングジム TRAILROCK",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "rock-fiddle",
+    "name": "Rock & Fiddle（ロック＆フィドル）",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "varappe",
+    "name": "ボルダリングジム Varappe（ヴァラップ）",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "skypia-adatara",
+    "name": "スカイピア あだたら アクティブパーク",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "diverse",
+    "name": "DIVERSE ROCK CLIMBING（ディバースロッククライミング）",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "halerock",
+    "name": "クライミングジム ハレロック",
+    "prefectureCode": "JP-07"
+  },
+  {
+    "id": "rocky-tsukubaami",
+    "name": "ROCKY（ロッキー） つくば阿見店",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "vortex",
+    "name": "ボルダリングジム Vortex（ボルテックス）",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "ao_roc-climbing",
+    "name": "ao_roc.（アオロク） climbing",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "style-crew",
+    "name": "ボルダリングジム Style crew",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "spole",
+    "name": "Spole（スポーレ） クライミングジム",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "monky-magic",
+    "name": "ボルダリングジム モンキーマジック つくばQ’t",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "echoes",
+    "name": "ECHOES CLIMBING（エコーズ クライミング）",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "fly-hight",
+    "name": "ボルダリングジム フライハイト",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "zero-mito",
+    "name": "クライミングジム ZE-RO（ゼロ） 水戸店",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "avue",
+    "name": "水戸シティロックジム avue（アヴュー）",
+    "prefectureCode": "JP-08"
+  },
+  {
+    "id": "mountain-cliff",
+    "name": "MOUNTAIN CLIFF（マウンテンクリフ）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "lost-canyon",
+    "name": "クライミングジム LOST CANYON（ロストキャニオン）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "suncul",
+    "name": "SUNCUL（サンカル）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "flash",
+    "name": "クライミングジム FLASH（フラッシュ）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "zero-utsunomiyashimoguri",
+    "name": "クライミングジム ZE-RO（ゼロ） 宇都宮下栗店",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "zero-utsunomiya",
+    "name": "クライミングジム ZE-RO（ゼロ） 宇都宮店",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "rockyn",
+    "name": "クライミングジム RocKY’N（ロッキン）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "arc",
+    "name": "クライミングジム アーク",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "prost",
+    "name": "Prost（プロスト） クライミングクラブ",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "bouldering-space-h",
+    "name": "ボルダリングスペース H（エイチ）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "prob",
+    "name": "クライミングジム prob（プロブ）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "mibu-sogoundojo",
+    "name": "壬生町総合運動場 ボルダリング施設",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "zone",
+    "name": "ボルダリングジム ZONE（ゾーン）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "berry-wall",
+    "name": "BERRY WALL（ベリーウォール ） クライミングジム",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "t-rox",
+    "name": "ボルダリングジム T-Rox（ティーロックス）",
+    "prefectureCode": "JP-09"
+  },
+  {
+    "id": "zero-isesaki",
+    "name": "クライミングジム ZE-RO（ゼロ） 伊勢崎店",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "ranbo",
+    "name": "クライミングジム RANBO（ランボ）",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "blue-bird",
+    "name": "Blue Bird（ブルーバード） ボルダリングジム",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "bouldering-spot-landmark",
+    "name": "Bouldering Spot Landmark（ボルダリングスポットランドマーク）",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "white-rock",
+    "name": "クライミングジム WHITE ROCK（ホワイトロック）",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "goofee",
+    "name": "クライミングジム GooFee（グーフィー）",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "and-energy-bouldering",
+    "name": "And Energy Bouldering（アンドエネルギーボルダリング）",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "wall-street",
+    "name": "クライミングジム ウォールストリート",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "cozy",
+    "name": "クライミングジム COZY",
+    "prefectureCode": "JP-10"
+  },
+  {
+    "id": "bonobo",
+    "name": "BONOBO（ボノボ） ボルダリングスペース",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "limestone",
+    "name": "LIMESTONE（ライムストーン） クライミングクラブ",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "climb-park-base-camp",
+    "name": "Climb Park Base Camp（ベースキャンプ） 入間店",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "b3",
+    "name": "ボルダリングサイトB3春日部",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "kazo-taiikukan",
+    "name": "加須市民体育館",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "maru",
+    "name": "クライミングジム MARU（マル）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "pump1-kawaguchi",
+    "name": "クライミングジム PUMP1 川口",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "craze-kawaguchi",
+    "name": "craze（クレイズ） ボルダリングジム 川口店",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "rockcraft-kawagoe",
+    "name": "ROCKCRAFT（ロッククラフト）川越",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "monolithe",
+    "name": "Monolithe（モノリス） ボルダリングジム",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "konami-kawagoe",
+    "name": "コナミスポーツクラブ 川越",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "zero-saitama",
+    "name": "クライミングジム ZE-RO（ゼロ） さいたま店",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "walrus",
+    "name": "クライミングジム Walrus（ウォルラス）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "overground",
+    "name": "ボルダリングジム OVERGROUND（オーバーグラウンド）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "climbing-gym-be-born",
+    "name": "Be born（ビーボーン） クライミングジム",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "rock-cube",
+    "name": "ROCK CUBE（ロックキューブ） クライミングジム",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "penguin",
+    "name": "クライミングジム Penguin（ペンギン）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "energy-urawa",
+    "name": "エナジークライミングジム 浦和店",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "noborock-omiya",
+    "name": "NOBOROCK（ノボロック） 大宮",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "kalma",
+    "name": "KALMA（カルマ） クライミングジム",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "trip",
+    "name": "クライミングジム TRIP",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "rout-f",
+    "name": "Rout f（ルートエフ） ボルダリングジム",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "next-gen",
+    "name": "Next Gen Bouldering（ネクストジェンボルダリング）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "shinikan",
+    "name": "小鹿野町クライミングパーク 神怡舘",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "boulder-park-base-camp",
+    "name": "Boulder Park Base Camp（ベースキャンプ） 飯能店",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "trick-star",
+    "name": "TRICK STAR（トリックスター） クライミングジム",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "fukaya-climbing-village",
+    "name": "深谷クライミングヴィレッジ",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "lutralutra",
+    "name": "Lutra Lutra（ルトラルトラ）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "three-peaks",
+    "name": "クライミングジム THREE PEAKS（スリーピークス）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "okku-rock",
+    "name": "クライミングハウス OKKU ROCK（オックロック）",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "community-park-yashio",
+    "name": "Community Park Yashio",
+    "prefectureCode": "JP-11"
+  },
+  {
+    "id": "rocky-inzai",
+    "name": "ROCKY（ロッキー） 印西店",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "matsuyama-sogotaiikukan",
+    "name": "松山下公園総合体育館",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "energy-kashiwa",
+    "name": "エナジークライミングジム 柏店",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "altior",
+    "name": "ALTIOR（アルティオール）クライミングジム",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "funny",
+    "name": "ボルダリングガレージ FUNNY（ファニー）",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "db-plus-soga",
+    "name": "ディーボルダリングプラス蘇我",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "tohan-dojo",
+    "name": "ボルダリングジム 登攀道場",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "asuka",
+    "name": "クライミング飛鳥",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "beaks",
+    "name": "BEAKS（ビークス） クライミングスタジオ",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "db-plus-kaihinmakuhari",
+    "name": "ディーボルダリングプラスリード海浜幕張",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "olioli",
+    "name": "クライミングジム OliOli（オリオリ）",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "granny-minaminagareyama",
+    "name": "ボルダリングジム GRANNY（グラニー） 南流山店",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "sarukichi",
+    "name": "クライミングジム猿吉",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "db-plus-tsudanuma",
+    "name": "ディーボルダリングプラス津田沼",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "rocky-funabashi",
+    "name": "ROCKY（ロッキー） 船橋店",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "q-roche",
+    "name": "クライミングパーク カルチェロッシュ",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "db-plus-yachiyo",
+    "name": "ディーボルダリングプラス八千代",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "green-arrow-kaihin-makuhari",
+    "name": "グリーンアロー海浜幕張店",
+    "prefectureCode": "JP-12"
+  },
+  {
+    "id": "prime-climbing",
+    "name": "PRIME（プライム） クライミング",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "boulcom-tokyo",
+    "name": "BOULCOM（ボルコム） 東京店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "rocky-shinagawa",
+    "name": "ROCKY（ロッキー） 品川店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "sorayon",
+    "name": "ボルダリングジム 空の向こうへ四足歩行（そらよん）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "spider",
+    "name": "クライミングジム SPIDER（スパイダー）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "noborock-shibuya",
+    "name": "NOBOROCK（ノボロック） 渋谷店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "base-camp-shinjuku",
+    "name": "Urban Base Camp（アーバンベースキャンプ） 新宿",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "everfree-climbing-gym",
+    "name": "EVERFREE（エバーフリー） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "rocky-shinjukuakebonobashi",
+    "name": "ROCKY（ロッキー） 新宿曙橋店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "beta",
+    "name": "BETA（ベータ） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "parkers-tokyo",
+    "name": "PARKERS TOKYO",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "noborock-takadanobaba",
+    "name": "NOBOROCK（ノボロック）高田馬場",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "noborock-ikebukuro",
+    "name": "NOBOROCK（ノボロック） 池袋店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "jands-ikebukuro",
+    "name": "スポーツクライミングスクール・ジム J&S 池袋",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "konami-ikebukuro",
+    "name": "コナミスポーツクラブ 池袋",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "b-pump-tokyo",
+    "name": "B-PUMP TOKYO 秋葉原",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "spodori",
+    "name": "スポドリ！",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "base-camp-tokyoedogawabashi",
+    "name": "Base Camp Tokyo（ベースキャンプ東京）江戸川橋店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "boulders",
+    "name": "BOULDERS（ボルダーズ） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "galaxcity",
+    "name": "ギャラクシティ",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "rhino-and-bird",
+    "name": "Rhino and Bird（ライノアンドバード）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "hutte",
+    "name": "クライミングジム Hutte（ヒュッテ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "deer",
+    "name": "ボルダリング deer（ディア）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "rocklands",
+    "name": "クライミングジム ROCKLANDS（ロックランズ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "bears-rock",
+    "name": "ボルダリングジム BEAR’S ROCK（ベアーズロック）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "higashikanamachi-undojo",
+    "name": "葛飾区東金町運動場 スポーツクライミングセンター",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "fish-and-bird",
+    "name": "Fish and Bird（フィッシュアンドバード）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "fukagawa-sport-center",
+    "name": "深川スポーツセンター",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "base-camp-tokyokinsicho",
+    "name": "Base Camp Tokyo（ベースキャンプ東京）錦糸町店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "livedoor-urbansports",
+    "name": "livedoor URBAN SPORTS PARK（ライブドアアーバンスポーツパーク）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "headrock",
+    "name": "HEADROCK（ヘッドロック） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "nico",
+    "name": "クライミングジム NICO（ニコ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "tss-tokyo",
+    "name": "THE STONE SESSION TOKYO",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "granny-higashiueno",
+    "name": "ボルダリングジム グラニー 東上野店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "b-pump-ogikubo",
+    "name": "B-PUMP OGIKUBO 荻窪",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "bleau",
+    "name": "ボルダリングスペース BLEAU（ブロー）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "lago",
+    "name": "フィットネスクライミングスタジオ LAGO（ラーゴ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "cell",
+    "name": "クライミングジム CELL（セル）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "exciting-sancha",
+    "name": "スポーツクライミングジム エキサイティング三茶",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "quail",
+    "name": "Quail（クエール） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "pop-in",
+    "name": "ボルダリングジム POP IN（ポップイン）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "piglet",
+    "name": "PIGLET（ピグレット） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "north-park",
+    "name": "ノースパークビル ボルダリングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "the-factory",
+    "name": "the FACTORY（ファクトリー）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "dracaena",
+    "name": "クライミングジム ドラセナ",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "underground",
+    "name": "ボルダリングジム UNDERGROUND（アンダーグラウンド）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "camelopardalis",
+    "name": "クライミングスタジオ カメロパルダリス",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "play",
+    "name": "クライミングジム＆ヨガスタジオ PLAY",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "runout",
+    "name": "クライミングジム ランナウト",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "jet-set",
+    "name": "JET SET（ジェットセット） climbing gym",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "db-plus-tachikawa",
+    "name": "ディーボルダリングプラスリード立川",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "westrock-chofu",
+    "name": "クライミングジム WESTROCK（ウエストロック） 調布店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "hangout",
+    "name": "クライミングジム hangout（ハングアウト）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "girigiri",
+    "name": "クライミングジム GIRI.GIRI（ギリギリ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "westrock-futyu",
+    "name": "クライミングジム WESTROCK（ウエストロック） 府中店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "jam-session-mitaka",
+    "name": "ボルダリングジム ジャムセッション三鷹",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "isara",
+    "name": "クライミングカフェ isara（イサラ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "volny",
+    "name": "クライミングジム VOLNY（ボルニー）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "mitaka-gym",
+    "name": "ロッククライミング 三鷹ジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "maboo",
+    "name": "クライミングジム MABOO（マーブー）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "maghreb",
+    "name": "マグレブエスト",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "d-hachioji",
+    "name": "ディーボルダリング 八王子",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "madrock",
+    "name": "クライミングジム マッドロック",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "rock-beans",
+    "name": "クライミングジム ROCKBEANS（ロックビーンズ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "d-nishihachioji",
+    "name": "ディーボルダリングプラス 西八王子",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "noborock-machida",
+    "name": "NOBOROCK（ノボロック） 町田店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "nose",
+    "name": "クライミングジム NOSE（ノーズ） 町田店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "fits",
+    "name": "Fits（フィッツ） クライミングジム",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "caramba",
+    "name": "CLIMBING FRONT CARAMBA（カランバ）",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "miyakemura",
+    "name": "三宅村レクリエーションセンター",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "pump-climbing-yotsuya",
+    "name": "PUMP CLIMBING 四谷店",
+    "prefectureCode": "JP-13"
+  },
+  {
+    "id": "sea-rock",
+    "name": "クライミングジム SEA ROCK（シーロック）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "cipher",
+    "name": "クライミングジム Cipher（サイファー）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "lamp-plus",
+    "name": "ボルダリングジム Lamp+（ランププラス） 愛甲石田店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "hann2",
+    "name": "ボルダリングジム 攀（HANN2） 厚木店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "d-honatsugi",
+    "name": "ディーボルダリング本厚木",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "ledge",
+    "name": "クライミングスペース Ledge（レッジ）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "wisteria",
+    "name": "クライミング Wisteria（ウィステリア）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "pump2-kawasaki",
+    "name": "PUMP2 川崎",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "boulcom-kawasaki",
+    "name": "BOULCOM（ボルコム） 川崎店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "dogwood-takatsu",
+    "name": "DOGWOOD（ドッグウッド） クライミングジム 高津店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "pocket",
+    "name": "クライミングジム POCKET（ポケット）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "noborock-mizonokuchi",
+    "name": "NOBOROCK（ノボロック） 溝ノ口店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "boys-klub",
+    "name": "ボルダリングジム Boulder Boys Klub",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "bolbol",
+    "name": "BolBol（ボルボル）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "stone-magic",
+    "name": "クライミングパーク STONE MAGIC（ストーンマジック）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "kachil",
+    "name": "KaChill カチル",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "kanagawa-sport-center",
+    "name": "神奈川県立 山岳スポーツセンター",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "hadano-climbing-park",
+    "name": "はだの丹沢クライミングパーク",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "sloth",
+    "name": "クライミングジム SLOTH（スロース）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "rock-wall",
+    "name": "ボルダリングジム Rock&Wall（ロックアンドウォール）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "j-wall",
+    "name": "クライミングジム J-WALL",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "hat",
+    "name": "ボルダリングスペース HAT（ハット）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "forge",
+    "name": "Forge bouldering",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "all-fours",
+    "name": "ボルダリングジム ROCKSPOT（ロックスポット）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "rise",
+    "name": "クライミングジム RISE（ライズ）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "grimrock",
+    "name": "GRIMROCK（グリムロック） クライミングジム",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "b-pump-yokohama",
+    "name": "B-PUMP YOKOHAMA 横浜",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "project",
+    "name": "クライミングジム Project（プロジェクト）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "bum-yokohama",
+    "name": "クライミングバム 横浜店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "bigrock-hiyoshi",
+    "name": "クライミングジム ビッグロック 日吉店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "aladdin",
+    "name": "Aladdin（アラジン） クライミング",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "share",
+    "name": "ボルダリングジム Share（シェア）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "speedy",
+    "name": "ボルダリングジム SPEEDY（スピーディー）",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "d-tsunashima",
+    "name": "ディーボルダリング 綱島",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "mammut-yokohama",
+    "name": "MAMMUT ボルダリングジム 横浜",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "folk",
+    "name": "folk（フォーク） ボルダリングジム",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "peradora-yokohama",
+    "name": "PERADORA（ペルアドラ） クライミングジム 横浜",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "hann1",
+    "name": "ボルダリングジム 攀（HANN1） 寒川店",
+    "prefectureCode": "JP-14"
+  },
+  {
+    "id": "little-forest",
+    "name": "クライミング＆ボルダリング リトルフォレスト",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "kujira-wall",
+    "name": "KUJIRA WALL（クジラウォール）",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "joetsu-bouldering",
+    "name": "上越ボルダリングハウス",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "hutwall",
+    "name": "ボルダリングジム HUT WALL（ハットウォール）",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "c-box",
+    "name": "ボルダリングジム C-BOX",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "cloud-nine",
+    "name": "ボルダリングジム Cloud Nine（クラウドナイン）",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "camp4",
+    "name": "クライミングジム CAMP4",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "minamiuonuma-training",
+    "name": "南魚沼市トレーニングセンター",
+    "prefectureCode": "JP-15"
+  },
+  {
+    "id": "fcs-wall",
+    "name": "クライミングジム FCSウォール",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "are",
+    "name": "ボルダリングジム ARE",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "gecko",
+    "name": "フリークライミングジム Gecko（ゲッコー）",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "arise",
+    "name": "Arise（アライズ） クライミングジム",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "ridgeline",
+    "name": "Ridge Line（リッジライン） ボルダリングジム",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "climbing-wall-ten",
+    "name": "クライミングウォール テン",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "sakuragaike-climbing",
+    "name": "桜ヶ池クライミングセンター",
+    "prefectureCode": "JP-16"
+  },
+  {
+    "id": "on-the-rock",
+    "name": "ボルダリングジム On The Rock",
+    "prefectureCode": "JP-17"
+  },
+  {
+    "id": "kc-wall",
+    "name": "金沢クライミングウォール（KCウォール）",
+    "prefectureCode": "JP-17"
+  },
+  {
+    "id": "step",
+    "name": "Step BOULDERING（ステップ ボルダリング）",
+    "prefectureCode": "JP-17"
+  },
+  {
+    "id": "goldgym-nonoichi",
+    "name": "ゴールドジム ヴィテンののいち",
+    "prefectureCode": "JP-17"
+  },
+  {
+    "id": "ikeda-climbing-wall",
+    "name": "池田町立クライミングウォール",
+    "prefectureCode": "JP-18"
+  },
+  {
+    "id": "rock-scape",
+    "name": "ROCK SCAPE（ロックスケイプ）",
+    "prefectureCode": "JP-18"
+  },
+  {
+    "id": "fukui-climbing-center",
+    "name": "福井県立クライミングセンター",
+    "prefectureCode": "JP-18"
+  },
+  {
+    "id": "grappa",
+    "name": "ボルダリングジム grappa（グラッパ）",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "kose-climbing",
+    "name": "小瀬スポーツ公園 クライミング場",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "ten",
+    "name": "クライミングジム 天",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "pirania-ishiwa",
+    "name": "クライミングジム ピラニア 石和店",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "pirania-minami-alps",
+    "name": "クライミングジム ピラニア 南アルプス店",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "mitsutoge",
+    "name": "三ツ峠グリーンセンター",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "activa",
+    "name": "クライミングジム Activ-A（アクティバ）",
+    "prefectureCode": "JP-19"
+  },
+  {
+    "id": "dumbo",
+    "name": "クライミングジム DUMBO（ダンボ）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "rakurakuto",
+    "name": "ボルダリング＆ちょこっとカフェ 楽々登（らくらくと）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "edge-ina",
+    "name": "Edge and Sofa（エッジアンドソファー） クライムワンダーランド 伊那",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "zigs-rock",
+    "name": "クライミングパーク Zig’s Rock（ジグズロック）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "nagano-sangaku-jinko",
+    "name": "長野県山岳総合センター 人工岩場",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "nagano-sangaku-bouldering",
+    "name": "長野県山岳総合センター ボルダリング壁",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "ultimate-club",
+    "name": "Ultimate club（アルティメットクラブ）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "obuse-open-oasis",
+    "name": "小布施オープンオアシス",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "sengataki",
+    "name": "千ヶ滝ボルダリングテラス",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "sakudaira",
+    "name": "佐久平ロッククライミングセンター",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "sorani",
+    "name": "クライミングジム SORANI（ソラニ）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "handjam",
+    "name": "クライミングジム HANDJAM（ハンドジャム）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "noboriba",
+    "name": "クライミング ノボリバ",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "artwall",
+    "name": "クライミングセンター ARTWALL（アートウォール）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "hang-dog",
+    "name": "クライミングジム HANG DOG（ハングドッグ）",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "horie",
+    "name": "Rock Gym Horie",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "edge-matsumoto",
+    "name": "Edge and Sofa（エッジアンドソファー） ボルダリングパーク 松本",
+    "prefectureCode": "JP-20"
+  },
+  {
+    "id": "bon-courage",
+    "name": "クライミングクラブ Bon Courage（ボンクラージュ）",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "hyotan-aqua",
+    "name": "ボルダリング＆クライミングパーク ひょうたん島",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "gyodo",
+    "name": "魚動クライミングジム 各務原店",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "c-holiq",
+    "name": "C‐HOLIQ（シーホリック）",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "bubu-gifu",
+    "name": "クライミングジム BUBU 岐阜店",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "reboulder-kanayama",
+    "name": "Reboulder kanayama",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "natura",
+    "name": "クライミングジム NATURA（ナトゥーラ）",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "high-mount",
+    "name": "クライミングジム High-Mount（ハイマウント）",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "granite",
+    "name": "クライミングフィールド Granite（グラニット）",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "bu-rock",
+    "name": "ボルダリングパーク Bu-Rock",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "bubu-gifunishi",
+    "name": "クライミングジム BUBU 岐阜西店",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "anpachi-sky",
+    "name": "安八スカイウォール",
+    "prefectureCode": "JP-21"
+  },
+  {
+    "id": "qrimo",
+    "name": "ボルダリングワールド QRiMo",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "jam-shizuoka",
+    "name": "クライミング JAM（ジャム） 静岡店",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "takibi",
+    "name": "ボルダリング たきび",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "sunny-rock-numazu",
+    "name": "クライミングジム サニーロック沼津",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "jam-hamamatsu",
+    "name": "クライミング JAM（ジャム）2 浜松店",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "b-spot",
+    "name": "ボルダリングジム B★SPOT（ビースポット）",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "crag",
+    "name": "CRAG（クラッグ） クライミングジム",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "square-climbing-center",
+    "name": "スクエアクライミングセンター",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "planet-fukuroi",
+    "name": "PLANET（プラネット） クライミングジム 袋井店",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "blue-canyon",
+    "name": "クライミングジム BLUE CANYON（ブルーキャニオン）",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "sunny-rock-fuji",
+    "name": "クライミングジム サニーロック富士",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "tentoumushi",
+    "name": "てんとう虫パーク",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "swen-mishima",
+    "name": "SWEN（スウェン） クライミングウォール",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "jam-yaizu",
+    "name": "クライミング JAM（ジャム）S 焼津店",
+    "prefectureCode": "JP-22"
+  },
+  {
+    "id": "piccoroccia",
+    "name": "クライミングジム Picco+Roccia（ピッコロッチャ）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "pokhara",
+    "name": "山の店 ポカラ",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "gyodo-ichinomiya",
+    "name": "魚動クライミングジム 一宮店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "funny-bone",
+    "name": "クライミングジム FUNNY BONE（ファニーボーン）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "orco",
+    "name": "クライミングジム ORCO（オルコ）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "pinnacle-obu",
+    "name": "ボルダリングジム ぴなくる2 リソラ大府店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "playmountain-okazaki",
+    "name": "ロッククライミング Play Mountain!（プレイマウンテン！） 岡崎店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "peakn",
+    "name": "クライミングジム PEAK’N（ピークン）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "to9-gamagori",
+    "name": "ボルダTO9（ティーオーキュー） 蒲郡店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "teal",
+    "name": "ティールクライミング",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "boulder-honpo",
+    "name": "クライミングジム ぼるだー本舗",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "to9-shinshiro",
+    "name": "ボルダTO9（ティーオーキュー） 新城店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "no-limit",
+    "name": "クライミングジム NO LIMIT（ノーリミット）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "bucket-list",
+    "name": "クライミングジム Bucket List（バケットリスト）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "iwanchu-toyokawa",
+    "name": "Sunny Space 岩んちゅ 豊川店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "pinnacle-toyota",
+    "name": "ボルダリングジム ぴなくる2 豊田店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "rock-drunkard",
+    "name": "ボルダリング RockDrunkard（ロックドランカー）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "evolv",
+    "name": "クライミングジム evolv FACTORY（イボルブ ファクトリー）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "iwanchu-toyohashi",
+    "name": "Sunny Space 岩んちゅ 豊橋店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "cactus2",
+    "name": "カクタス2 神野新田店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "soleil",
+    "name": "クライミングジム Soleil（ソレイユ）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "aim",
+    "name": "クライミングジム aim（エイム）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "n-rock",
+    "name": "ボルダリングジム N Rock（エヌロック）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "ganba",
+    "name": "クライミングジム GANBA（ガンバ）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "riot",
+    "name": "ライオットクライミング",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "playmountain-nagoya",
+    "name": "ロッククライミング Play Mountain!（プレイマウンテン！） 名古屋IC店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "colorful-rock",
+    "name": "クライミング・ボルダリングジム colorful rock（カラフルロック）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "cuore-nakagawa",
+    "name": "クライミングジム クオーレ 中川店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "thums-up",
+    "name": "クライミングジム Thumsup（サムズアップ）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "pinnacle-sakae",
+    "name": "ボルダリングジム ぴなくる2 栄店",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "knot",
+    "name": "ボルダリングハウス KNOT（ノット）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "box-cube",
+    "name": "クライミングボックス CUBE（キューブ）",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "bolsta",
+    "name": "bolsta（ボルスタ） クライミングジム",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "lacontento",
+    "name": "ラコンテント",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "dio",
+    "name": "クライミングジム Dio",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "climbing-gym-t09",
+    "name": "クライミングジム・ボルダT09",
+    "prefectureCode": "JP-23"
+  },
+  {
+    "id": "bamboo",
+    "name": "BAMBOO Bouldering（バンブーボルダリング）",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "humpty-dumpty-wall",
+    "name": "HUMPTY DUMPTY WALL（ハンプティダンプティウォール）",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "sunny-dipper-ise",
+    "name": "クライミングジム Sunny Dipper（サニーディッパー） 伊勢店",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "climbing-yu",
+    "name": "クライミングセンター遊",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "omoshirock",
+    "name": "おもしろっく",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "pentagon",
+    "name": "クライミングガレージ PENTAGON（ペンタゴン）",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "hampi-meiwa",
+    "name": "ボルダリングジム ハンピ 明和店",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "ko-wall-mie",
+    "name": "KO-WALL 三重店",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "canyon",
+    "name": "クライミングジム キャニオン",
+    "prefectureCode": "JP-24"
+  },
+  {
+    "id": "ko-wall-shiga-lead",
+    "name": "KO-WALL 滋賀リード店",
+    "prefectureCode": "JP-25"
+  },
+  {
+    "id": "ko-wall-shiga-boulder",
+    "name": "KO-WALL 滋賀ボルダー店",
+    "prefectureCode": "JP-25"
+  },
+  {
+    "id": "rock-mate-otsu",
+    "name": "ボルダリングジム ロックメイト 大津店",
+    "prefectureCode": "JP-25"
+  },
+  {
+    "id": "community-park-otsukyo",
+    "name": "Community Park OTSUKYO",
+    "prefectureCode": "JP-25"
+  },
+  {
+    "id": "colors",
+    "name": "カラーズ クライミングジム",
+    "prefectureCode": "JP-25"
+  },
+  {
+    "id": "good-bouldering",
+    "name": "グッぼる ボルダリングCafé",
+    "prefectureCode": "JP-25"
+  },
+  {
+    "id": "rocher-makishima",
+    "name": "クライミングジム ロシェ マキシマ",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "gravity-kyocera",
+    "name": "GRAVITY RESEARCH（グラビティリサーチ） サンガスタジアム by KYOCERA店",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "rock-mate-matsuiyamate",
+    "name": "ボルダリングジム ロックメイト 松井山手店",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "aoao",
+    "name": "R-PRESS AOAO Wall",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "rocher-momoyama",
+    "name": "京都ボルダリングパーク ロシェ 桃山",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "noah",
+    "name": "noah climbing & community",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "adsummum-shinkyogoku",
+    "name": "クライミングジム ADSUMMUM（アドスムム） 新京極店",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "cairn",
+    "name": "クライミングジム CAIRN（ケルン）",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "milnorte",
+    "name": "milnorte（ミルノルテ） クライミングクラブ",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "ruka-ra-ghaam",
+    "name": "Ruka ra Ghaam（ルカ・ラ・ガーム）",
+    "prefectureCode": "JP-26"
+  },
+  {
+    "id": "suhara-ikeda",
+    "name": "スハラクライミングジム 池田店",
     "prefectureCode": "JP-27"
   },
   {
-    "id": "gravity-research-umeda",
-    "name": "グラビティリサーチ梅田",
+    "id": "minorite",
+    "name": "MINORITE（ミノリテ）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "galera",
+    "name": "クライミングジム Galera（ガレーラ）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "mahoroba-forest",
+    "name": "MAHOROBA FOREST（マホロバフォレスト） ボルダリングスペース",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "mushrooming",
+    "name": "ボルダリングジム MUSHROOMING（マッシュルーミング）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "kawasemi",
+    "name": "アーバンクライミングクラブ カワセミ",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "higurashi-nagahoribashi",
+    "name": "クライミングジム ヒグラシ 長堀橋店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "bum-osaka",
+    "name": "クライミングバム 大阪店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "nakagai-soleil",
+    "name": "Soleil（ソレイユ） ナカガイクライミングジム",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "gravity-umeda",
+    "name": "GRAVITY RESEARCH（グラビティリサーチ） 梅田",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "tobito",
+    "name": "クライミングジム TOBITO（トビト）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "func2",
+    "name": "クライミングボックス FunC2（ファンク）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "roca",
+    "name": "ボルダリングジム roca（ロカ）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "luvrock",
+    "name": "Luvrock（ラブロック） ボルダリングスポット",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "clapple",
+    "name": "クライミングジム Clapple（クラップル）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "aube",
+    "name": "ボルダリングジム AUBE",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "d-bol-namba",
+    "name": "ディーボルダリング プラスリード なんば",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "6spider",
+    "name": "6.spider（ロックスパイダー）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "san-climbing",
+    "name": "SAN（サン） クライミングジム",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "grandwazoo-osaka",
+    "name": "グランドワズー クライミングジム 大阪柏原店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "gravity-kishiwada",
+    "name": "GRAVITY RESEARCH（グラビティリサーチ） 岸和田",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "sanyo",
+    "name": "サンヨークライミングジム",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "nakagai-shirasagi",
+    "name": "ナカガイクライミングジム堺 白鷺店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "nakagai-fukai",
+    "name": "ナカガイクライミングジム堺 深井店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "nakagai-settsu",
+    "name": "ナカガイクライミングジム 摂津店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "grace",
+    "name": "グレイス クライミングジム",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "nakagai-takatsuki",
+    "name": "ナカガイクライミングジム 高槻店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "cronico",
+    "name": "ボルダリングジム Cronico（クロニコ）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "luclu",
+    "name": "クライミングパーク LUCLU（ルクル）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "siesta-yoshida",
+    "name": "クライミングジム シエスタ 吉田店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "and-wall",
+    "name": "＆WALL（アンドウォール）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "siesta-takaida",
+    "name": "クライミングジム シエスタ 高井田店",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "hago",
+    "name": "ボルダリングジム HAGO（ハゴ）",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "crux-osaka",
+    "name": "CRUX（クラックス）大阪",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "hoshida",
+    "name": "ほしだ園地 クライミングウォール",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "rock-on",
+    "name": "ロックオン クライミングジム",
+    "prefectureCode": "JP-27"
+  },
+  {
+    "id": "10-oclock",
+    "name": "10 O’CLOCK（テンオクロック） ボルダリングスペース",
     "prefectureCode": "JP-27"
   },
   {
@@ -15,43 +2135,788 @@
     "prefectureCode": "JP-27"
   },
   {
-    "id": "urban-climbing-club-kawasemi",
-    "name": "アーバンクライミングクラブ カワセミ",
-    "prefectureCode": "JP-27"
-  },
-  {
-    "id": "crux-osaka",
-    "name": "CRUX クラックス大阪",
-    "prefectureCode": "JP-27"
-  },
-  {
-    "id": "bouldering-gym-roca",
-    "name": "ボルダリングジム roca",
-    "prefectureCode": "JP-27"
-  },
-  {
-    "id": "soleil-nakagai-climbing-gym",
-    "name": "Soleilナカガイクライミングジム",
-    "prefectureCode": "JP-27"
-  },
-  {
     "id": "climbing-gym-higurashi",
     "name": "Climbing Gym Higurashi",
     "prefectureCode": "JP-27"
   },
   {
-    "id": "d-bouldering-plus-lead-namba",
-    "name": "Dボルダリング プラスリード なんば",
-    "prefectureCode": "JP-27"
+    "id": "kiaora-bros-nishiakashi",
+    "name": "KIAORA BROS （キオラブロズ） クライミングジム 西明石店",
+    "prefectureCode": "JP-28"
   },
   {
-    "id": "mahoroba-forest",
-    "name": "マホロバフォレスト",
-    "prefectureCode": "JP-27"
+    "id": "barock",
+    "name": "ボルダリングスペース BaRock（バロック）",
+    "prefectureCode": "JP-28"
   },
   {
-    "id": "climbing-gym-galera",
-    "name": "クライミングジム ガレーラ",
-    "prefectureCode": "JP-27"
+    "id": "dawn",
+    "name": "DAWN（ドーン）クライミングジム",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "style",
+    "name": "ボルダリングジム Style（スタイル）",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "heimat-berg",
+    "name": "Heimat berg（ハイマートベルク） 1号店 クライミングジム",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "hinotama",
+    "name": "火の玉Wall クライミングジム",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "rock-garden",
+    "name": "ボルダリングジム Rock Garden （ロックガーデン神戸）",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "noboriba-sg",
+    "name": "ノボリバSG",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "bossa",
+    "name": "BOSSA クライミングジム",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "wagomu",
+    "name": "WAGOMU クライミングジム",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "michibi-visionpark",
+    "name": "ビジョンパーク みちびクライミングウォール",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "gravity-mintkobe",
+    "name": "GRAVITY RESEARCH（グラビティリサーチ） ミント神戸",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "mizuno-kobe",
+    "name": "ミズノスポーツプラザ 神戸和田岬",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "mont-bell-rokko",
+    "name": "mont-bell（モンベル） 六甲店",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "cocomo",
+    "name": "スポーツクライミングジム cocomo",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "riverstone",
+    "name": "クライミングジム RIVERSTONE（リバストーン）",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "suhara-takarazuka",
+    "name": "スハラクライミングジム 宝塚店",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "freescave-tanba",
+    "name": "フリーズケイブ ボルダリングジム 丹波店",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "rockestra",
+    "name": "ボルダリングジム Rockestra（ロッケストラ）",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "nishikita-climbing-wall",
+    "name": "にしきたクライミングウォール",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "old-but-gold",
+    "name": "OLD BUT GOLD",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "bouldering-life",
+    "name": "Bouldering Life（ボルダリングライフ）",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "gravity-himeji",
+    "name": "GRAVITY RESEARCH（グラビティリサーチ） 姫路",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "cargo-hanada",
+    "name": "チャルゴクライミングジム 花田店",
+    "prefectureCode": "JP-28"
+  },
+  {
+    "id": "fellows",
+    "name": "Fellows Climbing（フェローズクライミング）",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "neon-climbing-gym",
+    "name": "NEON CLIMBING GYM（ネオンクライミングジム）",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "key-bouldering",
+    "name": "Key bouldering（キーボルダリング）",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "noboriko",
+    "name": "クライミングジム ノボリコ",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "aogaki",
+    "name": "クライミングジム あをがき",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "city-rock-nara",
+    "name": "シティロックジム 大和郡山店",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "grandwazoo-nara",
+    "name": "グランドワズー クライミングジム 奈良橿原店",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "nakagai-kashihara",
+    "name": "ナカガイ クライミングジム 橿原店",
+    "prefectureCode": "JP-29"
+  },
+  {
+    "id": "kimiidera",
+    "name": "紀三井寺公園 登はん場",
+    "prefectureCode": "JP-30"
+  },
+  {
+    "id": "titan-wall",
+    "name": "Titan Wall（タイタンウォール） クライミングジム",
+    "prefectureCode": "JP-30"
+  },
+  {
+    "id": "ape",
+    "name": "ボルダリングスペース APE",
+    "prefectureCode": "JP-30"
+  },
+  {
+    "id": "wabo",
+    "name": "bee mee nee Wabo（ビーミーニー ワボ） クライミングジム",
+    "prefectureCode": "JP-30"
+  },
+  {
+    "id": "kurayoshi-sport",
+    "name": "倉吉スポーツクライミングセンター",
+    "prefectureCode": "JP-31"
+  },
+  {
+    "id": "babaanz",
+    "name": "ボルダリングジム Babaanz（ババーンズ）",
+    "prefectureCode": "JP-31"
+  },
+  {
+    "id": "monkeypod",
+    "name": "MONKEYPOD（モンキーポッド） クライミングジム",
+    "prefectureCode": "JP-31"
+  },
+  {
+    "id": "trans",
+    "name": "クライミングジム TRANS（トランス）",
+    "prefectureCode": "JP-32"
+  },
+  {
+    "id": "kabeya-shimane",
+    "name": "クライミングジム 壁屋（カベヤ）",
+    "prefectureCode": "JP-32"
+  },
+  {
+    "id": "boulder-base",
+    "name": "クライミングスタジオ BoulderBase（ボルダベース）",
+    "prefectureCode": "JP-32"
+  },
+  {
+    "id": "home",
+    "name": "クライミングパーク HOME（ホーム）",
+    "prefectureCode": "JP-32"
+  },
+  {
+    "id": "m-wall",
+    "name": "クライミングジム Mウォール",
+    "prefectureCode": "JP-32"
+  },
+  {
+    "id": "k-climb",
+    "name": "ボルダリングジム Ｋクライム",
+    "prefectureCode": "JP-32"
+  },
+  {
+    "id": "sabo",
+    "name": "ボルダーガーデン SaBo（サボ）",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "rocks-bouldering",
+    "name": "rocks（ロックス） ボルダリングジム",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "lism",
+    "name": "クライミングスペース Lism（リズム）",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "bon",
+    "name": "Bon（ボン） クライミングジム",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "rocks-climbing",
+    "name": "rocks（ロックス） クライミングジム",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "healthpia-kurashiki",
+    "name": "ヘルスピア倉敷 スポーツ施設",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "nekonote",
+    "name": "ボルダリングルーム ねこのて",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "f-t",
+    "name": "ボルダリングクラブ F.T（エフティー）",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "yuhara-climbing-center",
+    "name": "湯原クライミングセンター",
+    "prefectureCode": "JP-33"
+  },
+  {
+    "id": "cero",
+    "name": "クライムセンター CERO（セロ）",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "spooky",
+    "name": "Spooky climbing（スプーキークライミング）",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "guts",
+    "name": "ガッツ クライミングジム",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "solae",
+    "name": "ちゅーピーアスレチック SOLAE",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "climbing-park-higashihiroshima",
+    "name": "クライミングパーク 東広島",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "switch",
+    "name": "Switch（スイッチ） クライミングジム",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "pb-yokogawa",
+    "name": "pb（ピービー） クライミング 横川店",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "puregreen",
+    "name": "クライミングジム PUREGREEN（ピュアグリーン）",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "sora",
+    "name": "福山クライミングジム SORA（ソラ）",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "kokopelli",
+    "name": "BOULDERiNG SPACE KOKOPELLi",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "climbing-park-h",
+    "name": "Climbing Park H",
+    "prefectureCode": "JP-34"
+  },
+  {
+    "id": "unity",
+    "name": "ボルダリングジム UNITY（ユニティ）",
+    "prefectureCode": "JP-35"
+  },
+  {
+    "id": "labo-kudamatsu",
+    "name": "クライミングジム LABO(ラボ） 下松店",
+    "prefectureCode": "JP-35"
+  },
+  {
+    "id": "rubadub",
+    "name": "RUB A DUB（ラブアダブ）",
+    "prefectureCode": "JP-35"
+  },
+  {
+    "id": "9a",
+    "name": "ボルダリングスポット 9A",
+    "prefectureCode": "JP-35"
+  },
+  {
+    "id": "yamaguchi-seminar-park",
+    "name": "山口県セミナーパーク クライミング場",
+    "prefectureCode": "JP-35"
+  },
+  {
+    "id": "labo-yamaguchi",
+    "name": "ボルダリングジム LABO（ラボ） 山口店",
+    "prefectureCode": "JP-35"
+  },
+  {
+    "id": "roots",
+    "name": "ボルダリングジム Roots",
+    "prefectureCode": "JP-36"
+  },
+  {
+    "id": "lion",
+    "name": "ライオンボルダリングスペース",
+    "prefectureCode": "JP-36"
+  },
+  {
+    "id": "join-climbing-gym",
+    "name": "join climbing gym（ジョインクライミングジム）",
+    "prefectureCode": "JP-36"
+  },
+  {
+    "id": "mina-utari",
+    "name": "MINA. UTARI（ミナウタリ）",
+    "prefectureCode": "JP-37"
+  },
+  {
+    "id": "climbing-field-high-land",
+    "name": "Climbing field High-Land（クライミングフィールドハイランド）",
+    "prefectureCode": "JP-37"
+  },
+  {
+    "id": "jumbo",
+    "name": "クライミングスペース Jumbo（ジャンボ）",
+    "prefectureCode": "JP-37"
+  },
+  {
+    "id": "stance",
+    "name": "ボルダリングジム STANCE（スタンス）",
+    "prefectureCode": "JP-37"
+  },
+  {
+    "id": "owl",
+    "name": "ボルダリングジム OWL（アウル）",
+    "prefectureCode": "JP-37"
+  },
+  {
+    "id": "itte-kagawa",
+    "name": "香川クライミングジム iTTE",
+    "prefectureCode": "JP-37"
+  },
+  {
+    "id": "uwajima-sport",
+    "name": "宇和島市スポーツ交流センター",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "uwajima-climbing",
+    "name": "うわじまクライミングジム",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "ishizuchi-climbing-park",
+    "name": "石鎚クライミングパークSAIJO",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "crosspoint",
+    "name": "CROSSPOINT（クロスポイント）",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "ascent-ray",
+    "name": "クライミングウォール Ascent Ray（アッセントレイ）",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "brave-himehara",
+    "name": "クライミングスタジオ BRAVE（ブレイブ） 姫原店",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "itte-ehime",
+    "name": "愛媛クライミングジム iTTE",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "pspo24",
+    "name": "P・SPO24 DAINO（ピースポ24ダイノ）店",
+    "prefectureCode": "JP-38"
+  },
+  {
+    "id": "allez",
+    "name": "クライミングジム Allez!",
+    "prefectureCode": "JP-39"
+  },
+  {
+    "id": "stone-lav-minamikawazoe",
+    "name": "Stone LAV（ストーンラブ） 南川添店",
+    "prefectureCode": "JP-39"
+  },
+  {
+    "id": "motoyama-climbing-center",
+    "name": "本山町吉野クライミングセンター",
+    "prefectureCode": "JP-39"
+  },
+  {
+    "id": "volta",
+    "name": "クライミングスペース Volta（ボルタ）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "rock-party",
+    "name": "クライミングジム Rock Party（ロックパーティー）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "zip-rock",
+    "name": "ZIP ROCK（ジップロック） クライミングジム",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "k-wall",
+    "name": "足白ボルダリングセンターK-WALL",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "attic",
+    "name": "ATTIC（アティック） クライミング",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "od-kokura",
+    "name": "クライミングジム＆ショップ OD（オーディー） 小倉店",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "od-yahata",
+    "name": "クライミングジム＆ショップ OD（オーディー） 八幡店",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "escape",
+    "name": "ESCAPE（エスケープ） COFFEE & CLIMBING",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "impact-kurume",
+    "name": "クライミングスポット iMpACt（インパクト） 久留米",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "joywall-kurume",
+    "name": "クライミングジム JOYWALL 久留米",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "od-munakata",
+    "name": "クライミングジム＆ショップ OD1（オーディーワン） 宗像店",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "hunza-wall",
+    "name": "HUNZA WALL（フンザウォール）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "ecole",
+    "name": "クライミングガーデン ECOLE（エコール）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "sun-wall",
+    "name": "CLIMBING SUN WALL（クライミング サンウォール）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "stump",
+    "name": "STUMP CLIMBING（スタンプクライミング）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "myway",
+    "name": "クライミングジム MY WAY（マイウェイ）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "bare-hands",
+    "name": "Bare Hands（ベアハンズ） クライミングジム",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "bravo-fukuokanishi",
+    "name": "ブラボークライミング 福岡西",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "favour",
+    "name": "Favour（フェイバー） クライミング&ヨガ&ボディワーク",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "mono-hakata",
+    "name": "モノ クライミングスタジオ 博多店",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "the-wall",
+    "name": "The Wall（ザ ウォール） ボルダリングジム",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "hoa-hoa",
+    "name": "ボルダリングジム HOA-HOA.（ホアホア）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "at-wall",
+    "name": "CLIMBING AT WALL（クライミング アットウォール）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "nobolt",
+    "name": "NOBOLT（ノボルト）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "jungle-gym",
+    "name": "Jungle Gym（ジャングルジム）",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "lead-climbing-gym",
+    "name": "Leadクライミングジム",
+    "prefectureCode": "JP-40"
+  },
+  {
+    "id": "impact-saga",
+    "name": "クライミングスポット iMpACt（インパクト） 佐賀",
+    "prefectureCode": "JP-41"
+  },
+  {
+    "id": "aiparet",
+    "name": "多久市まちづくり交流センターあいぱれっと",
+    "prefectureCode": "JP-41"
+  },
+  {
+    "id": "mono-omura",
+    "name": "Mono（モノ） クライミングスタジオ 大村店",
+    "prefectureCode": "JP-42"
+  },
+  {
+    "id": "nagasaki-sports",
+    "name": "長崎県立総合体育館 県北トレーニング室",
+    "prefectureCode": "JP-42"
+  },
+  {
+    "id": "bravo-nagasaki",
+    "name": "ブラボークライミング 長崎",
+    "prefectureCode": "JP-42"
+  },
+  {
+    "id": "833-wall",
+    "name": "833 WALL BOULDERING STUIDO",
+    "prefectureCode": "JP-42"
+  },
+  {
+    "id": "clamp",
+    "name": "阿蘇サイクル＆クライミングベース CLAMP（クランプ）",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "mio-camino",
+    "name": "mio camino Amakusa（ミオカミーノ天草）",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "tengoku",
+    "name": "ボルダー天国",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "the-ranch",
+    "name": "The Ranch（ザ・ランチ） クライミングジム",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "rockbakka",
+    "name": "ROCKBAKKA（ロックバッカ）",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "jackarope",
+    "name": "jackarope（ジャッカロープ） クライミング",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "climbing-park-kikunan",
+    "name": "クライミングパーク 菊南",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "cracker",
+    "name": "ボルダリングスペース CRACKER",
+    "prefectureCode": "JP-43"
+  },
+  {
+    "id": "sunny-side",
+    "name": "ボルダリングハウス Sunny Side（サニーサイド）",
+    "prefectureCode": "JP-44"
+  },
+  {
+    "id": "earth",
+    "name": "ボルダリングボックス Earth（アース）",
+    "prefectureCode": "JP-44"
+  },
+  {
+    "id": "voltage",
+    "name": "ボルテージボルダリングジム",
+    "prefectureCode": "JP-44"
+  },
+  {
+    "id": "ceekers",
+    "name": "CEEKER’S（シーカーズ） クライミングジム",
+    "prefectureCode": "JP-44"
+  },
+  {
+    "id": "q-block",
+    "name": "Q-block（キューブロック） Climbing Space",
+    "prefectureCode": "JP-45"
+  },
+  {
+    "id": "press-factory",
+    "name": "PRESS FACTORY（プレスファクトリー）",
+    "prefectureCode": "JP-45"
+  },
+  {
+    "id": "smoothie",
+    "name": "SMOOTHIE（スムージー） ボルダリングジム",
+    "prefectureCode": "JP-45"
+  },
+  {
+    "id": "wowd",
+    "name": "Wow’d+（ワウディープラス） ボルダリングジム",
+    "prefectureCode": "JP-45"
+  },
+  {
+    "id": "awesome-climbing-wal",
+    "name": "Awesome Climbing Wall（オーサムクライミングウォール⁡）",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "meteo",
+    "name": "メテオスーパードーム",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "kironico",
+    "name": "Kironico（キロニコ） ボルダーパーク",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "cisco",
+    "name": "クライミングパーク CISCO（シスコ）",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "peri-garden",
+    "name": "PERI.Garden（ペリドットガーデン）",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "viva2",
+    "name": "クライミングジム VIVA2",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "tanegashima-red-point",
+    "name": "クライミングジム Red Point",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "osaka-bouldering",
+    "name": "大坂ボルダリング施設",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "authority-aira",
+    "name": "スポーツオーソリティ イオンタウン姶良店",
+    "prefectureCode": "JP-46"
+  },
+  {
+    "id": "topout",
+    "name": "ボルダリングジム TOPOUT（トップアウト）",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "boulbaka2",
+    "name": "ボルダリングジム BOULBAKA2（ボルバカ2）",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "banjat",
+    "name": "BANJAT（バンジャット） ボルダリング",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "look-rock",
+    "name": "LOOK ROCK Bouldering Park",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "korupiki",
+    "name": "ロッククライミングジム KORUPIKI（コルピキ）",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "coral-rock",
+    "name": "Coral Rock（コーラルロック）",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "d-okinawa",
+    "name": "ディーボルダリング沖縄豊崎",
+    "prefectureCode": "JP-47"
+  },
+  {
+    "id": "boulbaka",
+    "name": "ボルダリングジム BOULBAKA（ボルバカ）",
+    "prefectureCode": "JP-47"
   }
 ]

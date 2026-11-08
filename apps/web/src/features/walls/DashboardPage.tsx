@@ -27,14 +27,12 @@ import {
   deleteWallPost,
   getMyCommunityProfile,
   getWallPostFeed,
-  publishWallPost,
   setWallPostLike,
   setWallPostSaved,
   type WallPost,
   type WallPostFeed,
 } from "../../infrastructure/api/community";
-import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
-import { getImage } from "../../infrastructure/storage/database";
+import { GymPinFilterFields, useGymPinFilter } from "../gyms/GymPinFilter";
 import { useWorkspaceStore } from "../workspace/store";
 import { useWallPng } from "./use-wall-png";
 import { WallPostDetailPage } from "./WallPostDetailPage";
@@ -428,9 +426,7 @@ export function WallFeed({ authorHandle }: { authorHandle?: string } = {}) {
                         </li>
                       ))}
                     </ul>
-                  ) : (
-                    <p className="route-post__wall">ルート未登録</p>
-                  )}
+                  ) : null}
                   <div className="route-post__actions">
                     <button
                       className={`route-post__action ${post.likedByMe ? "is-active" : ""}`}
@@ -495,10 +491,9 @@ export function DashboardPage() {
   const [gymName, setGymName] = useState("");
   const [japaneseGrade, setJapaneseGrade] = useState("");
   const [vGrade, setVGrade] = useState("");
-  const [postAuthor, setPostAuthor] = useState("");
-  const [postDescription, setPostDescription] = useState("");
   const [postTags, setPostTags] = useState<WallPostTags>(emptyWallPostTags);
   const [saving, setSaving] = useState(false);
+  const gymFilter = useGymPinFilter();
 
   useEffect(() => {
     if (!dialogOpen || !sessionUserId) return;
@@ -537,34 +532,8 @@ export function DashboardPage() {
       setName("");
       setJapaneseGrade("");
       setVGrade("");
-      setPostAuthor("");
-      setPostDescription("");
       setPostTags(emptyWallPostTags);
-      let statusMessage = "壁を登録しました。";
-      if (session?.user) {
-        try {
-          const image = await getImage(wall.imageId);
-          if (!image) throw new Error("壁画像が見つかりません。");
-          await publishWallPost({
-            wallId: wall.id,
-            wallName: wall.name,
-            gymName: wall.gymName ?? "",
-            japaneseGrade: wall.japaneseGrade ?? "",
-            vGrade: wall.vGrade ?? "",
-            author: postAuthor.trim(),
-            description: postDescription.trim(),
-            routes: [],
-            tags: wall.tags ?? emptyWallPostTags,
-            image: await encodeWallPostPreview(image.blob),
-          });
-          statusMessage = "壁を登録してタイムラインに投稿しました。";
-        } catch (reason) {
-          statusMessage = `壁は登録済みですが、タイムラインへの投稿に失敗しました: ${reason instanceof Error ? reason.message : "通信エラー"}`;
-        }
-      } else {
-        statusMessage = "壁を登録しました。タイムラインへの自動投稿にはログインが必要です。";
-      }
-      notify(statusMessage);
+      notify("壁を登録しました。投稿は編集画面から行えます。");
       await navigate({ to: "/walls/$wallId", params: { wallId: wall.id } });
     } catch (reason) {
       notify(reason instanceof Error ? reason.message : "壁を保存できませんでした。");
@@ -607,8 +576,6 @@ export function DashboardPage() {
             }
             setJapaneseGrade("");
             setVGrade("");
-            setPostAuthor("");
-            setPostDescription("");
             setGymName("");
             setDialogOpen(true);
           }}
@@ -742,42 +709,37 @@ export function DashboardPage() {
             </div>
             {session?.user ? (
               <>
+                <GymPinFilterFields
+                  prefectureCode={gymFilter.prefectureCode}
+                  onPrefectureChange={gymFilter.setPrefectureCode}
+                  query={gymFilter.query}
+                  onQueryChange={gymFilter.setQuery}
+                  filtersApplied={gymFilter.filtersApplied}
+                  resultCount={gymFilter.filteredGyms.length}
+                />
                 <label className="field-label">
                   ジム名
                   <select
+                    aria-label="ジム名を選択"
                     className="text-input"
                     value={gymName}
                     onChange={(event) => setGymName(event.currentTarget.value)}
                     required
                   >
                     <option value="">ジムを選択</option>
-                    {GYM_PINS.map((gym) => (
+                    {gymName && !gymFilter.filteredGyms.some((gym) => gym.name === gymName) && (
+                      <option value={gymName}>
+                        {GYM_PINS.some((gym) => gym.name === gymName) ? "選択中" : "登録外"}:{" "}
+                        {gymName}
+                      </option>
+                    )}
+                    {gymFilter.filteredGyms.map((gym) => (
                       <option key={gym.id} value={gym.name}>
                         {gym.name}
                       </option>
                     ))}
                   </select>
-                  <span className="field-hint">
-                    登録後、壁画像がタイムラインに自動投稿されます。
-                  </span>
-                </label>
-                <label className="field-label">
-                  作成者 <span className="field-hint inline">任意</span>
-                  <input
-                    className="text-input"
-                    value={postAuthor}
-                    onChange={(event) => setPostAuthor(event.currentTarget.value)}
-                    maxLength={80}
-                  />
-                </label>
-                <label className="field-label">
-                  説明
-                  <textarea
-                    className="text-input textarea-input"
-                    value={postDescription}
-                    onChange={(event) => setPostDescription(event.currentTarget.value)}
-                    maxLength={500}
-                  />
+                  <span className="field-hint">壁を作成した後、編集画面から投稿できます。</span>
                 </label>
                 <div className="field-label wall-tag-field">
                   <span>
@@ -787,7 +749,7 @@ export function DashboardPage() {
                 </div>
               </>
             ) : (
-              <p className="field-hint">ログイン中は壁の登録後にタイムラインへ自動投稿されます。</p>
+              <p className="field-hint">壁を作成した後、編集画面から投稿できます。</p>
             )}
             <div className="modal-actions">
               <button

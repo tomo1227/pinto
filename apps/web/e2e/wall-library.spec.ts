@@ -50,6 +50,12 @@ async function authenticateAsE2eUser(page: Page) {
   );
 }
 
+async function selectTokyoGym(page: Page) {
+  await page.getByLabel("都道府県で絞り込む").selectOption("JP-13");
+  await page.getByLabel("ジム名で検索").fill("B-PUMP TOKYO");
+  await page.getByLabel("ジム名を選択").selectOption({ label: "B-PUMP TOKYO 秋葉原" });
+}
+
 test("asks logged-out visitors to sign in before adding a wall", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "壁を追加" }).click();
@@ -59,6 +65,143 @@ test("asks logged-out visitors to sign in before adding a wall", async ({ page }
   await expect(prompt.getByRole("button", { name: "Googleでログイン" })).toBeVisible();
   await prompt.getByRole("button", { name: "キャンセル" }).click();
   await expect(prompt).toHaveCount(0);
+});
+
+test("filters favorite gyms by region and name in settings", async ({ page }) => {
+  await authenticateAsE2eUser(page);
+  await page.goto("/settings");
+  const favoriteGyms = page.getByRole("group", { name: /よく行くジム/ });
+
+  await favoriteGyms.getByLabel("都道府県で絞り込む").selectOption("JP-13");
+  await favoriteGyms.getByLabel("ジム名で検索").fill("B-PUMP TOKYO");
+  const gym = favoriteGyms.getByRole("checkbox", {
+    name: "B-PUMP TOKYO 秋葉原",
+    exact: true,
+  });
+  await gym.check();
+  await favoriteGyms.getByLabel("ジム名で検索").fill("");
+  await favoriteGyms.getByLabel("都道府県で絞り込む").selectOption("");
+
+  await expect(gym).toBeChecked();
+});
+
+test("filters gyms by region and name when adding a wall", async ({ page }) => {
+  await authenticateAsE2eUser(page);
+  await page.route("**/api/community/posts/wall/**", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({ json: { postId: null } })
+      : route.continue(),
+  );
+  await page.goto("/");
+  let automaticPostCount = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && new URL(request.url()).pathname === "/api/community/posts") {
+      automaticPostCount += 1;
+    }
+  });
+  const imageBase64 = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is unavailable");
+    context.fillStyle = "#2f7a68";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.getByRole("button", { name: "壁を追加" }).click();
+  await page.getByLabel("壁の写真").setInputFiles({
+    name: "filtered-gym-wall.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(imageBase64, "base64"),
+  });
+  await page.getByLabel("壁の名前").fill("Filtered gym wall");
+  await selectTokyoGym(page);
+  await page.getByRole("button", { name: "壁を作成" }).click();
+
+  expect(automaticPostCount).toBe(0);
+  await expect(page.getByRole("button", { name: "投稿", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+  const settings = page.getByRole("form", { name: "壁の設定" });
+  await expect(settings.getByLabel("ジム名を選択")).toHaveValue("B-PUMP TOKYO 秋葉原");
+});
+
+test("publishes a newly created wall only after explicit submission", async ({ page }) => {
+  await authenticateAsE2eUser(page);
+  await page.route("**/api/community/posts/wall/**", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({ json: { postId: null } })
+      : route.continue(),
+  );
+  let publishedPost: { wallId: string; image: string } | null = null;
+  await page.route("**/api/community/posts", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+    publishedPost = route.request().postDataJSON();
+    await route.fulfill({ json: { post: { id: "e2e-wall-post" } } });
+  });
+  await page.route("**/api/community/posts/e2e-wall-post", (route) =>
+    route.fulfill({
+      json: {
+        post: {
+          id: "e2e-wall-post",
+          userId: "e2e-user",
+          username: "E2E Climber",
+          handle: "e2e_climber",
+          avatar: null,
+          wallId: publishedPost?.wallId ?? "",
+          wallName: "Explicit post wall",
+          gymName: "B-PUMP TOKYO 秋葉原",
+          japaneseGrade: "",
+          vGrade: "",
+          author: "",
+          description: "",
+          routes: [],
+          tags: { hold: [], move: [], type: [] },
+          image: publishedPost?.image ?? "",
+          createdAt: Date.now(),
+          likeCount: 0,
+          likedByMe: false,
+          savedByMe: false,
+        },
+      },
+    }),
+  );
+  await page.goto("/");
+  const imageBase64 = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2;
+    canvas.height = 2;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is unavailable");
+    context.fillStyle = "#2f7a68";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  await page.getByRole("button", { name: "壁を追加" }).click();
+  await page.getByLabel("壁の写真").setInputFiles({
+    name: "explicit-post-wall.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(imageBase64, "base64"),
+  });
+  await page.getByLabel("壁の名前").fill("Explicit post wall");
+  await selectTokyoGym(page);
+  await page.getByRole("button", { name: "壁を作成" }).click();
+
+  const publishButton = page.getByRole("button", { name: "投稿", exact: true });
+  await expect(publishButton).toBeEnabled();
+  await expect(publishButton).toHaveCSS("background-color", "rgb(47, 122, 104)");
+  expect(publishedPost).toBeNull();
+  await publishButton.click();
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toBeEnabled();
+  expect(publishedPost).toMatchObject({ wallId: expect.any(String) });
+  expect(publishedPost?.image).toMatch(/^data:image\/webp;base64,/);
+  await page.getByRole("link", { name: "壁一覧に戻る" }).click();
+  await expect(page).toHaveURL("/?post=e2e-wall-post");
+  await expect(page.getByRole("heading", { name: "Explicit post wall" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "編集", exact: true })).toBeVisible();
 });
 
 test("deletes holds by keyboard and touch drag", async ({ page }) => {
@@ -105,7 +248,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
     buffer: Buffer.from(imageBase64, "base64"),
   });
   await page.getByLabel("壁の名前").fill("E2E wall");
-  await page.getByLabel(/ジム名/).selectOption({ index: 1 });
+  await selectTokyoGym(page);
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
   await expect(page.locator(".wall-title")).toContainText("E2E wall");
@@ -230,7 +373,7 @@ test("deletes holds by keyboard and touch drag", async ({ page }) => {
   for (const label of await routeActionLabels.all()) await expect(label).toBeHidden();
 });
 
-test("edits creator and description from wall settings on mobile", async ({ page }) => {
+test("edits gym, creator, and description from wall settings on mobile", async ({ page }) => {
   await authenticateAsE2eUser(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -251,19 +394,23 @@ test("edits creator and description from wall settings on mobile", async ({ page
     buffer: Buffer.from(imageBase64, "base64"),
   });
   await page.getByLabel("壁の名前").fill("Mobile settings");
-  await page.getByLabel(/ジム名/).selectOption({ index: 1 });
+  await selectTokyoGym(page);
   await page.getByRole("button", { name: "壁を作成" }).click();
   await expect(page).toHaveURL(/\/walls\//);
 
   await expect(page.locator("#editor-sidebar-panel")).toHaveCount(0);
   const settings = page.getByRole("form", { name: "壁の設定" });
   await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+  await settings.getByLabel("都道府県で絞り込む").selectOption("JP-13");
+  await settings.getByLabel("ジム名で検索").fill("ROCKY");
+  await settings.getByLabel("ジム名を選択").selectOption({ label: "ROCKY（ロッキー） 品川店" });
   await settings.getByLabel("作成者").fill("E2E setter");
   await settings.getByLabel("説明").fill("Mobile wall description");
   await settings.getByRole("button", { name: "設定を保存" }).click();
   await expect(settings).toHaveCount(0);
   await page.reload();
   await page.getByRole("button", { name: "壁の設定", exact: true }).click();
+  await expect(settings.getByLabel("ジム名を選択")).toHaveValue("ROCKY（ロッキー） 品川店");
   await expect(settings.getByLabel("作成者")).toHaveValue("E2E setter");
   await expect(settings.getByLabel("説明")).toHaveValue("Mobile wall description");
 });
@@ -293,7 +440,7 @@ test("reopens selected route text for editing instead of duplicating it", async 
     buffer: Buffer.from(imageBase64, "base64"),
   });
   await page.getByLabel("壁の名前").fill("Text editing wall");
-  await page.getByLabel(/ジム名/).selectOption({ index: 1 });
+  await selectTokyoGym(page);
   await page.getByRole("button", { name: "壁を作成" }).click();
   await page.getByRole("button", { name: "ルートを作成" }).click();
   await page.locator(".modal-panel").getByLabel("ルート名").fill("Text editing route");

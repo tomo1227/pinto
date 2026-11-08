@@ -7,10 +7,16 @@ describe("parseCruxDisplayOptions", () => {
   });
 
   it("restores and merges saved display settings with defaults", () => {
-    expect(parseCruxDisplayOptions('{"showVideo":false,"skeletonOpacity":0.4}')).toEqual({
+    expect(
+      parseCruxDisplayOptions(
+        '{"showVideo":false,"skeletonOpacity":0.4,"show3DAxes":false,"pose3DBackground":"white"}',
+      ),
+    ).toEqual({
       ...defaultCruxDisplayOptions,
       showVideo: false,
       skeletonOpacity: 0.4,
+      show3DAxes: false,
+      pose3DBackground: "white",
     });
   });
 
@@ -24,5 +30,6 @@ describe("parseCruxDisplayOptions", () => {
     expect(() => parseCruxDisplayOptions('{"jointColor":"red"}')).toThrow();
     expect(() => parseCruxDisplayOptions('{"skeletonOpacity":2}')).toThrow();
     expect(() => parseCruxDisplayOptions('{"jointVisibility":{"leftElbow":"hidden"}}')).toThrow();
+    expect(() => parseCruxDisplayOptions('{"pose3DBackground":"transparent"}')).toThrow();
   });
 });

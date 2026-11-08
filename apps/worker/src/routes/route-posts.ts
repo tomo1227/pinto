@@ -460,9 +460,16 @@ routePostRoutes.post("/", async (context) => {
     )
     .run();
 
+  const savedPost = await context.env.DB.prepare(
+    "SELECT id FROM community_wall_post WHERE userId = ? AND wallId = ?",
+  )
+    .bind(session.user.id, wallId)
+    .first<{ id: string }>();
+  if (!savedPost) return context.json({ error: "投稿を保存できませんでした。" }, 500);
+
   return context.json({
     post: {
-      id: postId,
+      id: savedPost.id,
       userId: session.user.id,
       wallId,
       wallName,
@@ -475,6 +482,22 @@ routePostRoutes.post("/", async (context) => {
       tags,
     },
   });
+});
+
+routePostRoutes.get("/wall/:wallId", async (context) => {
+  context.header("Cache-Control", "private, no-store");
+  const session = await getSession(context.req.raw, context.env);
+  if (!session) return context.json({ error: "ログインが必要です。" }, 401);
+
+  const wallId = context.req.param("wallId");
+  if (!/^[\w-]{1,64}$/.test(wallId)) return context.json({ error: "壁IDが無効です。" }, 400);
+
+  const post = await context.env.DB.prepare(
+    "SELECT id FROM community_wall_post WHERE wallId = ? AND userId = ?",
+  )
+    .bind(wallId, session.user.id)
+    .first<{ id: string }>();
+  return context.json({ postId: post?.id ?? null });
 });
 
 routePostRoutes.put("/wall/:wallId/image", async (context) => {

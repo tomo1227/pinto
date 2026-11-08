@@ -910,6 +910,36 @@ export function CruxPage() {
                       胴体中心
                     </label>
                   </fieldset>
+                  <fieldset className="crux-display-settings__visibility">
+                    <legend>3D表示</legend>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={displayOptions.show3DAxes}
+                        onChange={(event) =>
+                          updateDisplayOption("show3DAxes", event.currentTarget.checked)
+                        }
+                      />
+                      座標軸
+                    </label>
+                    <label className="crux-display-settings__background">
+                      背景
+                      <select
+                        className="text-input text-input--compact"
+                        value={displayOptions.pose3DBackground}
+                        aria-label="3D背景色"
+                        onChange={(event) => {
+                          const background = event.currentTarget.value;
+                          if (background === "black" || background === "white") {
+                            updateDisplayOption("pose3DBackground", background);
+                          }
+                        }}
+                      >
+                        <option value="black">黒</option>
+                        <option value="white">白</option>
+                      </select>
+                    </label>
+                  </fieldset>
                   <fieldset className="crux-display-settings__joint-parts">
                     <legend>関節の部位・ポイント別表示</legend>
                     {poseJointGroups.map((group) => (

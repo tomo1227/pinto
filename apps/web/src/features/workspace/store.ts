@@ -88,6 +88,7 @@ type WorkspaceState = {
     metadata?: Pick<Wall, "japaneseGrade" | "vGrade" | "gymName" | "tags">,
   ) => Promise<Wall>;
   removeWall: (wallId: string) => Promise<void>;
+  restoreWallChanges: (wall: Wall, holds: Hold[], routes: ClimbingRoute[]) => Promise<void>;
   renameWall: (wallId: string, name: string) => Promise<void>;
   updateWall: (wallId: string, patch: Partial<Wall>) => Promise<Wall>;
   addHold: (
@@ -307,6 +308,39 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   async removeWall(wallId) {
     await deleteWall(wallId);
     set((state) => ({ walls: state.walls.filter((wall) => wall.id !== wallId) }));
+  },
+  async restoreWallChanges(wall, holds, routes) {
+    const state = get();
+    const currentHolds = state.holds.filter((hold) => hold.wallId === wall.id);
+    const currentRoutes = state.routes.filter((route) => route.wallId === wall.id);
+    const pendingWrites = [
+      wallSaveQueues.get(wall.id),
+      ...Array.from(new Set([...currentHolds, ...holds].map((hold) => hold.id)), (id) =>
+        holdSaveQueues.get(id),
+      ),
+      ...Array.from(new Set([...currentRoutes, ...routes].map((route) => route.id)), (id) =>
+        routeSaveQueues.get(id),
+      ),
+    ].filter((write): write is Promise<void> => Boolean(write));
+    await Promise.all(pendingWrites.map((write) => write.catch(() => {})));
+    await Promise.all([
+      saveInOrder(wallSaveQueues, saveWall, wall),
+      persistSnapshot(wall.id, {
+        holds,
+        routes,
+        selectedRouteId: state.selectedRouteId,
+      }),
+    ]);
+    set((current) => ({
+      walls: current.walls.map((item) => (item.id === wall.id ? wall : item)),
+      holds: [...current.holds.filter((hold) => hold.wallId !== wall.id), ...holds],
+      routes: [...current.routes.filter((route) => route.wallId !== wall.id), ...routes],
+      selectedRouteId: routes.some((route) => route.id === current.selectedRouteId)
+        ? current.selectedRouteId
+        : (routes[0]?.id ?? null),
+      past: [],
+      future: [],
+    }));
   },
   async renameWall(wallId, name) {
     await get().updateWall(wallId, { name: name.trim() });

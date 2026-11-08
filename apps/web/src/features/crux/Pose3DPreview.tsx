@@ -26,13 +26,13 @@ type Pose3DPreviewProps = {
 const initialZoom = 1.2;
 const minimumZoom = 0.75;
 const maximumZoom = 3;
-const axisColor = "#d4d8d6";
-
 function drawPoseAxes(
   context: CanvasRenderingContext2D,
   scene: ReturnType<typeof projectPoseScene3D>,
+  background: "black" | "white",
 ) {
   if (!scene.axes.length || scene.box.length !== 8) return;
+  const axisColor = background === "white" ? "#374139" : "#d4d8d6";
   const boxEdges: [number, number][] = [];
   for (let first = 0; first < scene.box.length; first += 1) {
     for (let second = first + 1; second < scene.box.length; second += 1) {
@@ -45,7 +45,7 @@ function drawPoseAxes(
     context.moveTo(scene.box[first].x, scene.box[first].y);
     context.lineTo(scene.box[second].x, scene.box[second].y);
   }
-  context.strokeStyle = "#687270";
+  context.strokeStyle = background === "white" ? "#a8b0ad" : "#687270";
   context.globalAlpha = 0.38;
   context.lineWidth = 1;
   context.stroke();
@@ -133,13 +133,15 @@ export function Pose3DPreview({ landmarks, displayOptions }: Pose3DPreviewProps)
     const context = canvas.getContext("2d");
     if (!context) return;
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    context.fillStyle = "#101312";
+    context.fillStyle = displayOptions.pose3DBackground === "white" ? "#fffefa" : "#101312";
     context.fillRect(0, 0, rect.width, rect.height);
 
     if (landmarks?.length) {
       const scene = projectPoseScene3D(landmarks, rect.width, rect.height, rotation, zoom);
       const projected = scene.landmarks;
-      drawPoseAxes(context, scene);
+      if (displayOptions.show3DAxes) {
+        drawPoseAxes(context, scene, displayOptions.pose3DBackground);
+      }
       if (displayOptions.showSkeleton) {
         context.beginPath();
         for (const [start, end] of poseConnections) {
@@ -270,7 +272,7 @@ export function Pose3DPreview({ landmarks, displayOptions }: Pose3DPreviewProps)
         ref={canvasRef}
         className="crux-3d-preview__canvas"
         role="img"
-        aria-label="MediaPipeの3DワールドランドマークとX、Y、Z軸をメートル単位で表示"
+        aria-label="MediaPipeの3Dワールドランドマークを表示"
         onPointerDown={startView}
         onPointerMove={moveView}
         onPointerUp={endView}
@@ -278,7 +280,7 @@ export function Pose3DPreview({ landmarks, displayOptions }: Pose3DPreviewProps)
         onWheel={zoomWithWheel}
       />
       {hasPose && (
-        <details className="crux-3d-preview__coordinates" open>
+        <details className="crux-3d-preview__coordinates">
           <summary>3D表示座標 X/Y/Z（原点移動・m）</summary>
           <p>
             骨格全体を正の領域へ置くため、フレームごとに表示用の原点を移動しています。実位置ではありません。
@@ -318,7 +320,9 @@ export function Pose3DPreview({ landmarks, displayOptions }: Pose3DPreviewProps)
       )}
       {hasPose ? (
         <p className="crux-3d-preview__hint">
-          ドラッグで回転・2本指で拡大縮小 · 軸目盛りはm · 単眼推定のため実寸・壁距離ではありません
+          ドラッグで回転・2本指で拡大縮小 ·{" "}
+          {displayOptions.show3DAxes ? "軸目盛りはm · " : ""}
+          単眼推定のため実寸・壁距離ではありません
         </p>
       ) : (
         <p className="crux-3d-preview__hint" role="status">

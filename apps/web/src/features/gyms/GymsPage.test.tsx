@@ -22,24 +22,26 @@ describe("GymsPage", () => {
     const user = userEvent.setup();
     render(<GymsPage />);
 
-    await user.selectOptions(screen.getByLabelText("ジム"), "gravity-research-umeda");
+    await user.selectOptions(screen.getByLabelText("ジム"), "gravity-umeda");
 
     const mapsLink = screen.getByRole("link", { name: "Google Mapsで検索" });
     const searchUrl = new URL(mapsLink.getAttribute("href") ?? "");
     expect(searchUrl.origin).toBe("https://www.google.com");
     expect(searchUrl.pathname).toBe("/maps/search/");
-    expect(searchUrl.searchParams.get("query")).toBe("グラビティリサーチ梅田 大阪府");
+    expect(searchUrl.searchParams.get("query")).toBe(
+      "GRAVITY RESEARCH（グラビティリサーチ） 梅田 大阪府",
+    );
   });
 
-  it("disables gym selection when the JSON has no gyms for a prefecture", async () => {
+  it("shows directory gyms for prefectures beyond the original list", async () => {
     const user = userEvent.setup();
     render(<GymsPage />);
 
-    await user.selectOptions(screen.getByLabelText("地域"), "関東");
-    await user.selectOptions(screen.getByLabelText("都道府県"), "JP-13");
+    await user.selectOptions(screen.getByLabelText("地域"), "東北");
+    await user.selectOptions(screen.getByLabelText("都道府県"), "JP-02");
 
-    expect(screen.getByLabelText("ジム")).toBeDisabled();
-    expect(screen.getByText("この都道府県の登録ジムはありません。")).toBeInTheDocument();
+    expect(screen.getByLabelText("ジム")).toBeEnabled();
+    expect(screen.queryByText("この都道府県の登録ジムはありません。")).not.toBeInTheDocument();
   });
 
   it("submits a gym registration request and shows the pending confirmation", async () => {
