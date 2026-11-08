@@ -10,6 +10,7 @@ import {
 } from "../../infrastructure/api/community";
 import { postDiscordTest } from "../../infrastructure/api/discord";
 import { getDiscordSettings, saveSetting } from "../../infrastructure/storage/database";
+import { GymPinFilterFields, useGymPinFilter } from "../gyms/GymPinFilter";
 
 const emptySettings: DiscordSettings = {
   webhookUrl: "",
@@ -55,8 +56,8 @@ async function encodeAvatar(file: File) {
 
 export function SettingsPage() {
   const { data: session, isPending: sessionPending } = authClient.useSession();
-  const [darkAccent, setDarkAccent] = useState<"blue" | "orange">(
-    () => (window.localStorage.getItem("pinto-theme-accent") === "orange" ? "orange" : "blue"),
+  const [darkAccent, setDarkAccent] = useState<"blue" | "orange">(() =>
+    window.localStorage.getItem("pinto-theme-accent") === "orange" ? "orange" : "blue",
   );
   const [darkMode, setDarkMode] = useState(
     () => window.localStorage.getItem("pinto-theme") === "dark",
@@ -69,6 +70,7 @@ export function SettingsPage() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [busy, setBusy] = useState(false);
+  const gymFilter = useGymPinFilter();
 
   useEffect(() => {
     void getDiscordSettings().then((stored) => {
@@ -133,6 +135,17 @@ export function SettingsPage() {
     } finally {
       setProfileSaving(false);
     }
+  }
+
+  function toggleHomeGym(gymName: string, checked: boolean) {
+    setProfile((current) => {
+      const homeGyms = checked
+        ? current.homeGyms.includes(gymName)
+          ? current.homeGyms
+          : [...current.homeGyms, gymName]
+        : current.homeGyms.filter((name) => name !== gymName);
+      return { ...current, homeGyms, homeGym: homeGyms[0] ?? "" };
+    });
   }
 
   async function selectAvatar(event: ChangeEvent<HTMLInputElement>) {
@@ -214,10 +227,16 @@ export function SettingsPage() {
           <span>01</span>
         </div>
         <div className="settings-block">
-          <h2 className="appearance-heading" id="appearance-heading">表示テーマ</h2>
+          <h2 className="appearance-heading" id="appearance-heading">
+            表示テーマ
+          </h2>
           <label className="toggle-row appearance-toggle">
             <span className="appearance-toggle__label">
-              {darkMode ? <Moon size={17} aria-hidden="true" /> : <Sun size={17} aria-hidden="true" />}
+              {darkMode ? (
+                <Moon size={17} aria-hidden="true" />
+              ) : (
+                <Sun size={17} aria-hidden="true" />
+              )}
               <span>
                 <strong>ダークモード</strong>
                 <small>この端末の表示に適用します。</small>
@@ -423,25 +442,43 @@ export function SettingsPage() {
                 <legend>
                   よく行くジム <span className="field-hint inline">任意・複数選択可</span>
                 </legend>
+                <GymPinFilterFields
+                  prefectureCode={gymFilter.prefectureCode}
+                  onPrefectureChange={gymFilter.setPrefectureCode}
+                  query={gymFilter.query}
+                  onQueryChange={gymFilter.setQuery}
+                  filtersApplied={gymFilter.filtersApplied}
+                  resultCount={gymFilter.filteredGyms.length}
+                />
                 <div className="profile-home-gyms__options">
-                  {GYM_PINS.map((gym) => (
-                    <label className="profile-home-gyms__option" key={gym.id}>
+                  {profile.homeGyms.map((gymName) => (
+                    <label className="profile-home-gyms__option" key={`selected:${gymName}`}>
                       <input
                         type="checkbox"
-                        checked={profile.homeGyms.includes(gym.name)}
-                        onChange={(event) => {
-                          const checked = event.currentTarget.checked;
-                          setProfile((current) => {
-                            const homeGyms = checked
-                              ? [...current.homeGyms, gym.name]
-                              : current.homeGyms.filter((name) => name !== gym.name);
-                            return { ...current, homeGyms, homeGym: homeGyms[0] ?? "" };
-                          });
-                        }}
+                        checked={profile.homeGyms.includes(gymName)}
+                        onChange={(event) => toggleHomeGym(gymName, event.currentTarget.checked)}
                       />
-                      <span>{gym.name}</span>
+                      <span>
+                        {GYM_PINS.some((gym) => gym.name === gymName)
+                          ? gymName
+                          : `登録外: ${gymName}`}
+                      </span>
                     </label>
                   ))}
+                  {gymFilter.filteredGyms
+                    .filter((gym) => !profile.homeGyms.includes(gym.name))
+                    .map((gym) => (
+                      <label className="profile-home-gyms__option" key={gym.id}>
+                        <input
+                          type="checkbox"
+                          checked={profile.homeGyms.includes(gym.name)}
+                          onChange={(event) => {
+                            toggleHomeGym(gym.name, event.currentTarget.checked);
+                          }}
+                        />
+                        <span>{gym.name}</span>
+                      </label>
+                    ))}
                 </div>
               </fieldset>
               <label className="field-label profile-field--wide" htmlFor="profile-bio">

@@ -12,7 +12,7 @@ import {
   type WallEditorStyleDefaults,
   type WallPostTags,
 } from "@pinto/shared";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Download,
@@ -33,8 +33,14 @@ import {
   X,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { GYM_PINS } from "../../domain/gym-pins";
 import { authClient } from "../../infrastructure/api/auth";
-import { updateWallPostImage } from "../../infrastructure/api/community";
+import {
+  getWallPostId,
+  publishWallPost,
+  updateWallPost,
+  updateWallPostImage,
+} from "../../infrastructure/api/community";
 import { shareRoutePng } from "../../infrastructure/api/discord";
 import { exportRoutePng } from "../../infrastructure/export/route-png";
 import { encodeWallPostPreview } from "../../infrastructure/export/wall-post-preview";
@@ -44,6 +50,7 @@ import {
   getWall,
   saveWallPng,
 } from "../../infrastructure/storage/database";
+import { GymPinFilterFields, useGymPinFilter } from "../gyms/GymPinFilter";
 import { useWorkspaceStore } from "../workspace/store";
 import { WallCanvas } from "./WallCanvas";
 
@@ -112,6 +119,25 @@ function routePngFileName(name: string) {
   return `${name.replace(/[\\/:*?"<>|]/g, "-").trim() || "route"}.png`;
 }
 
+type WallEditorSnapshot = {
+  wall: Wall;
+  holds: Hold[];
+  routes: ClimbingRoute[];
+};
+
+function getCurrentEditorSnapshot(wallId: string, fallbackWall: Wall): WallEditorSnapshot {
+  const state = useWorkspaceStore.getState();
+  return structuredClone({
+    wall: state.walls.find((item) => item.id === wallId) ?? fallbackWall,
+    holds: state.holds.filter((item) => item.wallId === wallId),
+    routes: state.routes.filter((item) => item.wallId === wallId),
+  });
+}
+
+function serializeEditorSnapshot(snapshot: WallEditorSnapshot) {
+  return JSON.stringify(snapshot);
+}
+
 function downloadPng(file: File) {
   const url = URL.createObjectURL(file);
   const anchor = document.createElement("a");
@@ -130,7 +156,9 @@ function isNamedError(reason: unknown, name: string) {
 
 export function WallEditorPage({ wallId }: { wallId: string }) {
   const navigate = useNavigate();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending: sessionPending } = authClient.useSession();
+  const sessionUserId = session?.user.id;
+  const hasSession = Boolean(session?.user);
   const holds = useWorkspaceStore((state) => state.holds);
   const routes = useWorkspaceStore((state) => state.routes);
   const selectedRouteId = useWorkspaceStore((state) => state.selectedRouteId);
@@ -149,6 +177,8 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const undo = useWorkspaceStore((state) => state.undo);
   const redo = useWorkspaceStore((state) => state.redo);
   const notify = useWorkspaceStore((state) => state.notify);
+  const removeWall = useWorkspaceStore((state) => state.removeWall);
+  const restoreWallChanges = useWorkspaceStore((state) => state.restoreWallChanges);
   const [wall, setWall] = useState<Wall | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("hold");
@@ -170,7 +200,16 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   const [wallSettingsOpen, setWallSettingsOpen] = useState(false);
   const [wallSettingsSaving, setWallSettingsSaving] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
+  const [wallPostId, setWallPostId] = useState<string | null>(null);
+  const [postStatusForWallId, setPostStatusForWallId] = useState<string | null>(null);
+  const [postStatusLoading, setPostStatusLoading] = useState(true);
+  const [postStatusError, setPostStatusError] = useState<string | null>(null);
+  const [savedPostSnapshot, setSavedPostSnapshot] = useState<string | null>(null);
+  const gymFilter = useGymPinFilter();
   const imageScaleRef = useRef<number | null>(null);
+  const postLookupKeyRef = useRef<string | null>(null);
+  const skipNextNavigationBlockRef = useRef(false);
+  const savedEditorSnapshotRef = useRef<WallEditorSnapshot | null>(null);
   const handleImageScaleChange = useCallback((scale: number) => {
     imageScaleRef.current = scale;
   }, []);
@@ -212,6 +251,42 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
       (tool === "text"
         ? editorStyleDefaults.textOutlineColor
         : editorStyleDefaults.holdOutlineColor));
+  const currentEditorSnapshot = JSON.stringify({
+    wall,
+    holds: holds.filter((item) => item.wallId === wallId),
+    routes: routes.filter((item) => item.wallId === wallId),
+  });
+  const wallSettingsChanged = Boolean(
+    wall &&
+      wallSettingsOpen &&
+      (wallSettingsDraft.name.trim() !== wall.name ||
+        wallSettingsDraft.japaneseGrade !== (wall.japaneseGrade ?? "") ||
+        wallSettingsDraft.vGrade !== (wall.vGrade ?? "") ||
+        wallSettingsDraft.gymName.trim() !== (wall.gymName ?? "") ||
+        JSON.stringify(wallSettingsDraft.tags) !== JSON.stringify(wall.tags ?? emptyWallTags) ||
+        wallSettingsDraft.author.trim() !== (route?.author ?? "") ||
+        wallSettingsDraft.description.trim() !== (route?.description ?? "") ||
+        wallSettingsDraft.autoDetectHolds !== (wall.autoDetectHolds ?? true) ||
+        wallSettingsDraft.allowEllipses !== (wall.allowEllipses ?? true)),
+  );
+  const isPublishedPost = postStatusForWallId === wallId && Boolean(wallPostId);
+  const publishedPostNeedsSave =
+    isPublishedPost && (savedPostSnapshot !== currentEditorSnapshot || wallSettingsChanged);
+  const shouldBlockBeforeLeave =
+    wall?.id === wallId &&
+    (postStatusLoading ||
+      (postStatusForWallId === wallId &&
+        !postStatusError &&
+        (!wallPostId || publishedPostNeedsSave)));
+  const shouldBlockFn = useCallback(
+    () => !skipNextNavigationBlockRef.current && shouldBlockBeforeLeave,
+    [shouldBlockBeforeLeave],
+  );
+  const navigationBlocker = useBlocker({
+    shouldBlockFn,
+    enableBeforeUnload: shouldBlockBeforeLeave,
+    withResolver: true,
+  });
 
   useEffect(() => {
     const color = activeText?.color ?? activeHold?.color;
@@ -341,58 +416,209 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
     };
   }, [wallId, loadWall, loadWalls]);
 
-  async function saveRouteDetails() {
-    const currentRoute = useWorkspaceStore
-      .getState()
-      .routes.find((item) => item.id === selectedRouteId);
-    if (!currentRoute || !wall) return;
-    const savedRoute = {
-      ...currentRoute,
-      description: currentRoute.description?.trim() || undefined,
-      author: currentRoute.author?.trim() || undefined,
-    };
-    try {
-      await updateRoute(savedRoute.id, {
-        description: savedRoute.description,
-        author: savedRoute.author,
+  useEffect(() => {
+    if (sessionPending || !wall || wall.id !== wallId) return;
+    const lookupKey = `${wallId}:${sessionUserId ?? "anonymous"}`;
+    if (postLookupKeyRef.current === lookupKey) return;
+    postLookupKeyRef.current = lookupKey;
+    let active = true;
+    setWallPostId(null);
+    setPostStatusForWallId(null);
+    setPostStatusError(null);
+    setSavedPostSnapshot(null);
+    savedEditorSnapshotRef.current = null;
+    setPostStatusLoading(true);
+    if (!hasSession) {
+      setPostStatusForWallId(wallId);
+      setPostStatusError("投稿状態を確認するにはログインしてください。");
+      setPostStatusLoading(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    void getWallPostId(wallId)
+      .then((id) => {
+        if (!active) return;
+        setWallPostId(id);
+        setPostStatusForWallId(wallId);
+        if (id) {
+          const snapshot = getCurrentEditorSnapshot(wallId, wall);
+          savedEditorSnapshotRef.current = snapshot;
+          setSavedPostSnapshot(serializeEditorSnapshot(snapshot));
+        }
+      })
+      .catch((reason: unknown) => {
+        if (!active) return;
+        const message =
+          reason instanceof Error ? reason.message : "投稿状態を確認できませんでした。";
+        setPostStatusForWallId(wallId);
+        setPostStatusError(message);
+        notify(`投稿状態を確認できませんでした: ${message}`);
+      })
+      .finally(() => {
+        if (active) setPostStatusLoading(false);
       });
-    } catch (reason) {
-      notify(reason instanceof Error ? reason.message : "ルートを保存できませんでした。");
+
+    return () => {
+      active = false;
+    };
+  }, [sessionPending, sessionUserId, hasSession, wall, wallId, notify]);
+
+  useEffect(() => {
+    if (
+      navigationBlocker.status !== "blocked" ||
+      !navigationBlocker.proceed ||
+      !navigationBlocker.reset
+    ) {
       return;
     }
-
-    if (session?.user) {
-      try {
-        const imageWithRoute = await createRouteFile(savedRoute);
-        const postRoutes = routes
-          .filter((item) => item.wallId === wall.id)
-          .map((item) => {
-            const currentRoute = item.id === savedRoute.id ? savedRoute : item;
-            return {
-              id: currentRoute.id,
-              name: currentRoute.name,
-              grade: formatRouteGrade(currentRoute),
-              description: currentRoute.description ?? "",
-            };
-          });
-        const result = await updateWallPostImage(wall.id, {
-          image: await encodeWallPostPreview(imageWithRoute),
-          routes: postRoutes,
+    const { proceed, reset } = navigationBlocker;
+    if (postStatusLoading) return;
+    if (postStatusForWallId !== wallId || postStatusError) {
+      reset();
+      return;
+    }
+    const isUnpublishedWall = !wallPostId;
+    const message = isUnpublishedWall
+      ? "この壁はまだ投稿されていません。戻ると壁と編集内容が削除されます。破棄して戻りますか？"
+      : "編集が保存されていません。保存せずに戻りますか？";
+    if (!window.confirm(message)) {
+      reset();
+      return;
+    }
+    if (isUnpublishedWall) {
+      void removeWall(wallId)
+        .then(proceed)
+        .catch((reason: unknown) => {
+          notify(reason instanceof Error ? reason.message : "未投稿の壁を削除できませんでした。");
+          reset();
         });
-        notify(result.updated ? "ルートと投稿画像を保存しました" : "ルートを保存しました");
-        if (result.updated && result.postId) {
-          await navigate({ to: "/", search: { post: result.postId } });
+      return;
+    }
+    const savedSnapshot = savedEditorSnapshotRef.current;
+    if (!savedSnapshot) {
+      notify("保存時点の編集内容を復元できませんでした。");
+      reset();
+      return;
+    }
+    void restoreWallChanges(savedSnapshot.wall, savedSnapshot.holds, savedSnapshot.routes)
+      .then(proceed)
+      .catch((reason: unknown) => {
+        notify(reason instanceof Error ? reason.message : "編集内容を破棄できませんでした。");
+        reset();
+      });
+  }, [
+    navigationBlocker,
+    notify,
+    removeWall,
+    restoreWallChanges,
+    postStatusError,
+    postStatusForWallId,
+    postStatusLoading,
+    wallId,
+    wallPostId,
+  ]);
+
+  async function saveWallPost() {
+    if (!wall || actionBusy) return;
+    if (!session?.user) {
+      notify("投稿するにはログインしてください。");
+      return;
+    }
+    if (postStatusLoading || postStatusForWallId !== wallId || postStatusError) {
+      notify(postStatusError ?? "投稿状態を確認しています。");
+      return;
+    }
+    setActionBusy(true);
+    try {
+      const state = useWorkspaceStore.getState();
+      const currentRoute = state.routes.find(
+        (item) => item.id === selectedRouteId && item.wallId === wallId,
+      );
+      const savedRoute = currentRoute
+        ? {
+            ...currentRoute,
+            description: currentRoute.description?.trim() || undefined,
+            author: currentRoute.author?.trim() || undefined,
+          }
+        : undefined;
+      if (savedRoute) {
+        await updateRoute(savedRoute.id, {
+          description: savedRoute.description,
+          author: savedRoute.author,
+        });
+      }
+
+      const currentState = useWorkspaceStore.getState();
+      const currentWall = currentState.walls.find((item) => item.id === wallId) ?? wall;
+      const postRoutes = currentState.routes
+        .filter((item) => item.wallId === wallId && item.name.trim())
+        .map((item) => {
+          const currentRoute = item.id === savedRoute?.id ? savedRoute : item;
+          return {
+            id: currentRoute.id,
+            name: currentRoute.name,
+            grade: formatRouteGrade(currentRoute),
+            description: currentRoute.description ?? "",
+          };
+        });
+      const postMetadataRoute =
+        savedRoute ?? currentState.routes.find((item) => item.wallId === wallId);
+      const imageSource = postMetadataRoute
+        ? await createRouteFile(postMetadataRoute)
+        : (await getImage(currentWall.imageId))?.blob;
+      if (!imageSource) throw new Error("壁画像が見つかりません。");
+      const image = await encodeWallPostPreview(imageSource);
+      const postFields = {
+        wallName: currentWall.name,
+        gymName: currentWall.gymName ?? "",
+        japaneseGrade: currentWall.japaneseGrade ?? "",
+        vGrade: currentWall.vGrade ?? "",
+        author: postMetadataRoute?.author ?? "",
+        description: postMetadataRoute?.description ?? "",
+        tags: currentWall.tags ?? emptyWallTags,
+      };
+
+      if (wallPostId) {
+        const result = await updateWallPost(wallPostId, postFields);
+        if (!result.updated) throw new Error("投稿が見つかりません。");
+        const imageResult = await updateWallPostImage(wallId, { image, routes: postRoutes });
+        if (!imageResult.updated || !imageResult.postId) {
+          throw new Error("投稿画像を保存できませんでした。");
+        }
+        setWallPostId(imageResult.postId);
+        const snapshot = getCurrentEditorSnapshot(wallId, wall);
+        savedEditorSnapshotRef.current = snapshot;
+        setSavedPostSnapshot(serializeEditorSnapshot(snapshot));
+        notify("投稿を保存しました。");
+        skipNextNavigationBlockRef.current = true;
+        try {
+          await navigate({ to: "/", search: { post: imageResult.postId } });
+        } finally {
+          skipNextNavigationBlockRef.current = false;
         }
         return;
-      } catch (reason) {
-        notify(
-          `ルートは保存しましたが、投稿画像を更新できませんでした: ${reason instanceof Error ? reason.message : "通信エラー"}`,
-        );
-        return;
       }
-    }
 
-    notify("ルートを保存しました");
+      const result = await publishWallPost({
+        wallId,
+        ...postFields,
+        routes: postRoutes,
+        image,
+      });
+      setWallPostId(result.post.id);
+      setPostStatusForWallId(wallId);
+      setPostStatusError(null);
+      const snapshot = getCurrentEditorSnapshot(wallId, wall);
+      savedEditorSnapshotRef.current = snapshot;
+      setSavedPostSnapshot(serializeEditorSnapshot(snapshot));
+      notify("壁を投稿しました。");
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : "投稿を保存できませんでした。");
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   async function saveWallSettings(event: FormEvent<HTMLFormElement>) {
@@ -676,7 +902,12 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
   return (
     <main className="editor-page">
       <header className="editor-header">
-        <Link className="back-link" to="/" aria-label="壁一覧に戻る">
+        <Link
+          className="back-link"
+          to="/"
+          search={isPublishedPost ? { post: wallPostId } : {}}
+          aria-label="壁一覧に戻る"
+        >
           <ArrowLeft size={17} />
         </Link>
         <div className="wall-title">
@@ -757,13 +988,24 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
           <Redo2 size={15} /> <span>進む</span>
         </button>
         <button
-          className="button button--primary editor-save"
+          className={`button button--primary editor-save${isPublishedPost ? "" : " editor-save--publish"}`}
           type="button"
-          disabled={!route}
-          onClick={() => void saveRouteDetails()}
+          disabled={
+            actionBusy ||
+            postStatusLoading ||
+            postStatusForWallId !== wallId ||
+            Boolean(postStatusError)
+          }
+          title={postStatusError ?? undefined}
+          onClick={() => void saveWallPost()}
         >
-          <Save size={15} /> 投稿
+          <Save size={15} /> {isPublishedPost ? "保存" : "投稿"}
         </button>
+        {postStatusError && (
+          <span className="community-status" role="alert">
+            {postStatusError}
+          </span>
+        )}
       </header>
 
       <div className="editor-layout">
@@ -1156,11 +1398,21 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                 </select>
               </label>
             </div>
+            <GymPinFilterFields
+              prefectureCode={gymFilter.prefectureCode}
+              onPrefectureChange={gymFilter.setPrefectureCode}
+              query={gymFilter.query}
+              onQueryChange={gymFilter.setQuery}
+              filtersApplied={gymFilter.filtersApplied}
+              resultCount={gymFilter.filteredGyms.length}
+            />
             <label className="field-label">
               ジム名
-              <input
+              <select
+                aria-label="ジム名を選択"
                 className="text-input"
                 value={wallSettingsDraft.gymName}
+                disabled={!gymFilter.filtersApplied && !wallSettingsDraft.gymName}
                 onChange={(event) => {
                   const gymName = event.currentTarget.value;
                   setWallSettingsDraft((current) => ({
@@ -1168,8 +1420,23 @@ export function WallEditorPage({ wallId }: { wallId: string }) {
                     gymName,
                   }));
                 }}
-                maxLength={80}
-              />
+              >
+                <option value="">未設定</option>
+                {wallSettingsDraft.gymName &&
+                  !gymFilter.filteredGyms.some((gym) => gym.name === wallSettingsDraft.gymName) && (
+                    <option value={wallSettingsDraft.gymName}>
+                      {GYM_PINS.some((gym) => gym.name === wallSettingsDraft.gymName)
+                        ? "選択中"
+                        : "登録外"}
+                      : {wallSettingsDraft.gymName}
+                    </option>
+                  )}
+                {gymFilter.filteredGyms.map((gym) => (
+                  <option key={gym.id} value={gym.name}>
+                    {gym.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="field-label">
               作成者

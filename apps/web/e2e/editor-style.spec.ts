@@ -567,12 +567,18 @@ test("saves the annotated route image to the shared wall post", async ({ page })
     image: string;
     routes: { id: string; name: string; grade: string }[];
   } | null = null;
+  await page.route("**/api/community/posts/wall/style-wall", (route) =>
+    route.fulfill({ json: { postId: "style-post" } }),
+  );
   await page.route("**/api/community/posts/wall/style-wall/image", async (route) => {
     updatePayload = route.request().postDataJSON();
     await route.fulfill({ json: { updated: true, postId: "style-post" } });
   });
-  await page.route("**/api/community/posts/style-post**", (route) =>
-    route.fulfill({
+  await page.route("**/api/community/posts/style-post**", (route) => {
+    if (route.request().method() === "PUT") {
+      return route.fulfill({ json: { updated: true } });
+    }
+    return route.fulfill({
       json: {
         post: {
           id: "style-post",
@@ -596,8 +602,8 @@ test("saves the annotated route image to the shared wall post", async ({ page })
           savedByMe: false,
         },
       },
-    }),
-  );
+    });
+  });
   const remoteImage =
     "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==";
   await page.route("**/api/community/posts?**", (route) =>
@@ -700,7 +706,7 @@ test("saves the annotated route image to the shared wall post", async ({ page })
   await expect(page.locator(".wall-post-detail__image")).toHaveAttribute("src", /^blob:/);
   await page.getByRole("link", { name: "Style wallを編集" }).click();
   await expect(page.locator("canvas.wall-canvas")).toBeVisible();
-  await page.getByRole("button", { name: "投稿", exact: true }).click();
+  await page.getByRole("button", { name: "保存", exact: true }).click();
 
   await expect.poll(() => updatePayload?.image).toMatch(/^data:image\/webp;base64,/);
   await expect(page).toHaveURL(/\/\?post=style-post$/);
@@ -738,7 +744,161 @@ test("saves the annotated route image to the shared wall post", async ({ page })
   expect(updatePayload?.routes).toEqual([
     { id: "style-route", name: "Style route", grade: "", description: "Existing description" },
   ]);
-  await expect(page.getByText("ルートと投稿画像を保存しました")).toBeVisible();
+  await expect(page.getByText("投稿を保存しました。")).toBeVisible();
+});
+
+test("asks before leaving an unpublished wall and deletes it after confirmation", async ({
+  page,
+}) => {
+  const now = new Date().toISOString();
+  await page.route("**/api/auth/get-session**", (route) =>
+    route.fulfill({
+      json: {
+        session: {
+          id: "viewer-session",
+          userId: "viewer",
+          token: "viewer-token",
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        user: {
+          id: "viewer",
+          name: "Viewer",
+          email: "viewer@example.com",
+          emailVerified: true,
+          image: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/community/profile", (route) =>
+    route.fulfill({
+      json: {
+        profile: {
+          id: "viewer",
+          handle: "viewer",
+          username: "Viewer",
+          bio: "",
+          climbingLevel: "",
+          japaneseClimbingLevel: "",
+          vClimbingLevel: "",
+          homeGym: "",
+          homeGyms: [],
+          residence: "",
+          age: null,
+          avatar: null,
+          isPrivate: false,
+          followerCount: 0,
+          followingCount: 0,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/community/posts/wall/style-wall", (route) =>
+    route.fulfill({ json: { postId: null } }),
+  );
+
+  await openTestEditor(page);
+  await expect(page.getByRole("button", { name: "投稿", exact: true })).toBeEnabled();
+  const dialogPromise = page.waitForEvent("dialog").then(async (dialog) => {
+    const message = dialog.message();
+    await dialog.accept();
+    return message;
+  });
+  await page.getByRole("link", { name: "壁一覧に戻る" }).click();
+  expect(await dialogPromise).toContain("まだ投稿されていません");
+  await expect(page).toHaveURL("/");
+
+  const wallRemains = await page.evaluate(
+    () =>
+      new Promise<boolean>((resolve, reject) => {
+        const request = indexedDB.open("pinto-local");
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const transaction = database.transaction("walls");
+          const wall = transaction.objectStore("walls").get("style-wall");
+          transaction.oncomplete = () => {
+            resolve(Boolean(wall.result));
+            database.close();
+          };
+          transaction.onerror = () => reject(transaction.error);
+        };
+      }),
+  );
+  expect(wallRemains).toBe(false);
+});
+
+test("discards local edits to a published wall when leaving without saving", async ({ page }) => {
+  const now = new Date().toISOString();
+  await page.route("**/api/auth/get-session**", (route) =>
+    route.fulfill({
+      json: {
+        session: {
+          id: "viewer-session",
+          userId: "viewer",
+          token: "viewer-token",
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          createdAt: now,
+          updatedAt: now,
+        },
+        user: {
+          id: "viewer",
+          name: "Viewer",
+          email: "viewer@example.com",
+          emailVerified: true,
+          image: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/community/profile", (route) =>
+    route.fulfill({
+      json: {
+        profile: {
+          id: "viewer",
+          handle: "viewer",
+          username: "Viewer",
+          bio: "",
+          climbingLevel: "",
+          japaneseClimbingLevel: "",
+          vClimbingLevel: "",
+          homeGym: "",
+          homeGyms: [],
+          residence: "",
+          age: null,
+          avatar: null,
+          isPrivate: false,
+          followerCount: 0,
+          followingCount: 0,
+        },
+      },
+    }),
+  );
+  await page.route("**/api/community/posts/wall/style-wall", (route) =>
+    route.fulfill({ json: { postId: "style-post" } }),
+  );
+
+  await openTestEditor(page);
+  await expect(page.getByRole("button", { name: "保存", exact: true })).toBeEnabled();
+  await selectCanvasObject(page, 0.25, 0.65);
+  await page.getByLabel("丸の太さ").fill("8");
+  await expect.poll(async () => (await readStyles(page)).hold.markerWidth).toBe(8);
+
+  const dialogPromise = page.waitForEvent("dialog").then(async (dialog) => {
+    const message = dialog.message();
+    await dialog.accept();
+    return message;
+  });
+  await page.getByRole("link", { name: "壁一覧に戻る" }).click();
+  expect(await dialogPromise).toContain("編集が保存されていません");
+  await expect(page).toHaveURL("/?post=style-post");
+  expect((await readStyles(page)).hold.markerWidth).toBeUndefined();
 });
 
 test("keeps editor toolbar height stable when switching to text mode", async ({ page }) => {

@@ -197,6 +197,14 @@ export async function publishWallPost(input: WallPostInput) {
   });
 }
 
+export async function getWallPostId(wallId: string) {
+  const result = await requestJson<{ postId: string | null }>(
+    `/api/community/posts/wall/${encodeURIComponent(wallId)}`,
+    { cache: "no-store" },
+  );
+  return result.postId;
+}
+
 export async function updateWallPost(id: string, input: WallPostUpdateInput) {
   return requestJson<{ updated: boolean }>(`/api/community/posts/${encodeURIComponent(id)}`, {
     method: "PUT",

@@ -48,6 +48,8 @@ export type CruxDisplayOptions = {
   showRightLegJoints: boolean;
   jointVisibility: Partial<Record<CruxJointVisibilityKey, boolean>>;
   showTorsoCenter: boolean;
+  show3DAxes: boolean;
+  pose3DBackground: "black" | "white";
   skeletonColor: string;
   skeletonOpacity: number;
   jointColor: string;
@@ -66,6 +68,8 @@ export const defaultCruxDisplayOptions: CruxDisplayOptions = {
   showRightLegJoints: true,
   jointVisibility: {},
   showTorsoCenter: true,
+  show3DAxes: true,
+  pose3DBackground: "black",
   skeletonColor: "#ffe15c",
   skeletonOpacity: 1,
   jointColor: "#fffefa",
@@ -91,11 +95,19 @@ export function parseCruxDisplayOptions(value: string | null): CruxDisplayOption
     "showLeftLegJoints",
     "showRightLegJoints",
     "showTorsoCenter",
+    "show3DAxes",
   ] as const;
   for (const key of booleans) {
     if (key in options && typeof options[key] !== "boolean") {
       throw new Error("表示設定の保存データが正しくありません。");
     }
+  }
+  if (
+    "pose3DBackground" in options &&
+    options.pose3DBackground !== "black" &&
+    options.pose3DBackground !== "white"
+  ) {
+    throw new Error("3D背景の設定が正しくありません。");
   }
   for (const key of ["skeletonColor", "jointColor", "torsoCenterColor"] as const) {
     if (

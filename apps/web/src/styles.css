@@ -722,6 +722,14 @@ a {
   color: var(--ink);
   font-size: 10px;
 }
+.crux-display-settings__visibility .crux-display-settings__background {
+  justify-content: space-between;
+}
+.crux-display-settings__background select {
+  width: 76px;
+  min-height: 28px;
+  padding: 4px 6px;
+}
 .crux-display-settings__joint-parts label {
   display: inline-flex;
   align-items: center;
@@ -919,7 +927,7 @@ a {
 .crux-3d-preview__canvas {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;
   background: #101312;
   cursor: grab;
   touch-action: none;
@@ -1523,6 +1531,12 @@ a {
 }
 .button--primary:hover:not(:disabled) {
   background: #35423b;
+}
+.button--primary.editor-save--publish {
+  background: #2f7a68;
+}
+.button--primary.editor-save--publish:hover:not(:disabled) {
+  background: #245e50;
 }
 .button--outline {
   color: var(--ink);
@@ -3276,6 +3290,15 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+.gym-filter-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.gym-filter-fields__status {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 .field-grid {
   display: grid;
