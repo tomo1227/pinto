@@ -4,10 +4,10 @@ CONFIGURATION ?= Debug
 DERIVED_DATA_PATH ?= .build/Xcode
 TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 16,OS=latest
 
-XCODE_FLAGS = -project swift/Pinto.xcodeproj -scheme Pinto \
+XCODE_FLAGS = -project Pinto.xcodeproj -scheme Pinto \
 	-configuration "$(CONFIGURATION)" -derivedDataPath "$(DERIVED_DATA_PATH)" \
 	CODE_SIGNING_ALLOWED=NO
-SWIFT_PATHS = swift/Pinto swift/PintoTests
+SWIFT_PATHS = Pinto PintoTests
 
 .PHONY: build test test-ios lint format fmt
 

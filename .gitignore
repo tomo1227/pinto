@@ -2,8 +2,8 @@
 *.log
 
 # Xcode
-swift/**/xcuserdata/
-swift/DerivedData/
+xcuserdata/
+/DerivedData/
 .build/
 
 # Local dependencies, credentials, and generated files
