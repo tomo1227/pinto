@@ -1138,13 +1138,56 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.textStyle, editedStyle)
   }
 
-  func testEditorControlsPanelSharesHeightCapAndFitsSmallerSpace() {
+  func testEditorControlsPanelMatchesHoldHeightForShortAndTallContent() {
+    for contentHeight: CGFloat in [60, 160, 400] {
+      let panel = EditorControlsPanel {
+        Color.clear.frame(height: 160)
+      } content: {
+        Color.clear.frame(height: contentHeight)
+      }
+      let controller = UIHostingController(rootView: panel)
+      XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 500)).height, 176)
+      XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 150)).height, 150)
+    }
+  }
+
+  func testEditorControlsPanelCapsTallHoldControls() {
     let panel = EditorControlsPanel {
       Color.clear.frame(height: 400)
+    } content: {
+      Color.clear.frame(height: 60)
     }
     let controller = UIHostingController(rootView: panel)
     XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 500)).height, 240)
-    XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 150)).height, 150)
+  }
+
+  func testEditorControlsPanelPlacesShortContentAtBottomAndTallContentAtTop() async {
+    for (contentHeight, expectedTop): (CGFloat, CGFloat) in [(60, 108), (400, 8)] {
+      let laidOut = expectation(description: "Lay out panel content of height \(contentHeight)")
+      var measured = false
+      let panel = EditorControlsPanel {
+        Color.clear.frame(height: 160)
+      } content: {
+        Color.clear.frame(height: contentHeight)
+          .onGeometryChange(for: CGFloat.self) { geometry in
+            geometry.frame(in: .named("panel")).minY
+          } action: { top in
+            guard !measured else { return }
+            measured = true
+            XCTAssertEqual(top, expectedTop, accuracy: 0.5)
+            laidOut.fulfill()
+          }
+      }
+      .coordinateSpace(name: "panel")
+      .frame(width: 320, height: 176)
+      let controller = UIHostingController(rootView: panel)
+      let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 667))
+      window.rootViewController = controller
+      window.isHidden = false
+      defer { window.isHidden = true }
+      controller.view.layoutIfNeeded()
+      await fulfillment(of: [laidOut], timeout: 1)
+    }
   }
 
   func testEmptyTextEntryRendersNoBackgroundOrPlaceholder() throws {

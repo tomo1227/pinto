@@ -181,20 +181,25 @@ struct EditorView: View {
             .background(.regularMaterial, in: Capsule())
         }
       }
+      .padding(.horizontal, 20)
 
       Spacer(minLength: 0)
       StyledTextEntry(text: $model.textDraft, style: model.activeStyle)
         .frame(minHeight: 52, idealHeight: 144, maxHeight: 144)
+        .padding(.horizontal, 20)
       Spacer(minLength: 0)
-      EditorControlsPanel {
+      editorControlsPanel(contentInset: 20) {
         VStack(alignment: .leading, spacing: 10) {
           textColorControls
-          styleControls
+          styleControls(editingText: true)
         }
       }
-      .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+      .background {
+        RoundedRectangle(cornerRadius: 12)
+          .fill(.regularMaterial)
+          .padding(.horizontal, 20)
+      }
     }
-    .padding(.horizontal, 20)
     .padding(.top, 16)
     .background { Color.black.opacity(0.76).ignoresSafeArea() }
     .preferredColorScheme(.dark)
@@ -219,82 +224,102 @@ struct EditorView: View {
   private var editorDock: some View {
     VStack(spacing: 0) {
       if activeToolHasEditingControls && editorDockExpanded {
-        EditorControlsPanel {
-          VStack(alignment: .leading, spacing: 10) {
-            if model.tool == .route {
-              colorControls(title: "線の色")
-            } else if model.editingText {
-              textColorControls
-            } else {
-              HStack(spacing: 8) {
-                if model.tool == .hold {
-                  holdShapePicker
-                    .frame(width: 76)
-                    .frame(width: controlLabelWidth, alignment: .leading)
-                }
-                colorControls()
-              }
-            }
-            styleControls
-            if model.tool == .route {
-              VStack(alignment: .leading, spacing: 8) {
-                if let color = model.content.routeNumberColor {
-                  colorPalette(selectedColor: color, title: "ルートの数字色") { hex in
-                    model.change { $0.routeNumberColor = hex }
-                  }
-                } else {
-                  controlLabel("ルートの数字色")
-                }
-                Toggle(
-                  "ホールドと同じ色",
-                  isOn: Binding(
-                    get: { model.content.routeNumberColor == nil },
-                    set: { sameColor in
-                      model.change { $0.routeNumberColor = sameColor ? nil : $0.holdStyle.color }
-                    }
-                  ))
-              }
-              sliderRow(
-                "ルートの数字サイズ",
-                value: Binding(
-                  get: { model.content.effectiveRouteNumberSize },
-                  set: { value in model.change { $0.routeNumberSize = value } }
-                ),
-                in: 6...60, onReset: model.resetRouteNumberSize)
-              HStack {
-                Button {
-                  model.change { $0.showLines.toggle() }
-                } label: {
-                  Label("ルート線", systemImage: model.content.showLines ? "eye" : "eye.slash")
-                }
-                .accessibilityValue(model.content.showLines ? "表示" : "非表示")
-                Spacer()
-                Button {
-                  model.change { $0.showRouteNumbers = !$0.effectiveShowRouteNumbers }
-                } label: {
-                  Label(
-                    "ルートの数字",
-                    systemImage: model.content.effectiveShowRouteNumbers ? "eye" : "eye.slash")
-                }
-                .accessibilityValue(model.content.effectiveShowRouteNumbers ? "表示" : "非表示")
-              }
-            }
-            HStack {
-              Spacer()
-              Button(role: .destructive) {
-                model.removeSelection()
-              } label: {
-                Label("削除", systemImage: "trash")
-              }
-              .disabled(model.selection == nil)
-            }
-          }
+        editorControlsPanel {
+          dockControls(for: model.tool, editingText: model.editingText)
         }
       }
       Divider()
       tools
     }
     .background(.bar)
+  }
+
+  private func editorControlsPanel<Content: View>(
+    contentInset: CGFloat = 0, @ViewBuilder content: () -> Content
+  ) -> some View {
+    EditorControlsPanel(
+      contentInset: contentInset,
+      holdControls: {
+        dockControls(for: .hold, editingText: false)
+      }, content: content)
+  }
+
+  private func dockControls(for tool: EditorTool, editingText: Bool) -> some View {
+    VStack(alignment: .leading, spacing: 10) {
+      if tool == .route {
+        colorControls(title: "線の色")
+      } else if editingText {
+        textColorControls
+      } else {
+        HStack(spacing: 8) {
+          if tool == .hold {
+            holdShapePicker
+              .frame(width: 76)
+              .frame(width: controlLabelWidth, alignment: .leading)
+          }
+          colorControls()
+        }
+      }
+      styleControls(editingText: editingText)
+      if tool == .route {
+        routeControls
+      }
+      HStack {
+        Spacer()
+        Button(role: .destructive) {
+          model.removeSelection()
+        } label: {
+          Label("削除", systemImage: "trash")
+        }
+        .disabled(model.selection == nil)
+      }
+    }
+  }
+
+  private var routeControls: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      VStack(alignment: .leading, spacing: 8) {
+        if let color = model.content.routeNumberColor {
+          colorPalette(selectedColor: color, title: "ルートの数字色") { hex in
+            model.change { $0.routeNumberColor = hex }
+          }
+        } else {
+          controlLabel("ルートの数字色")
+        }
+        Toggle(
+          "ホールドと同じ色",
+          isOn: Binding(
+            get: { model.content.routeNumberColor == nil },
+            set: { sameColor in
+              model.change { $0.routeNumberColor = sameColor ? nil : $0.holdStyle.color }
+            }
+          ))
+      }
+      sliderRow(
+        "ルートの数字サイズ",
+        value: Binding(
+          get: { model.content.effectiveRouteNumberSize },
+          set: { value in model.change { $0.routeNumberSize = value } }
+        ),
+        in: 6...60, onReset: model.resetRouteNumberSize)
+      HStack {
+        Button {
+          model.change { $0.showLines.toggle() }
+        } label: {
+          Label("ルート線", systemImage: model.content.showLines ? "eye" : "eye.slash")
+        }
+        .accessibilityValue(model.content.showLines ? "表示" : "非表示")
+        Spacer()
+        Button {
+          model.change { $0.showRouteNumbers = !$0.effectiveShowRouteNumbers }
+        } label: {
+          Label(
+            "ルートの数字",
+            systemImage: model.content.effectiveShowRouteNumbers ? "eye" : "eye.slash")
+        }
+        .accessibilityValue(model.content.effectiveShowRouteNumbers ? "表示" : "非表示")
+      }
+    }
   }
 
   private var holdShapePicker: some View {
@@ -416,9 +441,9 @@ struct EditorView: View {
   }
 
   @ViewBuilder
-  private var styleControls: some View {
+  private func styleControls(editingText: Bool) -> some View {
     VStack(alignment: .leading, spacing: 4) {
-      if model.editingText {
+      if editingText {
         ScrollView(.horizontal) {
           HStack(spacing: 8) {
             ForEach(TextFamily.allCases, id: \.self) { family in
@@ -581,16 +606,49 @@ struct EditorView: View {
   }
 }
 
-struct EditorControlsPanel<Content: View>: View {
+struct EditorControlsPanel<HoldControls: View, Content: View>: View {
+  var contentInset: CGFloat = 0
+  @ViewBuilder let holdControls: HoldControls
   @ViewBuilder let content: Content
 
   var body: some View {
-    ScrollView(.vertical, showsIndicators: false) {
-      content
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+    HoldControlsPanelLayout {
+      paddedControls(holdControls)
+        .hidden()
+        .accessibilityHidden(true)
+      GeometryReader { viewport in
+        ScrollView(.vertical, showsIndicators: false) {
+          paddedControls(content)
+            .frame(minHeight: viewport.size.height, alignment: .bottom)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .padding(.horizontal, contentInset)
+      }
     }
-    .frame(maxHeight: 240)
+  }
+
+  private func paddedControls(_ controls: some View) -> some View {
+    controls
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+  }
+}
+
+private struct HoldControlsPanelLayout: Layout {
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    // Measure the hold controls without a vertical constraint, regardless of the active tool.
+    let width = proposal.width.flatMap { $0.isFinite ? $0 : nil }
+    let holdSize = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+    return CGSize(
+      width: width ?? holdSize.width,
+      height: min(holdSize.height, proposal.height ?? .infinity, 240))
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    subviews[1].place(
+      at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
   }
 }
 
