@@ -2,7 +2,7 @@
 
 CONFIGURATION ?= Debug
 DERIVED_DATA_PATH ?= .build/Xcode
-TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 16,OS=latest
+TEST_DESTINATION ?= platform=iOS Simulator,name=iPhone 18 Pro Max,OS=latest
 
 XCODE_FLAGS = -project Pinto.xcodeproj -scheme Pinto \
 	-configuration "$(CONFIGURATION)" -derivedDataPath "$(DERIVED_DATA_PATH)" \
