@@ -57,7 +57,44 @@ final class PintoTests: XCTestCase {
     let content = blocks.map { String($0.text.characters) }.joined(separator: "\n")
     XCTAssertTrue(content.contains("ルートの数字色"))
     XCTAssertTrue(content.contains("左にスワイプ"))
+    XCTAssertTrue(content.contains("長押しして選択"))
+    XCTAssertTrue(content.contains("絞り込み"))
     XCTAssertTrue(content.contains("自動保存"))
+  }
+
+  func testLibraryFiltersMatchAnyTagInEachSelectedCategory() {
+    let filters = LibraryFilters(tags: ["カチ", "ガバ", "キョン"])
+    var content = WallContent(name: "テスト壁")
+    XCTAssertTrue(filters.isActive)
+    XCTAssertFalse(filters.matches(content, search: ""))
+    content.tags = ["ガバ"]
+    XCTAssertFalse(filters.matches(content, search: ""))
+    content.tags.insert("キョン")
+    XCTAssertTrue(filters.matches(content, search: ""))
+    content.tags = ["カチ", "キョン", "垂壁"]
+    XCTAssertTrue(filters.matches(content, search: ""))
+    content.tags = ["スローパー", "キョン"]
+    XCTAssertFalse(filters.matches(content, search: ""))
+  }
+
+  func testLibraryFiltersCombineExactGradesWithTextSearch() {
+    let filters = LibraryFilters(japaneseGrade: "1級", vGrade: "V1", tags: ["垂壁"])
+    var content = WallContent(name: "テスト壁", japaneseGrade: "1級", vGrade: "V1")
+    content.gymName = "Pinto Gym"
+    content.tags = ["垂壁"]
+
+    XCTAssertTrue(filters.matches(content, search: "pinto"))
+    XCTAssertFalse(filters.matches(content, search: "カチ"))
+    content.vGrade = "V10"
+    XCTAssertFalse(filters.matches(content, search: "pinto"))
+    content.vGrade = "V1"
+    content.japaneseGrade = "10級"
+    XCTAssertFalse(filters.matches(content, search: "pinto"))
+
+    let cleared = LibraryFilters()
+    XCTAssertFalse(cleared.isActive)
+    XCTAssertTrue(cleared.matches(content, search: "垂壁"))
+    XCTAssertTrue(cleared.matches(content, search: ""))
   }
 
   func testUserManualPreservesHeadingsListsAndInlineFormatting() throws {
@@ -555,6 +592,44 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(try files.read(files.url(for: wall.id)).content.name, "更新済み")
     try files.delete(wall.id)
     XCTAssertTrue(try files.list().isEmpty)
+  }
+
+  func testStoreDeletesOnlySelectedWalls() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { removeTestDirectory(directory) }
+    let store = WallStore()
+    store.load(directory: directory)
+    let first = try makeDocument()
+    let second = try makeDocument()
+    let unselected = try makeDocument()
+    for wall in [first, second, unselected] { try store.save(wall) }
+
+    store.delete([first.id, second.id])
+
+    XCTAssertEqual(store.walls, [unselected])
+    XCTAssertNil(store.errorMessage)
+    store.load(directory: directory)
+    XCTAssertEqual(store.walls, [unselected])
+  }
+
+  func testStoreReportsFailedDeletionWithoutBlockingOtherSelectedWalls() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { removeTestDirectory(directory) }
+    let store = WallStore()
+    store.load(directory: directory)
+    let saved = try makeDocument()
+    var missingFile = try makeDocument()
+    missingFile.content.name = "削除できなかった壁"
+    try store.save(saved)
+    try store.save(missingFile)
+    let files = try WallFiles(directory: directory)
+    try files.delete(missingFile.id)
+
+    store.delete([saved.id, missingFile.id])
+
+    XCTAssertEqual(store.walls, [missingFile])
+    XCTAssertTrue(try files.list().isEmpty)
+    XCTAssertTrue(try XCTUnwrap(store.errorMessage).contains(missingFile.content.name))
   }
 
   func testCorruptAndUnsupportedDocumentsAreNotOverwritten() throws {

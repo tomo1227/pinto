@@ -143,13 +143,24 @@ final class WallStore: ObservableObject {
     walls.insert(document, at: 0)
   }
 
-  func delete(_ id: UUID) {
-    do {
-      guard let files, ready else { throw CocoaError(.fileWriteUnknown) }
-      try files.delete(id)
-      walls.removeAll { $0.id == id }
-    } catch {
-      errorMessage = "壁を削除できませんでした。\n\(error.localizedDescription)"
+  func delete(_ ids: Set<UUID>) {
+    guard let files, ready else {
+      errorMessage = "壁を削除できませんでした。\n端末内の保存先を開けません。"
+      return
+    }
+    var deleted: Set<UUID> = []
+    var failures: [String] = []
+    for wall in walls where ids.contains(wall.id) {
+      do {
+        try files.delete(wall.id)
+        deleted.insert(wall.id)
+      } catch {
+        failures.append("\(wall.content.name): \(error.localizedDescription)")
+      }
+    }
+    walls.removeAll { deleted.contains($0.id) }
+    if !failures.isEmpty {
+      errorMessage = "削除できなかった壁があります。\n\(failures.joined(separator: "\n"))"
     }
   }
 }
