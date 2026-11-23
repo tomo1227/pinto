@@ -85,6 +85,45 @@ final class PintoTests: XCTestCase {
     XCTAssertThrowsError(try UserManual.blocks(markdown: ""))
   }
 
+  func testUserManualOutlineKeepsIntroVisibleAndNestsSubheadings() throws {
+    let blocks = try UserManual.blocks(
+      markdown: """
+        # タイトル
+
+        導入文
+
+        ## 編集
+
+        編集の説明
+
+        ### 操作
+
+        - 項目
+
+        ## 保存
+
+        ### 操作
+
+        保存の説明
+        """)
+    let outline = UserManual.outline(from: blocks)
+    func titles(_ entries: [UserManual.Entry]) -> [String] {
+      entries.map { String($0.block.text.characters) }
+    }
+
+    XCTAssertEqual(titles(outline), ["タイトル", "導入文", "編集", "保存"])
+    let editing = try XCTUnwrap(outline.first { $0.block.headingLevel == 2 })
+    let saving = try XCTUnwrap(outline.last)
+    XCTAssertEqual(titles(editing.children), ["編集の説明", "操作"])
+    XCTAssertEqual(titles(saving.children), ["操作"])
+    let editingSteps = try XCTUnwrap(editing.children.last)
+    let savingSteps = try XCTUnwrap(saving.children.first)
+    XCTAssertNotEqual(editingSteps.id, savingSteps.id)
+    XCTAssertEqual(titles(editingSteps.children), ["項目"])
+    XCTAssertEqual(editingSteps.children.first?.block.listMarker, "\u{2022}")
+    XCTAssertEqual(titles(savingSteps.children), ["保存の説明"])
+  }
+
   func testDocumentRoundTripPreservesAllEditorProperties() throws {
     var document = try makeDocument()
     var style = MarkStyle(color: "#7654A6", width: 7, outlineColor: "#FFFEFA", outlineWidth: 3)

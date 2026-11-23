@@ -1,6 +1,6 @@
-# Pinto for iPhone / iPad
+# Pinto for iPhone
 
-iOS / iPadOS 17 以上向けの SwiftUI + UIKit アプリです。サーバー・外部 DB・追加パッケージは必要ありません。
+iOS 17 以上の iPhone 向けの SwiftUI + UIKit アプリです。サーバー・外部 DB・追加パッケージは必要ありません。
 
 利用者向けの操作手順は [ユーザーマニュアル](./USER_GUIDE.md) を参照してください。アプリ内では壁一覧の右上の「？」から、通信なしで閲覧できます。
 
@@ -8,7 +8,7 @@ iOS / iPadOS 17 以上向けの SwiftUI + UIKit アプリです。サーバー�
 
 1. Mac の Xcode 15 以降で [Pinto.xcodeproj](./Pinto.xcodeproj) を開きます。
 2. `PintoApp.swift` を開き、右上の **Canvas** を表示して **Resume** を押すと、ライブラリ画面を確認できます。
-3. Scheme を **Pinto** にし、iPhone または iPad の Simulator を選択します。
+3. Scheme を **Pinto** にし、iPhone の Simulator を選択します。
 4. **Run（⌘R）** で起動します。
 5. 実機の場合は Pinto ターゲットの **Signing & Capabilities** で自分の Team を選択します。必要に応じて Bundle Identifier（初期値 `com.pinto.local`）を変更してください。
 
