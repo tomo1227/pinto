@@ -9,7 +9,7 @@ struct WallSettingsView: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("壁・課題") {
+        Section("課題") {
           TextField("名前", text: $content.name)
           Picker("日本グレード", selection: $content.japaneseGrade) {
             Text("未設定").tag("")
@@ -44,7 +44,7 @@ struct WallSettingsView: View {
           }
         }
       }
-      .navigationTitle("壁の設定").navigationBarTitleDisplayMode(.inline)
+      .navigationTitle("課題の設定").navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
         ToolbarItem(placement: .confirmationAction) {

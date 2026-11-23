@@ -50,7 +50,7 @@ struct EditorView: View {
             .frame(width: 44, height: 44)
         }
         .disabled(isSavingImage)
-        .accessibilityLabel("壁一覧に戻る")
+        .accessibilityLabel("課題一覧に戻る")
       }
       ToolbarItemGroup(placement: .topBarTrailing) {
         Button {
@@ -91,7 +91,7 @@ struct EditorView: View {
         } label: {
           Image(systemName: "gearshape")
         }
-        .accessibilityLabel("壁の設定")
+        .accessibilityLabel("課題の設定")
       }
     }
     .sheet(isPresented: $showSettings) {

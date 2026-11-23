@@ -14,7 +14,7 @@ enum PintoError: LocalizedError {
     switch self {
     case .invalidImage: return "画像を読み込めません。別の画像を選択してください。"
     case .unsupportedDocument: return "このデータ形式には対応していません。アプリの更新を確認してください。"
-    case .invalidDocument: return "壁データが破損しているため読み込めません。元のファイルは変更していません。"
+    case .invalidDocument: return "課題データが破損しているため読み込めません。元のファイルは変更していません。"
     case .exportFailed: return "PNG画像を作成できませんでした。"
     case .photoLibraryAccessDenied:
       return "写真への追加が許可されていません。設定アプリで Pinto の写真への追加を許可してください。"
@@ -145,7 +145,7 @@ final class WallStore: ObservableObject {
 
   func delete(_ ids: Set<UUID>) {
     guard let files, ready else {
-      errorMessage = "壁を削除できませんでした。\n端末内の保存先を開けません。"
+      errorMessage = "課題を削除できませんでした。\n端末内の保存先を開けません。"
       return
     }
     var deleted: Set<UUID> = []
@@ -160,7 +160,7 @@ final class WallStore: ObservableObject {
     }
     walls.removeAll { deleted.contains($0.id) }
     if !failures.isEmpty {
-      errorMessage = "削除できなかった壁があります。\n\(failures.joined(separator: "\n"))"
+      errorMessage = "削除できなかった課題があります。\n\(failures.joined(separator: "\n"))"
     }
   }
 }

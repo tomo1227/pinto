@@ -45,7 +45,7 @@ struct LibraryView: View {
       .background(Color(uiColor: .systemGroupedBackground))
       .navigationTitle(selectedIDs.map { "\($0.count)件選択中" } ?? "")
       .navigationBarTitleDisplayMode(.inline)
-      .searchable(text: $search, prompt: "壁名・グレード・タグ")
+      .searchable(text: $search, prompt: "課題名・グレード・タグ")
       .onChange(of: filtered.map(\.id)) { _, visibleIDs in
         selectedIDs?.formIntersection(visibleIDs)
       }
@@ -55,7 +55,7 @@ struct LibraryView: View {
             Button("キャンセル") { self.selectedIDs = nil }
           }
           ToolbarItem(placement: .topBarTrailing) {
-            Button("選択した壁を削除", systemImage: "trash", role: .destructive) {
+            Button("選択した課題を削除", systemImage: "trash", role: .destructive) {
               pendingDeletion = selectedIDs
             }
             .labelStyle(.iconOnly)
@@ -92,7 +92,7 @@ struct LibraryView: View {
             } label: {
               Image(systemName: "plus")
             }
-            .disabled(!store.ready).accessibilityLabel("壁・課題を登録")
+            .disabled(!store.ready).accessibilityLabel("課題を登録")
           }
         }
       }
@@ -100,7 +100,7 @@ struct LibraryView: View {
         if let document = store.walls.first(where: { $0.id == id }) {
           EditorDestination(document: document)
         } else {
-          ContentUnavailableView("壁が見つかりません", systemImage: "photo")
+          ContentUnavailableView("課題が見つかりません", systemImage: "photo")
         }
       }
       .sheet(isPresented: $registering) {
@@ -123,7 +123,7 @@ struct LibraryView: View {
         titleVisibility: .visible,
         presenting: pendingDeletion
       ) { ids in
-        Button("壁と編集データを削除", role: .destructive) {
+        Button("課題と編集データを削除", role: .destructive) {
           store.delete(ids)
           if let selectedIDs {
             let remaining = selectedIDs.intersection(store.walls.map(\.id))
@@ -159,16 +159,14 @@ struct LibraryView: View {
         }
       } else if store.walls.isEmpty {
         ContentUnavailableView {
-          Label("壁を登録しよう", systemImage: "photo.badge.plus")
-        } description: {
-          Text("壁の写真にホールド・ルート・文字を書き込めます。\nすべてのデータはこの端末だけに保存されます。")
+          Label("ボルタリングの課題を登録しよう", systemImage: "photo.badge.plus")
         } actions: {
-          Button("壁・課題を登録") { registering = true }
+          Button("課題を登録") { registering = true }
         }
       } else if filtered.isEmpty {
         if filters.isActive {
           ContentUnavailableView {
-            Label("条件に合う壁がありません", systemImage: "line.3.horizontal.decrease.circle")
+            Label("条件に合う課題がありません", systemImage: "line.3.horizontal.decrease.circle")
           } description: {
             Text("検索語や絞り込み条件を見直してください。")
           } actions: {
@@ -194,7 +192,7 @@ struct LibraryView: View {
     {
       return "「\(document.content.name)」を端末から削除しますか？"
     }
-    return "\(pendingDeletion.count)件の壁を端末から削除しますか？"
+    return "\(pendingDeletion.count)件の課題を端末から削除しますか？"
   }
 
   private func wallItem(_ document: WallDocument) -> some View {
@@ -584,7 +582,7 @@ struct NewWallView: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section("壁・課題の名前") { TextField("例: 11月の壁・赤の3級", text: $name) }
+        Section("課題の名前") { TextField("例: 11月の課題・赤の3級", text: $name) }
         Section("壁の写真") {
           if let image {
             Image(uiImage: image).resizable().scaledToFit().frame(maxHeight: 300)
@@ -612,7 +610,7 @@ struct NewWallView: View {
         }
         if busy { ProgressView("画像を読み込み中…") }
       }
-      .navigationTitle("壁・課題を登録").navigationBarTitleDisplayMode(.inline)
+      .navigationTitle("課題を登録").navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
         ToolbarItem(placement: .confirmationAction) {

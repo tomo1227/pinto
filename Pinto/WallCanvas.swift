@@ -83,7 +83,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     contentMode = .redraw
     clipsToBounds = true
     isMultipleTouchEnabled = true
-    accessibilityLabel = "壁の編集キャンバス"
+    accessibilityLabel = "課題の編集キャンバス"
     accessibilityHint =
       "タップして配置。ドラッグして移動。選択枠の四角い点をドラッグしてサイズ変更。選択物を長押ししてゴミ箱へドラッグすると削除。選択中は2本指でもサイズ変更。キャンバスを2本指で移動・拡大。"
     trashTarget.contentMode = .center
