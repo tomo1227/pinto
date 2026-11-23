@@ -161,4 +161,7 @@ apps/worker/public/*
 apps/web/test-results/
 apps/web/playwright-report/
 
-swift
+# Xcode
+swift/**/xcuserdata/
+swift/DerivedData/
+.build/

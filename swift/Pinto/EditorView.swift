@@ -1,0 +1,518 @@
+import SwiftUI
+
+@MainActor
+struct EditorView: View {
+    @StateObject var model: EditorModel
+    @EnvironmentObject private var store: WallStore
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var showSettings = false
+    @State private var showReset = false
+    @State private var showLeave = false
+    @State private var leaveSaveError = ""
+    @State private var status: String?
+    @State private var isSavingImage = false
+    @State private var shareSheet: ImageShareSheet?
+    @State private var editorDockExpanded = true
+    @FocusState private var textInputFocused: Bool
+
+    var body: some View {
+        ZStack {
+            WallCanvas(model: model)
+                .overlay(alignment: .topLeading) {
+                    if let status {
+                        Text(status).font(.caption).padding(10)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8)).padding(8)
+                    }
+                }
+                .allowsHitTesting(!model.textPrompt)
+            if model.textPrompt {
+                textEntryOverlay
+            }
+        }
+            .background(Color(uiColor: .systemBackground))
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if !model.textPrompt { editorDock }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden()
+            .toolbar(model.textPrompt ? .hidden : .visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(model.content.name + (model.dirty ? " *" : ""))
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .foregroundStyle(.primary)
+                }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: leaveEditor) {
+                        Image(systemName: "chevron.left")
+                            .frame(width: 44, height: 44)
+                    }
+                    .disabled(isSavingImage)
+                    .accessibilityLabel("壁一覧に戻る")
+                }
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { model.undo() } label: { Image(systemName: "arrow.uturn.backward") }
+                        .disabled(!model.canUndo).accessibilityLabel("元に戻す")
+                    Button { model.redo() } label: { Image(systemName: "arrow.uturn.forward") }
+                        .disabled(!model.canRedo).accessibilityLabel("やり直す")
+                    Button(action: saveToPhotos) {
+                        if isSavingImage {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "square.and.arrow.down")
+                        }
+                    }
+                    .disabled(isSavingImage)
+                    .accessibilityLabel("画像を写真ライブラリに保存")
+                    Button {
+                        shareSheet = ImageShareSheet(
+                            image: SceneRenderer.render(image: model.image, content: model.content),
+                            onError: { error in
+                                model.errorMessage = "画像を共有できませんでした。\n\(error.localizedDescription)"
+                            }
+                        )
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(isSavingImage)
+                    .accessibilityLabel("画像を共有")
+                    Button { showSettings = true } label: { Image(systemName: "gearshape") }
+                        .accessibilityLabel("壁の設定")
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                WallSettingsView(content: model.content) { updated in
+                    model.change { $0 = updated }
+                }
+            }
+            .sheet(item: $shareSheet) { $0 }
+            .background {
+                Color.clear
+                    .alert("編集をすべてリセットしますか？", isPresented: $showReset) {
+                        Button("全リセット", role: .destructive) {
+                            model.change { $0.holds = []; $0.texts = []; $0.route = [] }
+                            model.selection = nil
+                        }
+
+                        Button("キャンセル", role: .cancel) {}
+                    } message: {
+                        Text("ホールド・文字・ルートをすべて削除します。\n壁の写真と設定は残ります。操作後は「元に戻す」で取り消せます。")
+                    }
+                    .tint(Color(uiColor: .label))
+            }
+            .confirmationDialog("未保存の編集があります", isPresented: $showLeave, titleVisibility: .visible) {
+                Button("保存して戻る") { if save() { dismiss() } }
+                Button("変更を破棄して戻る", role: .destructive) { dismiss() }
+                Button("編集を続ける", role: .cancel) {}
+            } message: {
+                Text("自動保存できませんでした。編集内容はこの画面に残っています。\n\(leaveSaveError)")
+            }
+            .alert("処理できませんでした", isPresented: Binding(
+                get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } }
+            )) { Button("閉じる", role: .cancel) {} } message: { Text(model.errorMessage ?? "") }
+            .onChange(of: model.tool) { _, _ in model.selection = nil }
+            .onChange(of: model.content) { _, _ in status = nil }
+            .task(id: model.content) {
+                do {
+                    try await model.autosave(to: store)
+                } catch is CancellationError {
+                } catch {
+                    reportSaveFailure(error)
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active, model.dirty { save() }
+            }
+    }
+
+    private func leaveEditor() {
+        do {
+            if model.dirty { try model.save(to: store) }
+            dismiss()
+        } catch {
+            leaveSaveError = error.localizedDescription
+            showLeave = true
+        }
+    }
+
+    private var textEntryOverlay: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Button(action: cancelTextEntry) {
+                    Image(systemName: "xmark")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .frame(width: 44, height: 44)
+                        .background(.regularMaterial, in: Circle())
+                }
+                .accessibilityLabel("テキスト編集をキャンセル")
+                Spacer()
+                Button(action: finishTextEntry) {
+                    Text("完了")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(.regularMaterial, in: Capsule())
+                }
+            }
+
+            Spacer(minLength: 16)
+            TextField("文字を入力", text: $model.textDraft, axis: .vertical)
+                .font(textPreviewFont)
+                .foregroundStyle(Color(uiColor: UIColor(hex: model.activeStyle.color)))
+                .multilineTextAlignment(.center)
+                .lineLimit(1...5)
+                .textFieldStyle(.plain)
+                .submitLabel(.done)
+                .focused($textInputFocused)
+                .onSubmit(finishTextEntry)
+                .frame(maxWidth: .infinity)
+            Spacer(minLength: 16)
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 10) {
+                    colorControls
+                    styleControls
+                }
+                .padding(12)
+            }
+            .frame(maxHeight: 200)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background { Color.black.opacity(0.76).ignoresSafeArea() }
+        .preferredColorScheme(.dark)
+        .onAppear { textInputFocused = true }
+    }
+
+    private var textPreviewFont: Font {
+        var style = model.activeStyle
+        style.fontSize = min(56, max(18, style.fontSize))
+        return Font(SceneRenderer.font(style, unit: 1))
+    }
+
+    private func cancelTextEntry() {
+        textInputFocused = false
+        model.textPrompt = false
+    }
+
+    private func finishTextEntry() {
+        model.commitText()
+        textInputFocused = false
+        model.textPrompt = false
+    }
+
+    private var editorDock: some View {
+        VStack(spacing: 0) {
+            if editorDockExpanded {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        colorControls
+                        styleControls
+                        if model.tool == .route {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack {
+                                    Text("ルートの数字サイズ")
+                                    Spacer()
+                                    Text("\(Int(model.content.effectiveRouteNumberSize))")
+                                        .monospacedDigit()
+                                        .foregroundStyle(.secondary)
+                                }
+                                Slider(value: Binding(
+                                    get: { model.content.effectiveRouteNumberSize },
+                                    set: { value in model.change { $0.routeNumberSize = value } }
+                                ), in: 6...60, step: 1)
+                                .accessibilityLabel("ルートの数字サイズ")
+                            }
+                            HStack {
+                                Button {
+                                    model.change { $0.showLines.toggle() }
+                                } label: {
+                                    Label("ルート線", systemImage: model.content.showLines ? "eye" : "eye.slash")
+                                }
+                                .accessibilityValue(model.content.showLines ? "表示" : "非表示")
+                                Spacer()
+                                Button {
+                                    model.change { $0.showRouteNumbers = !$0.effectiveShowRouteNumbers }
+                                } label: {
+                                    Label("ルートの数字", systemImage: model.content.effectiveShowRouteNumbers ? "eye" : "eye.slash")
+                                }
+                                .accessibilityValue(model.content.effectiveShowRouteNumbers ? "表示" : "非表示")
+                            }
+                        }
+                        HStack {
+                            Spacer()
+                            Button(role: .destructive) { model.removeSelection() } label: {
+                                Label("削除", systemImage: "trash")
+                            }
+                            .disabled(model.selection == nil)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                }
+                .frame(maxHeight: 240)
+            }
+            Divider()
+            tools
+        }
+        .background(.bar)
+    }
+
+    private func toggleEditorDock() {
+        setEditorDockExpanded(!editorDockExpanded)
+    }
+
+    private func setEditorDockExpanded(_ expanded: Bool) {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            editorDockExpanded = expanded
+        }
+    }
+
+    private var colorControls: some View {
+        HStack(spacing: 8) {
+            ForEach(WallCatalog.colors, id: \.self) { hex in
+                Button {
+                    model.updateStyle { $0.color = hex }
+                } label: {
+                    Circle().fill(Color(uiColor: UIColor(hex: hex)))
+                        .frame(width: 26, height: 26)
+                        .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
+                        .overlay(Circle().stroke(model.activeStyle.color == hex ? Color.accentColor : .clear, lineWidth: 2))
+                }
+                .accessibilityLabel(colorLabel(hex))
+                .accessibilityAddTraits(model.activeStyle.color == hex ? .isSelected : [])
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var styleControls: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if model.editingText {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(TextFamily.allCases, id: \.self) { family in
+                            Button {
+                                model.updateStyle { $0.fontFamily = family }
+                            } label: {
+                                Text(family.label)
+                                    .font(fontOptionPreview(family))
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        model.activeStyle.fontFamily == family
+                                            ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
+                                        in: Capsule()
+                                    )
+                                    .overlay(Capsule().strokeBorder(
+                                        model.activeStyle.fontFamily == family ? Color.accentColor : .clear,
+                                        lineWidth: 2
+                                    ))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("フォント: \(family.label)")
+                            .accessibilityAddTraits(model.activeStyle.fontFamily == family ? .isSelected : [])
+                        }
+                    }
+                }
+                HStack(spacing: 12) {
+                    Toggle(isOn: styleBinding(\.isBold)) {
+                        Text("B").font(.title3.bold())
+                    }
+                    .accessibilityLabel("太字")
+                    Toggle(isOn: styleBinding(\.isItalic)) {
+                        Text("I").font(.title3.italic())
+                    }
+                    .accessibilityLabel("斜体")
+                }
+                .toggleStyle(.button)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text("文字サイズ")
+                        Spacer()
+                        Text("\(Int(model.activeStyle.fontSize))")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: styleBinding(\.fontSize), in: 6...120, step: 1)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text("線の太さ")
+                        Spacer()
+                        Text("\(Int(model.activeStyle.width))")
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(value: styleBinding(\.width), in: 1...20, step: 1)
+                }
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text("枠線の太さ")
+                    Spacer()
+                    Text("\(Int(model.activeStyle.outlineWidth))")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: styleBinding(\.outlineWidth), in: 0...12, step: 1)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("枠線の色").font(.caption)
+                HStack(spacing: 8) {
+                    ForEach(WallCatalog.colors, id: \.self) { hex in
+                        Button {
+                            styleBinding(\.outlineColor).wrappedValue = hex
+                        } label: {
+                            Circle().fill(Color(uiColor: UIColor(hex: hex)))
+                                .frame(width: 26, height: 26)
+                                .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
+                                .overlay(Circle().stroke(
+                                    model.activeStyle.outlineColor == hex ? Color.accentColor : .clear,
+                                    lineWidth: 2
+                                ))
+                        }
+                        .accessibilityLabel("枠線の色: \(colorLabel(hex))")
+                        .accessibilityAddTraits(model.activeStyle.outlineColor == hex ? .isSelected : [])
+                    }
+                }
+            }
+        }
+    }
+
+    private func fontOptionPreview(_ family: TextFamily) -> Font {
+        var style = model.activeStyle
+        style.fontFamily = family
+        style.fontSize = 17
+        return Font(SceneRenderer.font(style, unit: 1))
+    }
+
+    private var tools: some View {
+        HStack(spacing: 0) {
+            ForEach(EditorTool.allCases, id: \.self) { tool in
+                let label = VStack(spacing: 4) {
+                    Image(systemName: tool.icon).font(.title3)
+                    Text(tool.title).font(.caption2)
+                }
+                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                .foregroundStyle(model.tool == tool ? Color.accentColor : .secondary)
+                .background(model.tool == tool ? Color.accentColor.opacity(0.1) : .clear)
+                .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
+
+                if tool == .eraser {
+                    label
+                        .contentShape(Rectangle())
+                        .gesture(
+                            LongPressGesture(minimumDuration: 0.6)
+                                .exclusively(before: TapGesture())
+                                .onEnded { action in
+                                    switch action {
+                                    case .first: showReset = true
+                                    case .second: selectTool(tool)
+                                    }
+                                }
+                        )
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(tool.title)
+                        .accessibilityHint("長押しで編集を全リセット")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityAction { selectTool(tool) }
+                        .accessibilityAction(named: Text("編集を全リセット")) {
+                            showReset = true
+                        }
+                } else {
+                    Button { selectTool(tool) } label: { label }
+                }
+            }
+        }
+    }
+
+    private func selectTool(_ tool: EditorTool) {
+        let isCurrentTool = model.tool == tool
+        model.tool = tool
+        if isCurrentTool {
+            toggleEditorDock()
+        }
+    }
+
+    private func styleBinding<T>(_ keyPath: WritableKeyPath<MarkStyle, T>) -> Binding<T> {
+        Binding(get: { model.activeStyle[keyPath: keyPath] },
+                set: { value in model.updateStyle { $0[keyPath: keyPath] = value } })
+    }
+
+    private func radiusBinding(_ index: Int, _ keyPath: WritableKeyPath<Hold, Double>) -> Binding<Double> {
+        let id = model.content.holds[index].id
+        return Binding(get: {
+            model.content.holds.first { $0.id == id }?[keyPath: keyPath] ?? 0.035
+        }, set: { value in
+            model.change { content in
+                if let current = content.holds.firstIndex(where: { $0.id == id }) {
+                    content.holds[current][keyPath: keyPath] = value
+                }
+            }
+        })
+    }
+
+    @discardableResult
+    private func save() -> Bool {
+        guard model.dirty else { return true }
+        do {
+            try model.save(to: store)
+            status = "端末内に保存しました"
+            return true
+        } catch {
+            reportSaveFailure(error)
+            return false
+        }
+    }
+
+    private func reportSaveFailure(_ error: Error) {
+        model.errorMessage = "保存できませんでした。編集内容はこの画面に残っています。\n\(error.localizedDescription)"
+    }
+
+    private func saveToPhotos() {
+        guard !isSavingImage else { return }
+        guard save() else { return }
+        isSavingImage = true
+        status = "写真ライブラリに保存中…"
+        Task {
+            defer { isSavingImage = false }
+            do {
+                try await model.saveImageToPhotos()
+                status = "写真ライブラリに画像を保存しました"
+            } catch {
+                status = nil
+                model.errorMessage = "編集データは端末内に保存しましたが、写真ライブラリに画像を保存できませんでした。\n\(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func colorLabel(_ hex: String) -> String {
+        let names = ["黒", "白", "赤", "オレンジ", "黄", "緑", "青", "紫"]
+        return names[WallCatalog.colors.firstIndex(of: hex) ?? 0]
+    }
+}
+
+@MainActor
+private struct ImageShareSheet: UIViewControllerRepresentable, Identifiable {
+    let id = UUID()
+    let image: UIImage
+    let onError: @MainActor (Error) -> Void
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, _, _, error in
+            if let error {
+                Task { @MainActor in onError(error) }
+            }
+        }
+        return controller
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}

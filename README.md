@@ -2,6 +2,10 @@
 
 クライミングウォールの写真をもとに、ホールドとルートを作成・管理するローカルファーストのWebアプリです。壁画像、編集内容、設定はブラウザーのIndexedDBに保存されます。Discord連携を使う場合のみ、Webhook送信をローカルのCloudflare Worker経由で行います。
 
+## iPhone / iPad アプリ
+
+[swift/Pinto.xcodeproj](./swift/Pinto.xcodeproj) を Xcode で開くと、iOS / iPadOS 17 以上向けのネイティブアプリを実行できます。壁・課題登録と editor に絞り、画像と編集内容は端末内のファイルに保存します。SNS・ログイン・外部 DB・ツールページ・クライマープロフィール・ジム検索は含みません。セットアップと操作は [Swift 版の README](./swift/README.md) を参照してください。
+
 ## 必要環境
 
 - Node.js 26以上（`.node-version`に記載）

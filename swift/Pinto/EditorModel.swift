@@ -1,0 +1,243 @@
+import SwiftUI
+import UIKit
+
+enum EditorTool: String, CaseIterable {
+    case pan, hold, route, text, eraser
+
+    var title: String {
+        switch self {
+        case .pan: return "画像を移動"
+        case .hold: return "ホールド"
+        case .route: return "ルート"
+        case .text: return "文字"
+        case .eraser: return "消去"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .pan: return "hand.draw"
+        case .hold: return "circle"
+        case .route: return "point.topleft.down.to.point.bottomright.curvepath"
+        case .text: return "textformat"
+        case .eraser: return "eraser"
+        }
+    }
+}
+
+enum EditorSelection: Equatable {
+    case hold(UUID)
+    case text(UUID)
+}
+
+@MainActor
+final class EditorModel: ObservableObject {
+    @Published var content: WallContent
+    @Published var tool: EditorTool = .hold
+    @Published var selection: EditorSelection?
+    @Published var errorMessage: String?
+    @Published var textPrompt = false
+    @Published var textDraft = ""
+    @Published private(set) var history = EditHistory<WallContent>()
+    @Published private(set) var savedContent: WallContent
+    @Published private(set) var viewportRevision = 0
+    let image: UIImage
+    private(set) var document: WallDocument
+    private var gestureStart: WallContent?
+    private var textPosition = WallPoint(x: 0.5, y: 0.5)
+    private var editingTextID: UUID?
+
+    init(document: WallDocument) throws {
+        guard let image = UIImage(data: document.imageData) else { throw PintoError.invalidImage }
+        self.document = document
+        self.image = image
+        self.content = document.content
+        self.savedContent = document.content
+    }
+
+    var dirty: Bool { content != savedContent }
+    var canUndo: Bool { !history.past.isEmpty }
+    var canRedo: Bool { !history.future.isEmpty }
+
+    func change(_ update: (inout WallContent) -> Void) {
+        let before = content
+        update(&content)
+        history.record(before, replacing: content)
+    }
+
+    func beginGesture() { gestureStart = content }
+
+    func endGesture() {
+        if let before = gestureStart { history.record(before, replacing: content) }
+        gestureStart = nil
+    }
+
+    func cancelGesture() {
+        if let before = gestureStart { content = before }
+        gestureStart = nil
+    }
+
+    func undo() {
+        if let previous = history.undo(content) { content = previous; selection = nil }
+    }
+
+    func redo() {
+        if let next = history.redo(content) { content = next; selection = nil }
+    }
+
+    func save(to store: WallStore) throws {
+        var next = document
+        next.content = content
+        next.updatedAt = Date()
+        try store.save(next)
+        document = next
+        savedContent = content
+    }
+
+    func autosave(to store: WallStore) async throws {
+        guard dirty else { return }
+        try await Task.sleep(for: .milliseconds(500))
+        try Task.checkCancellation()
+        if dirty { try save(to: store) }
+    }
+
+    func saveImageToPhotos(using saveImage: (Data) async throws -> Void = PhotoLibrary.savePNG) async throws {
+        let rendered = SceneRenderer.render(image: image, content: content)
+        guard let data = rendered.pngData() else { throw PintoError.exportFailed }
+        try await saveImage(data)
+    }
+
+    func resetViewport() { viewportRevision += 1 }
+
+    func addHold(at position: WallPoint) {
+        do {
+            let detected = content.autoDetectHolds
+                ? try HoldDetection.detect(image: image, position: position, style: content.holdStyle)
+                : nil
+            let radius = min(image.size.width, image.size.height) * 0.035
+            let hold = detected ?? Hold(position: position, radiusX: radius / image.size.width,
+                                        radiusY: radius / image.size.height, style: content.holdStyle)
+            change { $0.holds.append(hold) }
+            selection = .hold(hold.id)
+        } catch {
+            errorMessage = "ホールドの輪郭を検出できませんでした。\n\(error.localizedDescription)"
+        }
+    }
+
+    func appendToRoute(_ id: UUID) {
+        guard content.holds.contains(where: { $0.id == id }) else { return }
+        change { content in
+            if content.route.contains(id) {
+                content.route.removeAll { $0 == id }
+            } else {
+                content.appendToRoute(id)
+            }
+        }
+        selection = .hold(id)
+    }
+
+    func removeSelection() {
+        guard let selection else { return }
+        change { content in
+            switch selection {
+            case .hold(let id): content.removeHold(id)
+            case .text(let id): content.texts.removeAll { $0.id == id }
+            }
+        }
+        self.selection = nil
+    }
+
+    func promptText(at position: WallPoint, id: UUID? = nil) {
+        editingTextID = id
+        textPosition = position
+        textDraft = id.flatMap { id in content.texts.first { $0.id == id }?.text } ?? ""
+        textPrompt = true
+    }
+
+    func commitText() {
+        let text = textDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty {
+            if let id = editingTextID {
+                change { $0.texts.removeAll { $0.id == id } }
+                if selection == .text(id) { selection = nil }
+            }
+        } else if let id = editingTextID, let index = content.texts.firstIndex(where: { $0.id == id }) {
+            change { $0.texts[index].text = text }
+            selection = .text(id)
+        } else {
+            let annotation = WallText(position: textPosition, text: text, style: content.textStyle)
+            change { $0.texts.append(annotation) }
+            selection = .text(annotation.id)
+        }
+    }
+
+    var activeStyle: MarkStyle {
+        if tool == .route { return content.lineStyle }
+        if case .text(let id) = selection, let text = content.texts.first(where: { $0.id == id }) {
+            return text.style
+        }
+        if case .hold(let id) = selection, let hold = content.holds.first(where: { $0.id == id }) {
+            return hold.style
+        }
+        return tool == .text ? content.textStyle : content.holdStyle
+    }
+
+    var editingText: Bool {
+        if tool == .route { return false }
+        if case .text = selection { return true }
+        return tool == .text && selection == nil
+    }
+
+    func updateStyle(_ update: (inout MarkStyle) -> Void) {
+        var style = activeStyle
+        update(&style)
+        change { content in
+            if tool == .route {
+                content.lineStyle = style
+            } else if case .text(let id) = selection,
+                      let index = content.texts.firstIndex(where: { $0.id == id }) {
+                content.texts[index].style = style
+                content.textStyle = style
+            } else if case .hold(let id) = selection,
+                      let index = content.holds.firstIndex(where: { $0.id == id }) {
+                content.holds[index].style = style
+                content.holdStyle = style
+            } else if tool == .text {
+                content.textStyle = style
+            } else {
+                content.holdStyle = style
+            }
+        }
+    }
+
+    func moveSelection(to point: WallPoint) {
+        switch selection {
+        case .hold(let id):
+            if let index = content.holds.firstIndex(where: { $0.id == id }) {
+                content.holds[index].position = point.clamped()
+            }
+        case .text(let id):
+            if let index = content.texts.firstIndex(where: { $0.id == id }) {
+                content.texts[index].position = point.clamped()
+            }
+        case nil: break
+        }
+    }
+
+    func resizeSelection(x: Double, y: Double, from original: WallContent) {
+        switch selection {
+        case .hold(let id):
+            if let old = original.holds.first(where: { $0.id == id }),
+               let index = content.holds.firstIndex(where: { $0.id == id }) {
+                content.holds[index].radiusX = min(0.5, max(1 / (image.size.width * image.scale), old.radiusX * x))
+                content.holds[index].radiusY = min(0.5, max(1 / (image.size.height * image.scale), old.radiusY * y))
+            }
+        case .text(let id):
+            if let old = original.texts.first(where: { $0.id == id }),
+               let index = content.texts.firstIndex(where: { $0.id == id }) {
+                content.texts[index].style.fontSize = min(120, max(6, old.style.fontSize * max(x, y)))
+            }
+        case nil: break
+        }
+    }
+}
