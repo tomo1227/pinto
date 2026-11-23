@@ -8,8 +8,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
+  <header class="site-header">
     <nav aria-label="サイト内ナビゲーション">
+      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"></span>Pinto</a>
       <a href="./" aria-current="page">サポート</a>
       <a href="updates.html#news">お知らせ</a>
       <a href="updates.html#releases">リリースノート</a>
@@ -17,25 +18,44 @@
     </nav>
   </header>
   <main>
-    <h1>Pinto サポート</h1>
-    <p>Pinto は、壁の写真にホールドや登る順番を書き込み、ボルダリングの課題を作成・共有できる iPhone アプリです。</p>
+    <section class="hero" aria-labelledby="page-title">
+      <p class="eyebrow">サポートセンター</p>
+      <h1 id="page-title">Pinto サポート</h1>
+      <p>壁の写真から、オリジナルのボルダリング課題を。Pinto は、ホールドや登る順番を書き込んで、課題を作成・共有できる iPhone アプリです。</p>
+      <div class="actions">
+        <a class="button primary" href="#guide">使い方を見る</a>
+        <a class="button" href="updates.html#news">お知らせを見る</a>
+      </div>
+    </section>
 
-    <h2>使い方</h2>
-    <p>アプリ内では、課題一覧の右上にある「？」からユーザーマニュアルをオフラインで読めます。ウェブでも <a href="https://github.com/tomo1227/pinto/blob/main/USER_GUIDE.md">Pinto ユーザーマニュアル</a>をご覧いただけます。</p>
+    <div class="support-grid">
+      <section class="card" aria-labelledby="guide">
+        <h2 id="guide">使い方</h2>
+        <p>アプリ内では、課題一覧の右上にある「？」からユーザーマニュアルをオフラインで読めます。</p>
+        <a href="https://github.com/tomo1227/pinto/blob/main/USER_GUIDE.md">ウェブ版のユーザーマニュアルを読む</a>
+      </section>
+      <section class="card" aria-labelledby="contact">
+        <h2 id="contact">お問い合わせ</h2>
+        <p>使い方の質問、不具合の報告、機能のご要望は <a href="https://github.com/tomo1227/pinto/issues">Pinto の GitHub Issues</a> へ。投稿には GitHub アカウントが必要です。</p>
+        <p class="small">不具合の報告には、Pinto と iOS のバージョン、何をしたときに何が起きたかを添えてください。投稿は公開されるため、個人情報や非公開の写真は添付しないでください。</p>
+      </section>
+    </div>
 
-    <h2>よくある質問</h2>
-    <dl>
-      <dt>カメラで撮影できない、または画像を保存できない</dt>
-      <dd>iPhone の「設定」で Pinto のカメラや写真へのアクセス許可を確認してください。</dd>
-      <dt>課題を仲間に送りたい</dt>
-      <dd>編集画面上部の共有ボタンから、課題を画像としてメッセージや AirDrop などで送れます。</dd>
-      <dt>保存した画像から課題を再編集できますか？</dt>
-      <dd>写真ライブラリに保存した画像には編集データが含まれません。再編集するには Pinto の課題一覧から元の課題を開いてください。</dd>
-    </dl>
-
-    <h2>お問い合わせ</h2>
-    <p>不具合の報告、使い方の質問、機能のご要望は <a href="https://github.com/tomo1227/pinto/issues">Pinto の GitHub Issues</a> へお寄せください。投稿には GitHub アカウントが必要です。</p>
-    <p>不具合の報告には、Pinto と iOS のバージョン、何をしたときに何が起きたかを添えてください。投稿は公開されるため、個人情報や公開したくない写真は添付しないでください。</p>
+    <section class="card faq" aria-labelledby="faq">
+      <h2 id="faq">よくある質問</h2>
+      <details>
+        <summary>カメラで撮影できない、または画像を保存できない</summary>
+        <p>iPhone の「設定」で Pinto のカメラや写真へのアクセス許可を確認してください。</p>
+      </details>
+      <details>
+        <summary>課題を仲間に送りたい</summary>
+        <p>編集画面上部の共有ボタンから、課題を画像としてメッセージや AirDrop などで送れます。</p>
+      </details>
+      <details>
+        <summary>保存した画像から課題を再編集できますか？</summary>
+        <p>写真ライブラリに保存した画像には編集データが含まれません。再編集するには Pinto の課題一覧から元の課題を開いてください。</p>
+      </details>
+    </section>
   </main>
 </body>
 </html>

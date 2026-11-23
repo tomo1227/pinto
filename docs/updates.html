@@ -8,8 +8,9 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
+  <header class="site-header">
     <nav aria-label="サイト内ナビゲーション">
+      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"></span>Pinto</a>
       <a href="./">サポート</a>
       <a href="#news">お知らせ</a>
       <a href="#releases">リリースノート</a>
@@ -17,23 +18,33 @@
     </nav>
   </header>
   <main>
-    <h1>お知らせとリリースノート</h1>
-    <section aria-labelledby="news">
+    <section class="hero" aria-labelledby="page-title">
+      <p class="eyebrow">Pinto の更新情報</p>
+      <h1 id="page-title">お知らせと<wbr>リリースノート</h1>
+      <p>サポートに関するご案内と、アプリのバージョンごとの変更点をまとめています。</p>
+      <div class="actions">
+        <a class="button primary" href="#news">お知らせ</a>
+        <a class="button" href="#releases">リリースノート</a>
+      </div>
+    </section>
+    <section class="entries" aria-labelledby="news">
       <h2 id="news">お知らせ</h2>
-      <article>
+      <article class="card">
+        <p class="badge">サイト情報</p>
         <h3>サポートサイトを開設しました</h3>
         <p><a href="./">Pinto サポート</a>で使い方、よくある質問、お問い合わせ先を確認できます。アプリに関するお知らせや更新内容はこのページでご案内します。</p>
       </article>
     </section>
-    <section aria-labelledby="releases">
+    <section class="entries" aria-labelledby="releases">
       <h2 id="releases">リリースノート</h2>
-      <article>
-        <h3 id="version-1-0">バージョン 1.0 — 初版の主な機能</h3>
-        <ul>
-          <li>壁の写真を撮影するか、写真ライブラリやファイルから選んで課題を作成できます。</li>
-          <li>ホールドに印を付け、登る順番を線と番号で示せます。スタートやゴール、ムーブのヒントも文字で書き込めます。</li>
-          <li>課題名、グレード、タグで整理し、一覧から検索・絞り込みができます。</li>
-          <li>完成した課題は画像として保存・共有できます。編集内容は端末内に自動保存されます。</li>
+      <article class="card">
+        <p class="badge version">初版</p>
+        <h3 id="version-1-0">バージョン 1.0</h3>
+        <ul class="feature-list">
+          <li><strong>課題を作成</strong>壁の写真を撮影するか、写真ライブラリやファイルから読み込みます。</li>
+          <li><strong>ルートを書き込む</strong>ホールドに印を付け、登る順番を線と番号で表示。スタートやゴールに文字も添えられます。</li>
+          <li><strong>課題を整理</strong>課題名、グレード、タグで一覧から検索・絞り込みができます。</li>
+          <li><strong>保存・共有</strong>完成した課題は画像として保存・共有でき、編集内容は端末内に自動保存されます。</li>
         </ul>
       </article>
     </section>
