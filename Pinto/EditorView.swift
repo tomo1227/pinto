@@ -15,6 +15,7 @@ struct EditorView: View {
   @State private var shareSheet: ImageShareSheet?
   @State private var editorDockExpanded = true
   @FocusState private var textInputFocused: Bool
+  private let controlLabelWidth: CGFloat = 104
 
   var body: some View {
     ZStack {
@@ -196,7 +197,7 @@ struct EditorView: View {
       Spacer(minLength: 16)
       ScrollView(.vertical, showsIndicators: false) {
         VStack(alignment: .leading, spacing: 10) {
-          colorControls
+          textColorControls
           styleControls
         }
         .padding(12)
@@ -233,11 +234,30 @@ struct EditorView: View {
       if editorDockExpanded {
         ScrollView(.vertical, showsIndicators: false) {
           VStack(alignment: .leading, spacing: 10) {
-            colorControls
+            if model.tool == .route {
+              colorControls(title: "線の色")
+            } else if model.editingText {
+              textColorControls
+            } else {
+              HStack(spacing: 8) {
+                if model.tool == .hold {
+                  holdShapePicker
+                    .frame(width: 76)
+                    .frame(width: controlLabelWidth, alignment: .leading)
+                }
+                colorControls()
+              }
+            }
             styleControls
             if model.tool == .route {
               VStack(alignment: .leading, spacing: 8) {
-                Text("ルートの数字色")
+                if let color = model.content.routeNumberColor {
+                  colorPalette(selectedColor: color, title: "ルートの数字色") { hex in
+                    model.change { $0.routeNumberColor = hex }
+                  }
+                } else {
+                  controlLabel("ルートの数字色")
+                }
                 Toggle(
                   "ホールドと同じ色",
                   isOn: Binding(
@@ -246,28 +266,14 @@ struct EditorView: View {
                       model.change { $0.routeNumberColor = sameColor ? nil : $0.holdStyle.color }
                     }
                   ))
-                if let color = model.content.routeNumberColor {
-                  colorPalette(selectedColor: color, labelPrefix: "ルートの数字色: ") { hex in
-                    model.change { $0.routeNumberColor = hex }
-                  }
-                }
               }
-              VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                  Text("ルートの数字サイズ")
-                  Spacer()
-                  Text("\(Int(model.content.effectiveRouteNumberSize))")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                }
-                Slider(
-                  value: Binding(
-                    get: { model.content.effectiveRouteNumberSize },
-                    set: { value in model.change { $0.routeNumberSize = value } }
-                  ), in: 6...60, step: 1
-                )
-                .accessibilityLabel("ルートの数字サイズ")
-              }
+              sliderRow(
+                "ルートの数字サイズ",
+                value: Binding(
+                  get: { model.content.effectiveRouteNumberSize },
+                  set: { value in model.change { $0.routeNumberSize = value } }
+                ),
+                in: 6...60, onReset: model.resetRouteNumberSize)
               HStack {
                 Button {
                   model.change { $0.showLines.toggle() }
@@ -307,6 +313,23 @@ struct EditorView: View {
     .background(.bar)
   }
 
+  private var holdShapePicker: some View {
+    Picker(
+      "ホールドの形",
+      selection: Binding(
+        get: { model.activeHoldShape },
+        set: { model.updateHoldShape($0) }
+      )
+    ) {
+      ForEach(HoldShape.allCases, id: \.self) { shape in
+        Image(systemName: shape == .oval ? "circle" : "square")
+          .accessibilityLabel(Text(shape.label))
+          .tag(shape)
+      }
+    }
+    .pickerStyle(.segmented)
+  }
+
   private func toggleEditorDock() {
     setEditorDockExpanded(!editorDockExpanded)
   }
@@ -317,30 +340,98 @@ struct EditorView: View {
     }
   }
 
-  private var colorControls: some View {
-    colorPalette(selectedColor: model.activeStyle.color) { hex in
+  private func colorControls(title: String? = nil) -> some View {
+    colorPalette(selectedColor: model.activeStyle.color, title: title) { hex in
       model.updateStyle { $0.color = hex }
     }
   }
 
+  private var textColorControls: some View {
+    HStack(spacing: 8) {
+      HStack(spacing: 8) {
+        Toggle(isOn: styleBinding(\.isBold)) {
+          Text("B").font(.title3.bold())
+        }
+        .accessibilityLabel("太字")
+        Toggle(isOn: styleBinding(\.isItalic)) {
+          Text("I").font(.title3.italic())
+        }
+        .accessibilityLabel("斜体")
+      }
+      .toggleStyle(.button)
+      .frame(width: controlLabelWidth, alignment: .leading)
+      colorPalette(selectedColor: model.activeStyle.color, title: nil, accessibilityTitle: "文字の色") {
+        hex in
+        model.updateStyle { $0.color = hex }
+      }
+    }
+  }
+
   private func colorPalette(
-    selectedColor: String, labelPrefix: String = "",
+    selectedColor: String, title: String?, accessibilityTitle: String? = nil,
     onSelect: @escaping (String) -> Void
   ) -> some View {
     HStack(spacing: 8) {
-      ForEach(WallCatalog.colors, id: \.self) { hex in
-        Button {
-          onSelect(hex)
-        } label: {
-          Circle().fill(Color(uiColor: UIColor(hex: hex)))
-            .frame(width: 26, height: 26)
-            .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
-            .overlay(
-              Circle().stroke(selectedColor == hex ? Color.accentColor : .clear, lineWidth: 2))
-        }
-        .accessibilityLabel(labelPrefix + colorLabel(hex))
-        .accessibilityAddTraits(selectedColor == hex ? .isSelected : [])
+      if let title {
+        controlLabel(title)
       }
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 8) {
+          ForEach(WallCatalog.colors, id: \.self) { hex in
+            Button {
+              onSelect(hex)
+            } label: {
+              Circle().fill(Color(uiColor: UIColor(hex: hex)))
+                .frame(width: 26, height: 26)
+                .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
+                .overlay(
+                  Circle().stroke(selectedColor == hex ? Color.accentColor : .clear, lineWidth: 2))
+            }
+            .accessibilityLabel(
+              (accessibilityTitle ?? title).map { "\($0): \(colorLabel(hex))" } ?? colorLabel(hex)
+            )
+            .accessibilityAddTraits(selectedColor == hex ? .isSelected : [])
+          }
+        }
+        .padding(2)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+    }
+  }
+
+  private func controlLabel(_ title: String) -> some View {
+    Text(title)
+      .fixedSize(horizontal: false, vertical: true)
+      .frame(width: controlLabelWidth, alignment: .leading)
+  }
+
+  private func sliderRow(
+    _ title: String, value: Binding<Double>, in range: ClosedRange<Double>,
+    onReset: @escaping () -> Void
+  ) -> some View {
+    HStack(spacing: 8) {
+      controlLabel(title)
+      ResettableSlider(title: title, value: value, range: range, onReset: onReset)
+        .frame(maxWidth: .infinity)
+        .frame(height: 32)
+      Text("000")
+        .monospacedDigit()
+        .fixedSize()
+        .hidden()
+        .overlay(alignment: .trailing) {
+          Text("\(Int(value.wrappedValue))")
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+        }
+        .accessibilityHidden(true)
+    }
+  }
+
+  private func styleSliderRow(
+    _ title: String, _ keyPath: WritableKeyPath<MarkStyle, Double>, in range: ClosedRange<Double>
+  ) -> some View {
+    sliderRow(title, value: styleBinding(keyPath), in: range) {
+      model.resetStyleValue(keyPath)
     }
   }
 
@@ -375,69 +466,13 @@ struct EditorView: View {
             }
           }
         }
-        HStack(spacing: 12) {
-          Toggle(isOn: styleBinding(\.isBold)) {
-            Text("B").font(.title3.bold())
-          }
-          .accessibilityLabel("太字")
-          Toggle(isOn: styleBinding(\.isItalic)) {
-            Text("I").font(.title3.italic())
-          }
-          .accessibilityLabel("斜体")
-        }
-        .toggleStyle(.button)
-        VStack(alignment: .leading, spacing: 2) {
-          HStack {
-            Text("文字サイズ")
-            Spacer()
-            Text("\(Int(model.activeStyle.fontSize))")
-              .monospacedDigit()
-              .foregroundStyle(.secondary)
-          }
-          Slider(value: styleBinding(\.fontSize), in: 6...120, step: 1)
-        }
+        styleSliderRow("文字サイズ", \.fontSize, in: 6...120)
       } else {
-        VStack(alignment: .leading, spacing: 2) {
-          HStack {
-            Text("線の太さ")
-            Spacer()
-            Text("\(Int(model.activeStyle.width))")
-              .monospacedDigit()
-              .foregroundStyle(.secondary)
-          }
-          Slider(value: styleBinding(\.width), in: 1...20, step: 1)
-        }
+        styleSliderRow("線の太さ", \.width, in: 1...20)
       }
-      VStack(alignment: .leading, spacing: 2) {
-        HStack {
-          Text("枠線の太さ")
-          Spacer()
-          Text("\(Int(model.activeStyle.outlineWidth))")
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-        }
-        Slider(value: styleBinding(\.outlineWidth), in: 0...12, step: 1)
-      }
-      VStack(alignment: .leading, spacing: 4) {
-        Text("枠線の色").font(.caption)
-        HStack(spacing: 8) {
-          ForEach(WallCatalog.colors, id: \.self) { hex in
-            Button {
-              styleBinding(\.outlineColor).wrappedValue = hex
-            } label: {
-              Circle().fill(Color(uiColor: UIColor(hex: hex)))
-                .frame(width: 26, height: 26)
-                .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
-                .overlay(
-                  Circle().stroke(
-                    model.activeStyle.outlineColor == hex ? Color.accentColor : .clear,
-                    lineWidth: 2
-                  ))
-            }
-            .accessibilityLabel("枠線の色: \(colorLabel(hex))")
-            .accessibilityAddTraits(model.activeStyle.outlineColor == hex ? .isSelected : [])
-          }
-        }
+      styleSliderRow("枠線の太さ", \.outlineWidth, in: 0...12)
+      colorPalette(selectedColor: model.activeStyle.outlineColor, title: "枠線の色") { hex in
+        model.updateStyle { $0.outlineColor = hex }
       }
     }
   }
@@ -445,7 +480,7 @@ struct EditorView: View {
   private func fontOptionPreview(_ family: TextFamily) -> Font {
     var style = model.activeStyle
     style.fontFamily = family
-    style.fontSize = 17
+    style.fontSize = 13
     return Font(SceneRenderer.font(style, unit: 1))
   }
 
@@ -562,6 +597,112 @@ struct EditorView: View {
   private func colorLabel(_ hex: String) -> String {
     let names = ["黒", "白", "赤", "オレンジ", "黄", "緑", "青", "紫"]
     return names[WallCatalog.colors.firstIndex(of: hex) ?? 0]
+  }
+}
+
+private struct ResettableSlider: UIViewRepresentable {
+  let title: String
+  @Binding var value: Double
+  let range: ClosedRange<Double>
+  let onReset: () -> Void
+
+  func makeUIView(context: Context) -> ResettableSliderView {
+    ResettableSliderView(frame: .zero)
+  }
+
+  func updateUIView(_ view: ResettableSliderView, context: Context) {
+    let slider = view.slider
+    slider.accessibilityLabel = title
+    slider.minimumValue = Float(range.lowerBound)
+    slider.maximumValue = Float(range.upperBound)
+    slider.onReset = onReset
+    let binding = $value
+    slider.onValueChange = { binding.wrappedValue = $0 }
+    let next = Float(value)
+    if slider.value != next && (!slider.isTracking || slider.value.rounded() != next) {
+      slider.setValue(next, animated: false)
+    }
+  }
+}
+
+final class ResettableSliderView: UIView, UIGestureRecognizerDelegate {
+  let slider = ResettableSliderControl(frame: .zero)
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    addSubview(slider)
+    slider.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    slider.frame = bounds
+    // Observe taps above UISlider so its own tracking gestures do not consume them first.
+    let doubleTap = UITapGestureRecognizer(target: self, action: #selector(resetFromDoubleTap))
+    doubleTap.numberOfTapsRequired = 2
+    doubleTap.delegate = self
+    addGestureRecognizer(doubleTap)
+  }
+
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
+    -> Bool
+  {
+    slider.thumbContains(touch.location(in: slider))
+  }
+
+  func gestureRecognizer(
+    _ gestureRecognizer: UIGestureRecognizer,
+    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+  ) -> Bool {
+    otherGestureRecognizer.view?.isDescendant(of: self) == true
+  }
+
+  @objc private func resetFromDoubleTap() {
+    // Let UISlider finish cancelling its tracking before writing the default.
+    Task { @MainActor [weak self] in
+      self?.slider.onReset?()
+    }
+  }
+}
+
+final class ResettableSliderControl: UISlider {
+  var onValueChange: ((Double) -> Void)?
+  var onReset: (() -> Void)?
+
+  override init(frame: CGRect) {
+    super.init(frame: frame)
+    setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+    addTarget(self, action: #selector(valueChanged), for: .valueChanged)
+    accessibilityCustomActions = [
+      UIAccessibilityCustomAction(
+        name: "初期値に戻す", target: self, selector: #selector(resetValue))
+    ]
+  }
+
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  override func accessibilityIncrement() { adjustAccessibilityValue(by: 1) }
+
+  override func accessibilityDecrement() { adjustAccessibilityValue(by: -1) }
+
+  private func adjustAccessibilityValue(by step: Float) {
+    let next = min(maximumValue, max(minimumValue, value.rounded() + step))
+    guard next != value else { return }
+    setValue(next, animated: true)
+    valueChanged()
+  }
+
+  func thumbContains(_ point: CGPoint) -> Bool {
+    thumbRect(forBounds: bounds, trackRect: trackRect(forBounds: bounds), value: value)
+      .contains(point)
+  }
+
+  @objc private func valueChanged() {
+    onValueChange?(Double(value.rounded()))
+  }
+
+  @objc private func resetValue() -> Bool {
+    guard let onReset else { return false }
+    onReset()
+    return true
   }
 }
 

@@ -1,7 +1,9 @@
 import UIKit
 
 enum HoldDetection {
-  static func detect(image: UIImage, position: WallPoint, style: MarkStyle) throws -> Hold? {
+  static func detect(
+    image: UIImage, position: WallPoint, style: MarkStyle, shape: HoldShape? = nil
+  ) throws -> Hold? {
     guard let source = image.cgImage else { throw PintoError.invalidImage }
     let size = min(320, source.width, source.height)
     guard size >= 32 else { return nil }
@@ -30,12 +32,26 @@ enum HoldDetection {
           pixels: UnsafeBufferPointer(buffer), width: size, height: size,
           seedX: seedX - left, seedY: seedY - top)
       else { return nil }
+      let imageSize = CGSize(width: source.width, height: source.height)
+      let clearance = style.outlinedWidth * SceneRenderer.markUnit(for: imageSize) / 2
+      let rx = bounds.width / 2
+      let ry = bounds.height / 2
+      let shortRadius = min(rx, ry)
+      func fittedRadius(_ radius: CGFloat) -> CGFloat {
+        if shape == .rectangle { return radius + clearance }
+        // Bound the ellipse plus a clearance disk, with exact clearance on the short axis.
+        // Adding clearance independently to each radius underestimates it along diagonals.
+        return sqrt(
+          radius * radius * (1 + clearance / shortRadius)
+            + clearance * (shortRadius + clearance))
+      }
       return Hold(
         position: WallPoint(
           x: (Double(left) + bounds.midX) / Double(source.width),
           y: (Double(top) + bounds.midY) / Double(source.height)),
-        radiusX: bounds.width / 2 / Double(source.width),
-        radiusY: bounds.height / 2 / Double(source.height), style: style)
+        radiusX: fittedRadius(rx) / imageSize.width,
+        radiusY: fittedRadius(ry) / imageSize.height,
+        style: style, shape: shape)
     }
     return result
   }

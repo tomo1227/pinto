@@ -11,6 +11,10 @@ extension UIColor {
 }
 
 enum SceneRenderer {
+  static func markUnit(for size: CGSize) -> CGFloat {
+    min(size.width, size.height) / 600
+  }
+
   static func point(_ position: WallPoint, in size: CGSize) -> CGPoint {
     CGPoint(x: position.x * size.width, y: position.y * size.height)
   }
@@ -19,11 +23,22 @@ enum SceneRenderer {
     let center = point(hold.position, in: size)
     let x = hold.radiusX * size.width
     let y = hold.radiusY * size.height
-    let radiusX = content.allowEllipses ? x : max(x, y)
-    let radiusY = content.allowEllipses ? y : max(x, y)
+    let locked = content.locksHoldAspectRatio(hold)
+    let radiusX = locked ? max(x, y) : x
+    let radiusY = locked ? max(x, y) : y
     return CGRect(
       x: center.x - radiusX, y: center.y - radiusY,
       width: radiusX * 2, height: radiusY * 2)
+  }
+
+  static func holdPath(_ hold: Hold, content: WallContent, size: CGSize, padding: CGFloat = 0)
+    -> UIBezierPath
+  {
+    let rect = holdRect(hold, content: content, size: size).insetBy(dx: -padding, dy: -padding)
+    switch hold.effectiveShape {
+    case .oval: return UIBezierPath(ovalIn: rect)
+    case .rectangle: return UIBezierPath(rect: rect)
+    }
   }
 
   static func font(_ style: MarkStyle, unit: CGFloat) -> UIFont {
@@ -52,7 +67,7 @@ enum SceneRenderer {
   }
 
   static func textRect(_ text: WallText, size: CGSize) -> CGRect {
-    let textFont = font(text.style, unit: min(size.width, size.height) / 600)
+    let textFont = font(text.style, unit: markUnit(for: size))
     let dimensions = (text.text as NSString).size(withAttributes: [.font: textFont])
     let center = point(text.position, in: size)
     // Keep edge annotations entirely in the exported image.
@@ -66,7 +81,7 @@ enum SceneRenderer {
     context.saveGState()
     context.clip(to: CGRect(origin: .zero, size: size))
     image.draw(in: CGRect(origin: .zero, size: size))
-    let unit = min(size.width, size.height) / 600
+    let unit = markUnit(for: size)
     if content.showLines {
       let holds = Dictionary(uniqueKeysWithValues: content.holds.map { ($0.id, $0) })
       let points = content.route.compactMap { holds[$0] }.map { point($0.position, in: size) }
@@ -78,7 +93,7 @@ enum SceneRenderer {
       }
     }
     for hold in content.holds {
-      let path = UIBezierPath(ovalIn: holdRect(hold, content: content, size: size))
+      let path = holdPath(hold, content: content, size: size)
       stroke(path, style: hold.style, unit: unit)
       if content.effectiveShowRouteNumbers, let index = content.route.firstIndex(of: hold.id) {
         let label = "\(index + 1)" as NSString
@@ -118,7 +133,7 @@ enum SceneRenderer {
     path.lineJoinStyle = .round
     if style.outlineWidth > 0 {
       UIColor(hex: style.outlineColor).setStroke()
-      path.lineWidth = (style.width + style.outlineWidth * 2) * unit
+      path.lineWidth = style.outlinedWidth * unit
       path.stroke()
     }
     UIColor(hex: style.color).setStroke()

@@ -26,7 +26,7 @@ struct WallSettingsView: View {
         Section("キャンバス設定") {
           Toggle("ホールド輪郭の自動検出", isOn: $content.autoDetectHolds)
           Toggle("楕円を許可", isOn: $content.allowEllipses)
-          Text("輪郭が見つからない場合は通常の丸を配置します。画像は端末内で処理され、外部へ送信されません。")
+          Text("輪郭が見つからない場合は標準サイズで配置します。「楕円を許可」は丸のホールドにのみ適用されます。画像は端末内で処理され、外部へ送信されません。")
             .font(.footnote).foregroundStyle(.secondary)
         }
         ForEach(WallCatalog.tagGroups, id: \.0) { group in
