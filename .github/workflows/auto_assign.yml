@@ -1,0 +1,15 @@
+name: "Assign author to PR"
+
+on:
+  pull_request:
+    types: [opened, reopened]
+jobs:
+  assignAuthor:
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    permissions:
+      pull-requests: write
+    name: Assign author to PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign author to PR
+        uses: technote-space/assign-author@v1

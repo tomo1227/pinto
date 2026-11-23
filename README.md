@@ -1,82 +1,68 @@
-# Pinto
+# Pinto for iPhone / iPad
 
-クライミングウォールの写真をもとに、ホールドとルートを作成・管理するローカルファーストのWebアプリです。壁画像、編集内容、設定はブラウザーのIndexedDBに保存されます。Discord連携を使う場合のみ、Webhook送信をローカルのCloudflare Worker経由で行います。
+iOS / iPadOS 17 以上向けの SwiftUI + UIKit アプリです。サーバー・外部 DB・追加パッケージは必要ありません。
 
-## 必要環境
+利用者向けの操作手順は [ユーザーマニュアル](./USER_GUIDE.md) を参照してください。アプリ内では壁一覧の右上の「？」から、通信なしで閲覧できます。
 
-- Node.js 26以上（`.node-version`に記載）
-- pnpm 12.16.1（Corepack利用を推奨）
+## Xcode で開く
 
-依存関係をインストールして、WebアプリとWorkerを起動します。
+1. Mac の Xcode 15 以降で [Pinto.xcodeproj](./Pinto.xcodeproj) を開きます。
+2. `PintoApp.swift` を開き、右上の **Canvas** を表示して **Resume** を押すと、ライブラリ画面を確認できます。
+3. Scheme を **Pinto** にし、iPhone または iPad の Simulator を選択します。
+4. **Run（⌘R）** で起動します。
+5. 実機の場合は Pinto ターゲットの **Signing & Capabilities** で自分の Team を選択します。必要に応じて Bundle Identifier（初期値 `com.pinto.local`）を変更してください。
 
-```sh
-pnpm install
-pnpm dev
-```
+このリポジトリには開発者の署名情報を含めていません。依存ライブラリのインストールやプロジェクト生成は不要です。
 
-Webアプリ: `http://localhost:5173`
-Worker API: `http://localhost:8787/api/hello`
+## 機能
 
-初回起動時にCloudflare Wranglerのローカル設定で権限エラーが出る環境では、`XDG_CONFIG_HOME=/tmp pnpm dev`を使用してください。Dev Containerでは`.devcontainer/Dockerfile`に設定済みです。
+- 写真・ファイル・カメラから壁／課題を登録。名前、グレード、日本語タグ、説明を編集。作成者・ジム名は任意のテキストとして入力可能
+- 壁一覧のグリッド／リスト切り替え、名前・グレード・タグなどのローカル検索。一覧の壁を長押しして削除
+- ホールドの追加・選択・移動・サイズ変更、端末内の色解析による輪郭検出、楕円／円の切り替え
+- 文字の追加・再編集・移動・サイズ変更、色、太さ、ゴシック／明朝／等幅、縁取り
+- ホールドを順番にタップしてルートを作成。線の色・太さ・縁取り、数字の色・サイズ、表示切り替え
+- Undo / Redo、「消去」ボタンの長押しによる編集の全リセット
 
-## 認証とコミュニティ
+## 編集操作
 
-Google OAuthとコミュニティ投稿を使う場合は、Worker用のローカル設定を作成します。
+- **壁一覧**: リスト表示では行を左にスワイプして「削除」を押し、確認画面で削除できます。スワイプだけでは削除されません。グリッド・リストのどちらも長押しから削除できます
+- **ホールド**: 空いている場所をタップして追加。既存のホールドや文字をタップして選択し、ドラッグして移動
+- **文字**: 場所をタップして入力。入力中は背景を暗くし、文字色・フォント・B（太字）／I（斜体）・文字サイズ・枠線の色と太さをその場で変更できます。フォントは横並びの書体見本から選択し、文字サイズはスライダーで調整。入力後も編集パネルで変更可能。既存の文字をタップすると再編集。空文字や空白・改行だけで「完了」を押すと編集中の文字を削除します（Undo で復元可能）。新規入力の場合は何も追加せず閉じます
+- **ルート**: ホールドを順番にタップして追加。登録済みのホールドを再タップすると、ホールド自体は残したままルートから削除します。もう一度タップすると末尾へ追加されます。追加・削除は Undo / Redo に対応します。「ルート」選択中の編集パネルで「ルートの数字サイズ」を 6〜60 の範囲で調整できます（初期値 13）。サイズは保存画像にも反映され、Undo / Redo に対応します。ルート線と数字をそれぞれ独立して表示／非表示にできます。非表示にしてもルートの順番は保持します
+- **消去**: ホールド・文字をタップして削除。ホールドを削除するとルートからも外れます。右下の「消去」ボタンを0.6秒長押しし、確認画面で「全リセット」を選ぶとホールド・文字・ルートをすべて削除します。全リセットも Undo で取り消せます
+- **画像を移動**: ドラッグで画像を移動、ピンチでズーム
+- **戻る**: 未保存の編集データを即座に自動保存して壁一覧に戻ります。保存に失敗した場合はエラーを表示し、再試行・破棄・編集継続を選べます
+- 選択中のホールドや文字を0.5秒長押しするとゴミ箱が表示されます。ゴミ箱へドラッグし、赤くなったところで離すと削除。ゴミ箱以外で離すと移動として確定し、削除も移動も Undo で取り消せます
+- ホールドの選択枠の四隅と各辺にある、青い枠の四角いハンドルをドラッグしてサイズを変更。左右の点は幅、上下の点は高さ、角の点は両方を変更します。外側へドラッグすると拡大、内側へドラッグすると縮小し、中心位置は変わりません。円モードでは真円を維持します。文字は四隅のハンドルでサイズ変更できます。選択物の上でピンチすると縦横を同時に拡縮。「見た目」でもサイズや装飾を変更できます。ドラッグ1回を Undo / Redo で取り消し・やり直しできます
 
-```sh
-cp apps/worker/.dev.vars.example apps/worker/.dev.vars
-openssl rand -base64 32
-```
+輪郭検出は写真の色の差を利用する方式で、AI や外部 API は使用しません。検出できない場合は通常の丸を配置します。
 
-生成した値を`BETTER_AUTH_SECRET`に設定し、Google Cloud ConsoleでOAuthクライアントを作成して`GOOGLE_CLIENT_ID`と`GOOGLE_CLIENT_SECRET`を設定します。ローカルの承認済みリダイレクトURIは`http://localhost:5173/api/auth/callback/google`です。
+## 保存
 
-D1は開発用と本番用で分けます。開発時は`wrangler.jsonc`の既定設定を使い、`database_id`は変更しません。WranglerのローカルD1はこの設定をもとにローカル保存領域を識別するため、本番IDを既定設定に入れると開発用DBが別領域になります。
+アプリの Application Support 内の `Pinto/<UUID>.pinto` に、元画像（向きを補正した PNG）と編集データを一つの JSON として atomic write で保存します。データベースは使いません。履歴には画像を含めず、直近 100 操作を画面表示中のみ保持します。
 
-```sh
-pnpm --filter @pinto/worker exec wrangler d1 create pinto-db
-pnpm --filter @pinto/worker exec wrangler d1 migrations apply pinto-db --local
-```
+編集データは変更が 0.5 秒途切れると自動保存します。ホールド・文字・ルート・表示設定・壁の設定の変更と Undo / Redo が対象です。連続した操作中は保存をまとめ、一覧へ戻るときやアプリが非アクティブ／バックグラウンドになるときは待たずに保存します。文字の入力途中は確定せず、「完了」で反映した内容を保存します。
 
-本番D1を作成し、表示されたIDを`apps/worker/wrangler.jsonc`の`env.production.d1_databases[0].database_id`に設定します。`database_name`も作成したD1名に合わせます。`pnpm deploy`は本番環境へデプロイします。
+上部の保存ボタンは、ホールド・ルート・文字を合成した PNG 画像を写真ライブラリ（カメラロール）に追加します。自動保存では写真ライブラリへの追加は行いません。画像は元写真のピクセル数で保存し、選択枠や操作ボタンは含めません。ルート線と数字の表示設定も反映します。初回は写真への追加許可を求めます。許可されなかった場合や画像の保存に失敗した場合はエラーを表示しますが、端末内の編集データは保持します。保存中は連打を防止し、完了すると画面に通知します。
 
-ジム申請の管理者は、ローカルでは`apps/worker/.dev.vars`の`GYM_ADMIN_EMAILS`にGoogleログインのメールアドレスを設定します。複数人はカンマ区切りです。本番では同じ名前のWorker secretを登録してください。ジム一覧の「申請管理」で内容を確認し、GitHub上のジム一覧に手動で追加した後、申請を削除します。
+保存失敗は画面に表示し、編集中のデータを残します。読み込めないファイルはエラーを表示し、削除・上書きしません。
 
-```sh
-pnpm --filter @pinto/worker exec wrangler d1 create pinto-db-production
-pnpm --filter @pinto/worker exec wrangler d1 migrations apply pinto-db-production --env production --remote
-```
+保存ボタンの隣の共有ボタンで、ホールド・ルート・文字を合成した画像を iOS の共有シートへ渡せます。AirDrop やメッセージなど、端末で利用可能な共有先を選べます。元写真のピクセル数とルートの表示・数字サイズ設定を反映し、選択枠や操作ボタンは含めません。共有するだけなら写真ライブラリへの追加許可は不要です。
 
-本番では、Google OAuthの承認済みリダイレクトURIを`https://<アプリのドメイン>/api/auth/callback/google`に設定し、`BETTER_AUTH_URL`をアプリのoriginにします。`BETTER_AUTH_SECRET`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`は`--env production`を付けてWrangler secretsに登録し、リモートDBにもマイグレーションを適用してください。
+編集データのインポート／エクスポートには対応していません。アプリ削除・端末紛失に備え、必要に応じて端末のバックアップを利用してください。
 
-## 主な機能
+## 検証
 
-- 「ジム」の右隣に「ツール」タブを配置。Cruxと今後追加するクライミングツールを掲載
-- Cruxで動画をブラウザー内に保存し、MediaPipe Pose Landmarker Heavyによる2D姿勢解析、ドラッグ回転・ピンチズームできる3D骨格とシンプルなXYZ座標軸（メートル目盛り・MediaPipe Colab準拠の座標変換と初期視点）、全関節を正の範囲に置くフレームごとの表示用座標・信頼度、3Dランドマークを使った関節角度・胴体中心目安の表示、検出しきい値の調整、スロー再生、2本の動画の同期比較が可能。GPUを優先し、未対応時はCPUを使用。再生中はフレームごとに解析し、比較時は動画ごとに独立したトラッカーを使用。初回の解析時に約31 MBの姿勢推定モデルを取得し、動画は外部へ送信しない。3Dは単眼推定で、LiDARや実距離計測は非対応
-- 壁画像の登録とライブラリ管理。壁詳細では画像・壁情報・共有・リアクションを表示し、「登録ルート」欄は表示しない。一覧と詳細はリロードなしで切り替え、ブラウザーの戻る・進むにも対応
-- Canvas上でのホールド配置、移動、属性編集
-- ツールボタン（ホールド・文字・ルート）で設定対象を判別し、色パレット付近で丸・文字・ルート線の太さと縁取り（枠線の色・太さ）を変更。文字選択時はウェイトとフォント（ゴシック体・明朝体・等幅）も変更でき、保存・Undo/Redo・PNG出力に反映
-- ホールド輪郭の自動検出と楕円の許可は、壁ごとの設定で切り替え（既定はON）
-- サイドバーのないCanvas中心の編集画面。グレード・作成者・説明は「壁の設定」から編集
-- Undo/Redo、PNG書き出し。線・丸・文字は編集画面と同じ画像に対する太さで出力し、タイトル帯は追加せず元画像と同じサイズで保存。生成したPNGは端末にも保存し、自分の壁一覧（グリッド・リスト）と壁詳細ではPNG出力と同じ画像を表示。「投稿」も同じPNGから画像を更新（他の端末向けには投稿サイズ上限に合わせて縮小）
-- IndexedDBへのローカル保存とPWA対応
-- Google OAuthログインとD1コミュニティ投稿
-- Discord Webhookの接続テスト、ルートPNG共有、作成・更新通知
+Xcode の **Product → Test（⌘U）** で `PintoTests` を実行できます。保存・再読み込み・破損データ、ルートの整合性、Undo / Redo、ジェスチャーの履歴、輪郭検出、PNG の寸法と線のスケールなどをテストします。
 
-## 開発コマンド
+リポジトリルートからのビルド例:
 
 ```sh
-pnpm format       # Biomeでフォーマット
-pnpm lint         # Biomeでチェック
-pnpm typecheck    # Web / Workerの型チェック
-pnpm test         # Vitest
-pnpm test:e2e     # Playwright E2E
-pnpm build        # Webをビルドし、Workerをローカル検証
+xcodebuild -project Pinto.xcodeproj -scheme Pinto \
+  -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+
+# 利用可能な Simulator を確認し、次のコマンドの端末名を置き換える
+xcodebuild -project Pinto.xcodeproj -scheme Pinto -showdestinations
+xcodebuild -project Pinto.xcodeproj -scheme Pinto \
+  -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
-
-E2Eテストの初回実行前に、PlaywrightのChromiumをインストールします。
-
-```sh
-pnpm --filter @pinto/web exec playwright install chromium
-```
-
-ビルド成果物はWorkerの静的アセットとして配信されます。通常の開発・確認ではデプロイは不要です。
