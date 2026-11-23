@@ -1,3 +1,4 @@
+import OSLog
 import UIKit
 
 extension UIColor {
@@ -11,6 +12,12 @@ extension UIColor {
 }
 
 enum SceneRenderer {
+  private static let logger = Logger(subsystem: "com.tomokiota.pinto", category: "SceneRenderer")
+
+  static func markUnit(for size: CGSize) -> CGFloat {
+    min(size.width, size.height) / 600
+  }
+
   static func point(_ position: WallPoint, in size: CGSize) -> CGPoint {
     CGPoint(x: position.x * size.width, y: position.y * size.height)
   }
@@ -19,11 +26,22 @@ enum SceneRenderer {
     let center = point(hold.position, in: size)
     let x = hold.radiusX * size.width
     let y = hold.radiusY * size.height
-    let radiusX = content.allowEllipses ? x : max(x, y)
-    let radiusY = content.allowEllipses ? y : max(x, y)
+    let locked = content.locksHoldAspectRatio(hold)
+    let radiusX = locked ? max(x, y) : x
+    let radiusY = locked ? max(x, y) : y
     return CGRect(
       x: center.x - radiusX, y: center.y - radiusY,
       width: radiusX * 2, height: radiusY * 2)
+  }
+
+  static func holdPath(_ hold: Hold, content: WallContent, size: CGSize, padding: CGFloat = 0)
+    -> UIBezierPath
+  {
+    let rect = holdRect(hold, content: content, size: size).insetBy(dx: -padding, dy: -padding)
+    switch hold.effectiveShape {
+    case .oval: return UIBezierPath(ovalIn: rect)
+    case .rectangle: return UIBezierPath(rect: rect)
+    }
   }
 
   static func font(_ style: MarkStyle, unit: CGFloat) -> UIFont {
@@ -35,24 +53,47 @@ enum SceneRenderer {
     case ...700: weight = .bold
     default: weight = .black
     }
-    let font = UIFont.systemFont(ofSize: style.fontSize * unit, weight: weight)
-    let design: UIFontDescriptor.SystemDesign
+    let size = style.fontSize * unit
+    let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
+    var descriptor: UIFontDescriptor
     switch style.fontFamily {
-    case .sans: design = .default
-    case .serif: design = .serif
-    case .monospace: design = .monospaced
+    case .sans:
+      descriptor = systemFont.fontDescriptor
+    case .serif:
+      descriptor = systemFont.fontDescriptor.withDesign(.serif) ?? systemFont.fontDescriptor
+    case .monospace:
+      descriptor = systemFont.fontDescriptor.withDesign(.monospaced) ?? systemFont.fontDescriptor
+    case .roundedGothic:
+      descriptor = namedFont("HiraMaruProN-W4", fallback: systemFont).fontDescriptor
+    case .condensed:
+      let face: String
+      switch style.fontWeight {
+      case ...400: face = "AvenirNextCondensed-Regular"
+      case ...600: face = "AvenirNextCondensed-DemiBold"
+      case ...700: face = "AvenirNextCondensed-Bold"
+      default: face = "AvenirNextCondensed-Heavy"
+      }
+      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
+    case .handwritten:
+      let face = style.isBold ? "MarkerFelt-Wide" : "MarkerFelt-Thin"
+      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
     }
-    var descriptor = font.fontDescriptor.withDesign(design) ?? font.fontDescriptor
     if style.isItalic {
       descriptor =
         descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic))
         ?? descriptor.withMatrix(CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0))
     }
-    return UIFont(descriptor: descriptor, size: font.pointSize)
+    return UIFont(descriptor: descriptor, size: size)
+  }
+
+  private static func namedFont(_ name: String, fallback: UIFont) -> UIFont {
+    if let font = UIFont(name: name, size: fallback.pointSize) { return font }
+    logger.error("Built-in font \(name, privacy: .public) is unavailable. Using the system font.")
+    return fallback
   }
 
   static func textRect(_ text: WallText, size: CGSize) -> CGRect {
-    let textFont = font(text.style, unit: min(size.width, size.height) / 600)
+    let textFont = font(text.style, unit: markUnit(for: size))
     let dimensions = (text.text as NSString).size(withAttributes: [.font: textFont])
     let center = point(text.position, in: size)
     // Keep edge annotations entirely in the exported image.
@@ -62,11 +103,24 @@ enum SceneRenderer {
       width: dimensions.width, height: dimensions.height)
   }
 
+  static func textAttributes(_ style: MarkStyle, unit: CGFloat) -> [NSAttributedString.Key: Any] {
+    var attributes: [NSAttributedString.Key: Any] = [
+      .font: font(style, unit: unit),
+      .foregroundColor: UIColor(hex: style.color),
+    ]
+    if style.outlineWidth > 0 {
+      attributes[.strokeColor] = UIColor(hex: style.outlineColor)
+      // A negative width paints both the fill and the stroke.
+      attributes[.strokeWidth] = -style.outlineWidth / style.fontSize * 200
+    }
+    return attributes
+  }
+
   static func draw(image: UIImage, content: WallContent, size: CGSize, context: CGContext) {
     context.saveGState()
     context.clip(to: CGRect(origin: .zero, size: size))
     image.draw(in: CGRect(origin: .zero, size: size))
-    let unit = min(size.width, size.height) / 600
+    let unit = markUnit(for: size)
     if content.showLines {
       let holds = Dictionary(uniqueKeysWithValues: content.holds.map { ($0.id, $0) })
       let points = content.route.compactMap { holds[$0] }.map { point($0.position, in: size) }
@@ -78,7 +132,7 @@ enum SceneRenderer {
       }
     }
     for hold in content.holds {
-      let path = UIBezierPath(ovalIn: holdRect(hold, content: content, size: size))
+      let path = holdPath(hold, content: content, size: size)
       stroke(path, style: hold.style, unit: unit)
       if content.effectiveShowRouteNumbers, let index = content.route.firstIndex(of: hold.id) {
         let label = "\(index + 1)" as NSString
@@ -97,18 +151,15 @@ enum SceneRenderer {
     }
     for text in content.texts {
       let rect = textRect(text, size: size)
-      var attributes: [NSAttributedString.Key: Any] = [
-        .font: font(text.style, unit: unit),
-        .foregroundColor: UIColor(hex: text.style.color),
-      ]
-      if text.style.outlineWidth > 0 {
-        attributes[.strokeColor] = UIColor(hex: text.style.outlineColor)
-        attributes[.strokeWidth] = text.style.outlineWidth / text.style.fontSize * 200
-        (text.text as NSString).draw(at: rect.origin, withAttributes: attributes)
+      var attributes = textAttributes(text.style, unit: unit)
+      let label = text.text as NSString
+      if let strokeWidth = attributes[.strokeWidth] as? Double {
+        attributes[.strokeWidth] = -strokeWidth
+        label.draw(at: rect.origin, withAttributes: attributes)
         attributes.removeValue(forKey: .strokeWidth)
         attributes.removeValue(forKey: .strokeColor)
       }
-      (text.text as NSString).draw(at: rect.origin, withAttributes: attributes)
+      label.draw(at: rect.origin, withAttributes: attributes)
     }
     context.restoreGState()
   }
@@ -118,7 +169,7 @@ enum SceneRenderer {
     path.lineJoinStyle = .round
     if style.outlineWidth > 0 {
       UIColor(hex: style.outlineColor).setStroke()
-      path.lineWidth = (style.width + style.outlineWidth * 2) * unit
+      path.lineWidth = style.outlinedWidth * unit
       path.stroke()
     }
     UIColor(hex: style.color).setStroke()

@@ -1,3 +1,4 @@
+import SwiftUI
 import UIKit
 import XCTest
 
@@ -78,6 +79,7 @@ final class PintoTests: XCTestCase {
     XCTAssertTrue(content.contains("長押しして選択"))
     XCTAssertTrue(content.contains("絞り込み"))
     XCTAssertTrue(content.contains("自動保存"))
+    XCTAssertTrue(content.contains("色選択の左側で丸（○）または四角（□）のアイコン"))
   }
 
   func testLibraryFiltersMatchAnyTagInEachSelectedCategory() {
@@ -186,8 +188,11 @@ final class PintoTests: XCTestCase {
     style.fontWeight = 900
     style.isItalic = true
     style.fontSize = 42
-    let hold = Hold(position: WallPoint(x: 0.3, y: 0.4), radiusX: 0.06, radiusY: 0.03, style: style)
+    let hold = Hold(
+      position: WallPoint(x: 0.3, y: 0.4),
+      radiusX: 0.06, radiusY: 0.03, style: style, shape: .rectangle)
     document.content.holds = [hold]
+    document.content.newHoldShape = .rectangle
     document.content.route = [hold.id]
     document.content.texts = [
       WallText(position: WallPoint(x: 0.1, y: 0.9), text: "核心", style: style)
@@ -206,6 +211,21 @@ final class PintoTests: XCTestCase {
     document.content.routeNumberSize = 32
     let data = try JSONEncoder().encode(document)
     XCTAssertEqual(try JSONDecoder().decode(WallDocument.self, from: data), document)
+  }
+
+  func testLegacyDocumentWithoutHoldShapeUsesOval() throws {
+    var document = try makeDocument()
+    document.content.holds = [Hold(position: WallPoint(x: 0.5, y: 0.5))]
+    let data = try JSONEncoder().encode(document)
+    let json = String(decoding: data, as: UTF8.self)
+    XCTAssertFalse(json.contains("\"shape\""))
+    XCTAssertFalse(json.contains("\"newHoldShape\""))
+    let decoded = try JSONDecoder().decode(WallDocument.self, from: data)
+    let model = try EditorModel(document: decoded)
+    model.selection = .hold(document.content.holds[0].id)
+    XCTAssertEqual(model.activeHoldShape, .oval)
+    model.selection = nil
+    XCTAssertEqual(model.activeHoldShape, .oval)
   }
 
   func testLegacyTextStyleAndBoldItalicToggles() throws {
@@ -248,6 +268,37 @@ final class PintoTests: XCTestCase {
       let regularImage = try XCTUnwrap(
         SceneRenderer.render(image: image(), content: content).pngData())
       XCTAssertNotEqual(italicImage, regularImage)
+    }
+  }
+
+  func testAddedFontFamiliesUseDistinctFacesAndSurviveSaving() throws {
+    XCTAssertEqual(
+      TextFamily.allCases,
+      [
+        .sans, .serif, .monospace, .roundedGothic, .condensed, .handwritten,
+      ])
+    let source = image()
+    var renderedImages = Set<Data>()
+    for (family, face, boldFace) in [
+      (TextFamily.roundedGothic, "HiraMaruProN-W4", "HiraMaruProN-W4"),
+      (.condensed, "AvenirNextCondensed-DemiBold", "AvenirNextCondensed-Bold"),
+      (.handwritten, "MarkerFelt-Thin", "MarkerFelt-Wide"),
+    ] {
+      var style = MarkStyle(fontFamily: family)
+      XCTAssertEqual(SceneRenderer.font(style, unit: 1).fontName, face)
+      var content = WallContent(name: "書体")
+      content.textStyle = style
+      content.texts = [
+        WallText(position: WallPoint(x: 0.1, y: 0.5), text: "Pinto 岩 123", style: style)
+      ]
+      let saved = try JSONEncoder().encode(content)
+      let restored = try JSONDecoder().decode(WallContent.self, from: saved)
+      XCTAssertEqual(restored.textStyle.fontFamily, family)
+      XCTAssertEqual(restored.texts.first?.style.fontFamily, family)
+      let rendered = try XCTUnwrap(SceneRenderer.render(image: source, content: restored).pngData())
+      XCTAssertTrue(renderedImages.insert(rendered).inserted)
+      style.isBold = true
+      XCTAssertEqual(SceneRenderer.font(style, unit: 1).fontName, boldFace)
     }
   }
 
@@ -456,6 +507,93 @@ final class PintoTests: XCTestCase {
       model.redo()
       XCTAssertEqual(model.content, expected)
     }
+  }
+
+  func testSliderResetsOnlyTheEditedValueToItsToolDefault() throws {
+    let model = try EditorModel(document: makeDocument())
+    model.updateStyle {
+      $0.width = 12
+      $0.outlineWidth = 6
+    }
+    let holdBeforeReset = model.content
+    model.resetStyleValue(\.width)
+    XCTAssertEqual(model.activeStyle.width, 3)
+    XCTAssertEqual(model.activeStyle.outlineWidth, 6)
+    model.undo()
+    XCTAssertEqual(model.content, holdBeforeReset)
+
+    model.tool = .text
+    model.updateStyle {
+      $0.fontSize = 100
+      $0.outlineWidth = 6
+      $0.isBold = true
+    }
+    model.resetStyleValue(\.fontSize)
+    model.resetStyleValue(\.outlineWidth)
+    XCTAssertEqual(model.activeStyle.fontSize, 24)
+    XCTAssertEqual(model.activeStyle.outlineWidth, 0)
+    XCTAssertTrue(model.activeStyle.isBold)
+
+    model.tool = .route
+    XCTAssertEqual(model.activeStyle.outlineWidth, 0)
+    model.updateStyle {
+      $0.width = 16
+      $0.outlineWidth = 5
+    }
+    model.change { $0.routeNumberSize = 42 }
+    model.resetStyleValue(\.width)
+    model.resetStyleValue(\.outlineWidth)
+    XCTAssertEqual(model.activeStyle.width, 4)
+    XCTAssertEqual(model.activeStyle.outlineWidth, 0)
+    model.resetRouteNumberSize()
+    XCTAssertEqual(model.content.effectiveRouteNumberSize, 13)
+    model.undo()
+    XCTAssertEqual(model.content.effectiveRouteNumberSize, 42)
+    model.redo()
+    XCTAssertNil(model.content.routeNumberSize)
+  }
+
+  func testSliderDoubleTapTargetsCurrentThumbAndNormalChangesDoNotReset() async throws {
+    let view = ResettableSliderView(frame: CGRect(x: 0, y: 0, width: 240, height: 32))
+    let slider = view.slider
+    slider.maximumValue = 20
+    let tap = try XCTUnwrap(
+      view.gestureRecognizers?.compactMap { $0 as? UITapGestureRecognizer }
+        .first { $0.delegate === view })
+    XCTAssertEqual(tap.numberOfTapsRequired, 2)
+    XCTAssertTrue(tap.cancelsTouchesInView)
+
+    func thumbCenter() -> CGPoint {
+      let thumb = slider.thumbRect(
+        forBounds: slider.bounds, trackRect: slider.trackRect(forBounds: slider.bounds),
+        value: slider.value)
+      return CGPoint(x: thumb.midX, y: thumb.midY)
+    }
+
+    slider.value = 3
+    let initialPosition = thumbCenter()
+    XCTAssertTrue(slider.thumbContains(initialPosition))
+    var changedValue: Double?
+    slider.onValueChange = { changedValue = $0 }
+    var resets = 0
+    let reset = expectation(description: "Double tap resets the slider")
+    slider.onReset = {
+      resets += 1
+      slider.value = 3
+      reset.fulfill()
+    }
+    slider.value = 16.4
+    slider.sendActions(for: .valueChanged)
+    XCTAssertEqual(changedValue, 16)
+    XCTAssertEqual(resets, 0)
+    XCTAssertTrue(slider.thumbContains(thumbCenter()))
+    XCTAssertFalse(slider.thumbContains(initialPosition))
+    view.perform(NSSelectorFromString("resetFromDoubleTap"))
+    await fulfillment(of: [reset], timeout: 1)
+    XCTAssertEqual(resets, 1)
+    XCTAssertEqual(slider.value, 3)
+    XCTAssertTrue(slider.thumbContains(initialPosition))
+    slider.onReset = nil
   }
 
   func testRouteNumberVisibilityDefaultsAndPersists() throws {
@@ -795,6 +933,62 @@ final class PintoTests: XCTestCase {
     }
   }
 
+  func testRectangleCanBeTargetedAtCornerAndResizedWithEllipsesDisabled() throws {
+    var document = try makeDocument()
+    let hold = Hold(
+      position: WallPoint(x: 0.5, y: 0.5), radiusX: 0.1, radiusY: 0.06, shape: .rectangle)
+    document.content.holds = [hold]
+    document.content.allowEllipses = false
+    let model = try EditorModel(document: document)
+    let canvas = CanvasView(model: model)
+    canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
+    let frame = SceneRenderer.holdRect(hold, content: model.content, size: canvas.bounds.size)
+    XCTAssertEqual(frame.width, 120, accuracy: 0.001)
+    XCTAssertEqual(frame.height, 96, accuracy: 0.001)
+
+    model.tool = .route
+    let tap = SimulatedTap()
+    tap.testLocation = CGPoint(x: frame.maxX - 1, y: frame.maxY - 1)
+    canvas.perform(NSSelectorFromString("tapped:"), with: tap)
+    XCTAssertEqual(model.content.route, [hold.id])
+    XCTAssertEqual(model.selection, .hold(hold.id))
+
+    model.tool = .hold
+    let pan = SimulatedPan()
+    pan.testLocation = CanvasView.ResizeHandle.e.position(in: frame.insetBy(dx: -5, dy: -5))
+    pan.testState = .began
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    pan.testTranslation = CGPoint(x: 20, y: 0)
+    pan.testState = .changed
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    pan.testState = .ended
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    XCTAssertEqual(model.content.holds[0].radiusX * 600, 80, accuracy: 0.001)
+    XCTAssertEqual(model.content.holds[0].radiusY, hold.radiusY, accuracy: 0.001)
+  }
+
+  func testChangingHoldShapeUpdatesSelectionAndNextHoldWithUndoAndRedo() throws {
+    let model = try EditorModel(document: makeDocument())
+    model.change { $0.autoDetectHolds = false }
+    let position = WallPoint(x: 0.3, y: 0.4)
+    model.addHold(at: position)
+    let original = model.content.holds[0]
+    XCTAssertEqual(original.effectiveShape, .oval)
+    model.updateHoldShape(.rectangle)
+    var expected = original
+    expected.shape = .rectangle
+    XCTAssertEqual(model.content.holds, [expected])
+    XCTAssertEqual(model.activeHoldShape, .rectangle)
+    model.undo()
+    XCTAssertEqual(model.content.holds, [original])
+    XCTAssertEqual(model.activeHoldShape, .oval)
+    model.redo()
+    model.addHold(at: WallPoint(x: 0.7, y: 0.8))
+    XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .rectangle])
+    model.updateHoldShape(.oval)
+    XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .oval])
+  }
+
   func testResizeHandlesDoNotStartTrashDragOrAppearInRouteTool() throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
@@ -960,6 +1154,192 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.texts[0].text, "再編集")
     XCTAssertEqual(model.content.texts[0].style, editedStyle)
     XCTAssertEqual(model.content.textStyle, editedStyle)
+  }
+
+  func testEditorControlsPanelMatchesHoldHeightForShortAndTallContent() {
+    for contentHeight: CGFloat in [60, 160, 400] {
+      let panel = EditorControlsPanel {
+        Color.clear.frame(height: 160)
+      } content: {
+        Color.clear.frame(height: contentHeight)
+      }
+      let controller = UIHostingController(rootView: panel)
+      XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 500)).height, 176)
+      XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 150)).height, 150)
+    }
+  }
+
+  func testEditorControlsPanelCapsTallHoldControls() {
+    let panel = EditorControlsPanel {
+      Color.clear.frame(height: 400)
+    } content: {
+      Color.clear.frame(height: 60)
+    }
+    let controller = UIHostingController(rootView: panel)
+    XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 500)).height, 240)
+  }
+
+  func testEditorControlsPanelPlacesShortContentAtBottomAndTallContentAtTop() async {
+    for (contentHeight, expectedTop): (CGFloat, CGFloat) in [(60, 108), (400, 8)] {
+      let laidOut = expectation(description: "Lay out panel content of height \(contentHeight)")
+      var measured = false
+      let panel = EditorControlsPanel {
+        Color.clear.frame(height: 160)
+      } content: {
+        Color.clear.frame(height: contentHeight)
+          .onGeometryChange(for: CGFloat.self) { geometry in
+            geometry.frame(in: .named("panel")).minY
+          } action: { top in
+            guard !measured else { return }
+            measured = true
+            XCTAssertEqual(top, expectedTop, accuracy: 0.5)
+            laidOut.fulfill()
+          }
+      }
+      .coordinateSpace(name: "panel")
+      .frame(width: 320, height: 176)
+      let controller = UIHostingController(rootView: panel)
+      let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 375, height: 667))
+      window.rootViewController = controller
+      window.isHidden = false
+      defer { window.isHidden = true }
+      controller.view.layoutIfNeeded()
+      await fulfillment(of: [laidOut], timeout: 1)
+    }
+  }
+
+  func testEmptyTextEntryRendersNoBackgroundOrPlaceholder() throws {
+    let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 144))
+    entry.update(text: "", style: MarkStyle())
+    entry.layoutIfNeeded()
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = false
+    let renderer = UIGraphicsImageRenderer(size: entry.bounds.size, format: format)
+    let rendered = renderer.image { entry.layer.render(in: $0.cgContext) }
+    let transparent = renderer.image { _ in }
+    XCTAssertEqual(try XCTUnwrap(rendered.pngData()), try XCTUnwrap(transparent.pngData()))
+    XCTAssertEqual(entry.accessibilityLabel, "文字を入力")
+  }
+
+  func testTextEntryRendersOutlineColorAndFullFontSizeRange() throws {
+    func ink(for style: MarkStyle, editing: Bool = true) throws
+      -> (height: Int, red: Int, blue: Int)
+    {
+      let rendered: UIImage
+      if editing {
+        let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 220))
+        entry.update(text: "H", style: style)
+        entry.layoutIfNeeded()
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        rendered = UIGraphicsImageRenderer(size: entry.bounds.size, format: format).image {
+          entry.layer.render(in: $0.cgContext)
+        }
+      } else {
+        var content = WallContent(name: "文字の枠線")
+        content.texts = [WallText(position: WallPoint(x: 0.3, y: 0.5), text: "H", style: style)]
+        rendered = SceneRenderer.render(
+          image: image(size: CGSize(width: 600, height: 600)), content: content)
+      }
+      let image = try XCTUnwrap(rendered.cgImage)
+      var rgba = [UInt8](repeating: 0, count: image.width * image.height * 4)
+      try rgba.withUnsafeMutableBytes { bytes in
+        let context = try XCTUnwrap(
+          CGContext(
+            data: bytes.baseAddress, width: image.width, height: image.height,
+            bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+      }
+      var rows = Set<Int>()
+      var red = 0
+      var blue = 0
+      for i in stride(from: 0, to: rgba.count, by: 4) where rgba[i + 3] > 128 {
+        if rgba[i] > 128 && rgba[i + 2] < 128 {
+          red += 1
+          rows.insert(i / 4 / image.width)
+        }
+        if rgba[i + 2] > 128 && rgba[i] < 128 {
+          blue += 1
+          rows.insert(i / 4 / image.width)
+        }
+      }
+      return (rows.count, red, blue)
+    }
+
+    var style = MarkStyle(color: "#FF0000", outlineColor: "#0000FF")
+    var previousHeight = 0
+    for size in [6.0, 18, 56, 90, 120] {
+      style.fontSize = size
+      let result = try ink(for: style)
+      XCTAssertGreaterThan(result.height, previousHeight, "Font size \(size) must grow")
+      XCTAssertGreaterThan(result.red, 0)
+      XCTAssertEqual(result.blue, 0)
+      previousHeight = result.height
+    }
+    style.outlineWidth = 3
+    let thin = try ink(for: style)
+    XCTAssertGreaterThan(thin.blue, 0)
+    XCTAssertGreaterThan(thin.red, 0)
+    style.outlineWidth = 8
+    XCTAssertGreaterThan(try ink(for: style).blue, thin.blue)
+    for size in [24.0, 60, 120] {
+      style.fontSize = size
+      for width in [3.0, 8, 12] {
+        style.outlineWidth = width
+        let entry = try ink(for: style)
+        let committed = try ink(for: style, editing: false)
+        XCTAssertEqual(
+          Double(entry.red) / Double(committed.red), 1, accuracy: 0.12,
+          "Fill coverage at font size \(size), outline \(width)")
+        XCTAssertEqual(
+          Double(entry.blue) / Double(committed.blue), 1, accuracy: 0.18,
+          "Outline coverage at font size \(size), outline \(width)")
+      }
+    }
+  }
+
+  func testTextEntryRestylesWithoutReplacingDraftOrSelection() throws {
+    let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 144))
+    var style = MarkStyle()
+    entry.update(text: "入力", style: style)
+    entry.selectedRange = NSRange(location: 1, length: 1)
+
+    style.fontSize = 120
+    style.outlineWidth = 6
+    entry.update(text: "入力", style: style)
+    XCTAssertEqual(entry.text, "入力")
+    XCTAssertEqual(entry.selectedRange, NSRange(location: 1, length: 1))
+    let font = try XCTUnwrap(
+      entry.textStorage.attribute(.font, at: 1, effectiveRange: nil) as? UIFont)
+    XCTAssertEqual(font.pointSize, 120)
+
+    var draft = ""
+    entry.onTextChange = { draft = $0 }
+    entry.insertText("力テスト")
+    XCTAssertEqual(draft, "入力テスト")
+    let strokeWidth = entry.textStorage.attribute(.strokeWidth, at: 4, effectiveRange: nil)
+    XCTAssertEqual(strokeWidth as? Double, -10)
+  }
+
+  func testTextEntryDefersRestylingUntilJapaneseCompositionEnds() {
+    let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 144))
+    var style = MarkStyle()
+    entry.update(text: "", style: style)
+    entry.setMarkedText("かな", selectedRange: NSRange(location: 2, length: 0))
+    XCTAssertNotNil(entry.markedTextRange)
+
+    style.outlineWidth = 6
+    entry.update(text: "かな", style: style)
+    XCTAssertNotNil(entry.markedTextRange)
+    XCTAssertNil(entry.textStorage.attribute(.strokeWidth, at: 0, effectiveRange: nil))
+
+    entry.unmarkText()
+    XCTAssertNil(entry.markedTextRange)
+    XCTAssertEqual(entry.text, "かな")
+    let width = entry.textStorage.attribute(.strokeWidth, at: 0, effectiveRange: nil)
+    XCTAssertEqual(width as? Double, -50)
   }
 
   func testEmptyTextCompletionDeletesExistingTextWithUndoAndRedo() throws {
@@ -1231,6 +1611,25 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(circle.width, circle.height)
   }
 
+  func testRectangleEdgesAppearInBothPreviewAndFullSizeRender() {
+    let source = image(size: CGSize(width: 600, height: 800))
+    let style = MarkStyle(color: "#202522", width: 12)
+    let position = WallPoint(x: 0.5, y: 0.5)
+    var content = WallContent(name: "形")
+    content.holds = [
+      Hold(position: position, radiusX: 0.1, radiusY: 0.05, style: style, shape: .rectangle)
+    ]
+    let full = SceneRenderer.render(image: source, content: content)
+    let preview = SceneRenderer.render(image: source, content: content, maxDimension: 400)
+    let white: [UInt8] = [255, 255, 255, 255]
+    XCTAssertLessThan(pixel(full, x: 350, y: 360)[0], 128)
+    XCTAssertEqual(pixel(full, x: 350, y: 360), pixel(preview, x: 175, y: 180))
+    XCTAssertEqual(pixel(full, x: 300, y: 400), white)
+    content.holds[0].shape = nil
+    let oval = SceneRenderer.render(image: source, content: content)
+    XCTAssertEqual(pixel(oval, x: 350, y: 360), white)
+  }
+
   func testDetectionFindsHoldAtCorrectImageCoordinatesAndRejectsFlatWall() throws {
     let size = CGSize(width: 600, height: 800)
     let format = UIGraphicsImageRendererFormat()
@@ -1248,9 +1647,58 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(detected.position.x, 135.0 / 600, accuracy: 0.01)
     XCTAssertEqual(detected.position.y, 140.0 / 800, accuracy: 0.01)
     XCTAssertGreaterThan(detected.radiusX * 600, detected.radiusY * 800)
+    var document = WallDocument(
+      imageData: try source.normalizedPNG(), content: WallContent(name: "自動検出"))
+    document.content.newHoldShape = .rectangle
+    let model = try EditorModel(document: document)
+    model.addHold(at: WallPoint(x: 135.0 / 600, y: 140.0 / 800))
+    let rectangle = try XCTUnwrap(model.content.holds.first)
+    XCTAssertEqual(rectangle.effectiveShape, .rectangle)
+    XCTAssertEqual(rectangle.position, detected.position)
+    XCTAssertEqual(rectangle.radiusY, detected.radiusY, accuracy: 1e-10)
     XCTAssertNil(
       try HoldDetection.detect(
         image: image(), position: WallPoint(x: 0.5, y: 0.5), style: MarkStyle()))
+  }
+
+  func testAutomaticHoldSizingKeepsPhotoClearOfThickLineAndOutline() throws {
+    let size = CGSize(width: 1200, height: 900)
+    let silhouette = CGRect(x: 144, y: 210, width: 96, height: 36)
+    let position = WallPoint(x: silhouette.midX / size.width, y: silhouette.midY / size.height)
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    let source = UIGraphicsImageRenderer(size: size, format: format).image { renderer in
+      UIColor.white.setFill()
+      renderer.fill(CGRect(origin: .zero, size: size))
+      UIColor.red.setFill()
+      UIBezierPath(ovalIn: silhouette).fill()
+    }
+    let data = try source.normalizedPNG()
+    for (shape, allowEllipses) in [
+      (HoldShape.oval, true), (.oval, false), (.rectangle, false),
+    ] {
+      for outlineWidth in [0.0, 12.0] {
+        var content = WallContent(name: "自動検出")
+        content.newHoldShape = shape
+        content.allowEllipses = allowEllipses
+        content.holdStyle = MarkStyle(
+          color: "#000000", width: 20, outlineColor: "#0000FF", outlineWidth: outlineWidth)
+        let model = try EditorModel(document: WallDocument(imageData: data, content: content))
+        model.addHold(at: position)
+        let hold = try XCTUnwrap(model.selectedHold)
+        XCTAssertEqual(hold.effectiveShape, shape)
+        let rect = SceneRenderer.holdRect(hold, content: model.content, size: size)
+        let rendered = SceneRenderer.render(image: model.image, content: model.content)
+        XCTAssertEqual(pixel(rendered, x: Int(rect.midX), y: Int(rect.minY)), [0, 0, 0, 255])
+        for angle in stride(from: 0.0, to: 2 * Double.pi, by: Double.pi / 16) {
+          let x = Int(silhouette.midX + cos(angle) * (silhouette.width / 2 - 2))
+          let y = Int(silhouette.midY + sin(angle) * (silhouette.height / 2 - 2))
+          XCTAssertEqual(
+            pixel(rendered, x: x, y: y), pixel(source, x: x, y: y),
+            "\(shape), ellipses: \(allowEllipses), outline: \(outlineWidth), pixel: \(x), \(y)")
+        }
+      }
+    }
   }
 
   private func pixel(_ image: UIImage, x: Int, y: Int) -> [UInt8] {

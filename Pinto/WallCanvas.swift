@@ -223,11 +223,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       }
     }
     for hold in model.content.holds.reversed() {
-      let rect = SceneRenderer.holdRect(hold, content: model.content, size: size).insetBy(
-        dx: -8, dy: -8)
-      let dx = (p.x - rect.midX) / (rect.width / 2)
-      let dy = (p.y - rect.midY) / (rect.height / 2)
-      if dx * dx + dy * dy <= 1 { return .hold(hold.id) }
+      if SceneRenderer.holdPath(hold, content: model.content, size: size, padding: 8).contains(p) {
+        return .hold(hold.id)
+      }
     }
     return nil
   }
@@ -369,7 +367,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
             translation: translation, size: resizeBase, isText: model.editingText)
           var scaleX = scale.width
           var scaleY = scale.height
-          if case .hold = model.selection, !model.content.allowEllipses {
+          if let hold = model.selectedHold, model.content.locksHoldAspectRatio(hold) {
             let scale =
               direction.x == 0
               ? scaleY

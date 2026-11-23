@@ -121,14 +121,16 @@ final class EditorModel: ObservableObject {
     do {
       let detected =
         content.autoDetectHolds
-        ? try HoldDetection.detect(image: image, position: position, style: content.holdStyle)
+        ? try HoldDetection.detect(
+          image: image, position: position, style: content.holdStyle, shape: content.newHoldShape)
         : nil
       let radius = min(image.size.width, image.size.height) * 0.035
       let hold =
         detected
         ?? Hold(
           position: position, radiusX: radius / image.size.width,
-          radiusY: radius / image.size.height, style: content.holdStyle)
+          radiusY: radius / image.size.height, style: content.holdStyle,
+          shape: content.newHoldShape)
       change { $0.holds.append(hold) }
       selection = .hold(hold.id)
     } catch {
@@ -183,12 +185,33 @@ final class EditorModel: ObservableObject {
     }
   }
 
+  var selectedHold: Hold? {
+    guard case .hold(let id) = selection else { return nil }
+    return content.holds.first { $0.id == id }
+  }
+
+  var activeHoldShape: HoldShape {
+    selectedHold?.effectiveShape ?? content.newHoldShape ?? .oval
+  }
+
+  func updateHoldShape(_ shape: HoldShape) {
+    let storedShape: HoldShape? = shape == .oval ? nil : shape
+    change { content in
+      if case .hold(let id) = selection,
+        let index = content.holds.firstIndex(where: { $0.id == id })
+      {
+        content.holds[index].shape = storedShape
+      }
+      content.newHoldShape = storedShape
+    }
+  }
+
   var activeStyle: MarkStyle {
     if tool == .route { return content.lineStyle }
     if case .text(let id) = selection, let text = content.texts.first(where: { $0.id == id }) {
       return text.style
     }
-    if case .hold(let id) = selection, let hold = content.holds.first(where: { $0.id == id }) {
+    if let hold = selectedHold {
       return hold.style
     }
     return tool == .text ? content.textStyle : content.holdStyle
@@ -198,6 +221,17 @@ final class EditorModel: ObservableObject {
     if tool == .route { return false }
     if case .text = selection { return true }
     return tool == .text && selection == nil
+  }
+
+  func resetStyleValue(_ keyPath: WritableKeyPath<MarkStyle, Double>) {
+    let defaults = tool == .route ? WallContent.defaultLineStyle : MarkStyle()
+    let value = defaults[keyPath: keyPath]
+    guard activeStyle[keyPath: keyPath] != value else { return }
+    updateStyle { $0[keyPath: keyPath] = value }
+  }
+
+  func resetRouteNumberSize() {
+    change { $0.routeNumberSize = nil }
   }
 
   func updateStyle(_ update: (inout MarkStyle) -> Void) {
