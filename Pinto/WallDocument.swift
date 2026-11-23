@@ -106,6 +106,34 @@ struct WallDocument: Codable, Identifiable, Equatable {
   var content: WallContent
 }
 
+struct LibraryFilters {
+  var japaneseGrade = ""
+  var vGrade = ""
+  var tags: Set<String> = []
+
+  var isActive: Bool {
+    !japaneseGrade.isEmpty || !vGrade.isEmpty || !tags.isEmpty
+  }
+
+  func matches(_ content: WallContent, search: String) -> Bool {
+    guard japaneseGrade.isEmpty || content.japaneseGrade == japaneseGrade,
+      vGrade.isEmpty || content.vGrade == vGrade
+    else { return false }
+
+    for (_, options) in WallCatalog.tagGroups {
+      let selected = tags.intersection(options)
+      if !selected.isEmpty, selected.isDisjoint(with: content.tags) { return false }
+    }
+
+    guard !search.isEmpty else { return true }
+    return [
+      content.name, content.grade, content.gymName, content.author,
+      content.notes, content.tags.sorted().joined(separator: " "),
+    ]
+    .joined(separator: " ").localizedCaseInsensitiveContains(search)
+  }
+}
+
 struct EditHistory<Value: Equatable> {
   private(set) var past: [Value] = []
   private(set) var future: [Value] = []

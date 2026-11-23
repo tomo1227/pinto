@@ -9,75 +9,91 @@ struct LibraryView: View {
   @State private var path: [UUID] = []
   @State private var registering = false
   @State private var showingManual = false
+  @State private var showingFilters = false
   @State private var search = ""
+  @State private var filters = LibraryFilters()
   @AppStorage("libraryGrid") private var grid = true
-  @State private var deleting: WallDocument?
-
-  private var filtered: [WallDocument] {
-    guard !search.isEmpty else { return store.walls }
-    return store.walls.filter {
-      [
-        $0.content.name, $0.content.grade, $0.content.gymName, $0.content.author,
-        $0.content.notes, $0.content.tags.sorted().joined(separator: " "),
-      ]
-      .joined(separator: " ").localizedCaseInsensitiveContains(search)
-    }
-  }
+  @State private var selectedIDs: Set<UUID>?
+  @State private var pendingDeletion: Set<UUID> = []
 
   var body: some View {
+    let filtered = store.walls.filter { filters.matches($0.content, search: search) }
     NavigationStack(path: $path) {
       Group {
         if !grid, store.ready, !filtered.isEmpty {
           List(filtered) { document in
-            Button {
-              path.append(document.id)
-            } label: {
-              card(document)
-            }
-            .buttonStyle(.plain)
-            .contextMenu {
-              Button("削除", systemImage: "trash", role: .destructive) { deleting = document }
-            }
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-              Button("削除", systemImage: "trash", role: .destructive) { deleting = document }
-                .tint(.red)
-            }
-            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
-            .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            wallItem(document)
+              .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                if selectedIDs == nil {
+                  Button("削除", systemImage: "trash", role: .destructive) {
+                    pendingDeletion = [document.id]
+                  }
+                  .tint(.red)
+                }
+              }
+              .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 16, trailing: 16))
+              .listRowSeparator(.hidden)
+              .listRowBackground(Color.clear)
           }
           .listStyle(.plain)
           .scrollContentBackground(.hidden)
           .contentMargins(.top, 16, for: .scrollContent)
         } else {
-          libraryGrid
+          libraryGrid(filtered)
         }
       }
       .background(Color(uiColor: .systemGroupedBackground))
-      .navigationTitle("Pinto")
+      .navigationTitle(selectedIDs.map { "\($0.count)件選択中" } ?? "")
+      .navigationBarTitleDisplayMode(.inline)
       .searchable(text: $search, prompt: "壁名・グレード・タグ")
+      .onChange(of: filtered.map(\.id)) { _, visibleIDs in
+        selectedIDs?.formIntersection(visibleIDs)
+      }
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          Button {
-            grid.toggle()
-          } label: {
-            Image(systemName: grid ? "list.bullet" : "square.grid.2x2")
+        if let selectedIDs {
+          ToolbarItem(placement: .topBarLeading) {
+            Button("キャンセル") { self.selectedIDs = nil }
           }
-          .accessibilityLabel(grid ? "リスト表示" : "グリッド表示")
-        }
-        ToolbarItemGroup(placement: .topBarTrailing) {
-          Button {
-            showingManual = true
-          } label: {
-            Image(systemName: "questionmark.circle")
+          ToolbarItem(placement: .topBarTrailing) {
+            Button("選択した壁を削除", systemImage: "trash", role: .destructive) {
+              pendingDeletion = selectedIDs
+            }
+            .labelStyle(.iconOnly)
+            .tint(.red)
+            .disabled(selectedIDs.isEmpty)
           }
-          .accessibilityLabel("ユーザーマニュアル")
-          Button {
-            registering = true
-          } label: {
-            Image(systemName: "plus")
+        } else {
+          ToolbarItem(placement: .topBarLeading) {
+            Button {
+              grid.toggle()
+            } label: {
+              Image(systemName: grid ? "list.bullet" : "square.grid.2x2")
+            }
+            .accessibilityLabel(grid ? "リスト表示" : "グリッド表示")
           }
-          .disabled(!store.ready).accessibilityLabel("壁・課題を登録")
+          ToolbarItemGroup(placement: .topBarTrailing) {
+            Button {
+              showingFilters = true
+            } label: {
+              Image(systemName: "line.3.horizontal.decrease.circle")
+                .symbolVariant(filters.isActive ? .fill : .none)
+            }
+            .accessibilityLabel("絞り込み")
+            .accessibilityValue(filters.isActive ? "適用中" : "なし")
+            .disabled(!store.ready)
+            Button {
+              showingManual = true
+            } label: {
+              Image(systemName: "questionmark.circle")
+            }
+            .accessibilityLabel("ユーザーマニュアル")
+            Button {
+              registering = true
+            } label: {
+              Image(systemName: "plus")
+            }
+            .disabled(!store.ready).accessibilityLabel("壁・課題を登録")
+          }
         }
       }
       .navigationDestination(for: UUID.self) { id in
@@ -96,15 +112,25 @@ struct LibraryView: View {
       .sheet(isPresented: $showingManual) {
         UserManualView()
       }
+      .sheet(isPresented: $showingFilters) {
+        LibraryFilterView(draft: filters) { filters = $0 }
+      }
       .confirmationDialog(
-        "「\(deleting?.content.name ?? "")」を端末から削除しますか？",
-        isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-        titleVisibility: .visible
-      ) {
+        deletionTitle,
+        isPresented: Binding(
+          get: { !pendingDeletion.isEmpty }, set: { if !$0 { pendingDeletion = [] } }
+        ),
+        titleVisibility: .visible,
+        presenting: pendingDeletion
+      ) { ids in
         Button("壁と編集データを削除", role: .destructive) {
-          if let deleting { store.delete(deleting.id) }
-          deleting = nil
+          store.delete(ids)
+          if let selectedIDs {
+            let remaining = selectedIDs.intersection(store.walls.map(\.id))
+            self.selectedIDs = remaining.isEmpty ? nil : remaining
+          }
         }
+        Button("キャンセル", role: .cancel) {}
       }
       .alert(
         "読み込み・保存エラー",
@@ -121,7 +147,7 @@ struct LibraryView: View {
     .task { if !store.ready { store.load() } }
   }
 
-  private var libraryGrid: some View {
+  private func libraryGrid(_ filtered: [WallDocument]) -> some View {
     ScrollView {
       if !store.ready {
         ContentUnavailableView {
@@ -140,22 +166,73 @@ struct LibraryView: View {
           Button("壁・課題を登録") { registering = true }
         }
       } else if filtered.isEmpty {
-        ContentUnavailableView.search(text: search)
+        if filters.isActive {
+          ContentUnavailableView {
+            Label("条件に合う壁がありません", systemImage: "line.3.horizontal.decrease.circle")
+          } description: {
+            Text("検索語や絞り込み条件を見直してください。")
+          } actions: {
+            Button("絞り込みを解除") { filters = LibraryFilters() }
+          }
+        } else {
+          ContentUnavailableView.search(text: search)
+        }
       } else {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 16)], spacing: 16) {
           ForEach(filtered) { document in
-            NavigationLink(value: document.id) {
-              card(document)
-            }
-            .buttonStyle(.plain)
-            .contextMenu {
-              Button("削除", systemImage: "trash", role: .destructive) { deleting = document }
-            }
+            wallItem(document)
           }
         }
         .padding()
       }
     }
+  }
+
+  private var deletionTitle: String {
+    if pendingDeletion.count == 1,
+      let document = store.walls.first(where: { pendingDeletion.contains($0.id) })
+    {
+      return "「\(document.content.name)」を端末から削除しますか？"
+    }
+    return "\(pendingDeletion.count)件の壁を端末から削除しますか？"
+  }
+
+  private func wallItem(_ document: WallDocument) -> some View {
+    let isSelected = selectedIDs?.contains(document.id) == true
+    let tap = {
+      if var selection = selectedIDs {
+        if selection.remove(document.id) == nil { selection.insert(document.id) }
+        selectedIDs = selection
+      } else {
+        path.append(document.id)
+      }
+    }
+    let select = {
+      if selectedIDs == nil { selectedIDs = [] }
+      selectedIDs?.insert(document.id)
+    }
+    return card(document)
+      .overlay(alignment: .topTrailing) {
+        if selectedIDs != nil {
+          Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+            .font(.title2)
+            .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+            .padding(3)
+            .background(.regularMaterial, in: Circle())
+            .padding(8)
+            .accessibilityHidden(true)
+        }
+      }
+      .contentShape(RoundedRectangle(cornerRadius: 16))
+      .gesture(
+        LongPressGesture().onEnded { _ in select() }
+          .exclusively(before: TapGesture().onEnded { tap() })
+      )
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAddTraits(isSelected ? .isSelected : [])
+      .accessibilityAction { tap() }
+      .accessibilityAction(named: Text("選択")) { select() }
   }
 
   private func card(_ document: WallDocument) -> some View {
@@ -196,6 +273,56 @@ struct LibraryView: View {
       }
       Text(document.updatedAt, format: .dateTime.year().month().day())
         .font(.caption2).foregroundStyle(.secondary)
+    }
+  }
+}
+
+@MainActor
+private struct LibraryFilterView: View {
+  @State var draft: LibraryFilters
+  var onApply: (LibraryFilters) -> Void
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      Form {
+        Section("グレード") {
+          Picker("日本グレード", selection: $draft.japaneseGrade) {
+            Text("すべて").tag("")
+            ForEach(WallCatalog.japaneseGrades, id: \.self) { Text($0).tag($0) }
+          }
+          Picker("Vグレード", selection: $draft.vGrade) {
+            Text("すべて").tag("")
+            ForEach(WallCatalog.vGrades, id: \.self) { Text($0).tag($0) }
+          }
+          Button("条件をリセット") { draft = LibraryFilters() }
+            .disabled(!draft.isActive)
+        }
+        ForEach(WallCatalog.tagGroups, id: \.0) { group in
+          Section(group.0) {
+            ForEach(group.1, id: \.self) { tag in
+              Toggle(
+                tag,
+                isOn: Binding(
+                  get: { draft.tags.contains(tag) },
+                  set: { selected in
+                    if selected { draft.tags.insert(tag) } else { draft.tags.remove(tag) }
+                  }
+                ))
+            }
+          }
+        }
+      }
+      .navigationTitle("絞り込み").navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
+        ToolbarItem(placement: .confirmationAction) {
+          Button("適用") {
+            onApply(draft)
+            dismiss()
+          }
+        }
+      }
     }
   }
 }
