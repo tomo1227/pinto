@@ -50,6 +50,24 @@ final class PintoTests: XCTestCase {
     WallDocument(imageData: try image().normalizedPNG(), content: WallContent(name: "テスト壁"))
   }
 
+  func testSystemLaunchScreenShowsOnlyTheSharedBackground() throws {
+    let bundle = Bundle.main
+    XCTAssertNil(bundle.object(forInfoDictionaryKey: "UILaunchStoryboardName"))
+    let launchScreen = try XCTUnwrap(
+      bundle.object(forInfoDictionaryKey: "UILaunchScreen") as? [String: String])
+    XCTAssertEqual(launchScreen, ["UIColorName": "LaunchBackground"])
+    let color = try XCTUnwrap(UIColor(named: "LaunchBackground", in: bundle, compatibleWith: nil))
+    let light = color.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+    let dark = color.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
+    XCTAssertNotEqual(light, dark)
+  }
+
+  func testAnimatedLaunchWordmarkIsBundledAsTemplate() throws {
+    let wordmark = try XCTUnwrap(UIImage(named: "PintoWordmark", in: .main, with: nil))
+    XCTAssertEqual(wordmark.renderingMode, .alwaysTemplate)
+    XCTAssertEqual(wordmark.size, CGSize(width: 99, height: 33))
+  }
+
   func testUserManualIsBundledAndIncludesCurrentInstructions() throws {
     let blocks = try UserManual.load()
     XCTAssertEqual(String(try XCTUnwrap(blocks.first).text.characters), "Pinto ユーザーマニュアル")
