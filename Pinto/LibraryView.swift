@@ -522,7 +522,7 @@ private struct WallThumbnail: View {
 
   var body: some View {
     ZStack {
-      Color(uiColor: .secondarySystemBackground)
+      Color(uiColor: .systemGray5)
       if let image {
         Image(uiImage: image).resizable().scaledToFit()
       } else if failed {
