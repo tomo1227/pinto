@@ -6,7 +6,7 @@ iOS 17 以上の iPhone 向けの SwiftUI + UIKit アプリです。サーバー
 
 お問い合わせは [Pinto サポート](https://tomo1227.github.io/pinto/)、データの取り扱いは [プライバシーポリシー](https://tomo1227.github.io/pinto/privacy.html) をご覧ください。
 
-アプリに関する [お知らせとリリースノート](https://tomo1227.github.io/pinto/updates.html) は、[更新情報ページ](./docs/updates.html) に新しい項目を上から追加して更新します。GitHub Pages は `main` ブランチの `/docs` から公開しています。
+アプリに関する [お知らせ](https://tomo1227.github.io/pinto/news.html) と [リリースノート](https://tomo1227.github.io/pinto/releases.html) は、それぞれ [news.html](./docs/news.html) と [releases.html](./docs/releases.html) の記事一覧の先頭に追加します。GitHub Pages は `main` ブランチの `/docs` から公開し、各ページのヘッダーは Jekyll の [共通テンプレート](./docs/_includes/site-header.html) を使用しています。
 
 ## Xcode で開く
 

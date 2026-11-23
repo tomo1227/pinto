@@ -1,3 +1,5 @@
+---
+---
 <!doctype html>
 <html lang="ja">
 <head>
@@ -8,15 +10,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="site-header">
-    <nav aria-label="サイト内ナビゲーション">
-      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"></span>Pinto</a>
-      <a href="./">サポート</a>
-      <a href="updates.html#news">お知らせ</a>
-      <a href="updates.html#releases">リリースノート</a>
-      <a href="privacy.html" aria-current="page">プライバシーポリシー</a>
-    </nav>
-  </header>
+{% include site-header.html current="privacy" %}
   <main>
     <section class="hero" aria-labelledby="page-title">
       <p class="eyebrow">データの取り扱い</p>

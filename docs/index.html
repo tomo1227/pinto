@@ -1,3 +1,5 @@
+---
+---
 <!doctype html>
 <html lang="ja">
 <head>
@@ -8,15 +10,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="site-header">
-    <nav aria-label="サイト内ナビゲーション">
-      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"></span>Pinto</a>
-      <a href="./" aria-current="page">サポート</a>
-      <a href="updates.html#news">お知らせ</a>
-      <a href="updates.html#releases">リリースノート</a>
-      <a href="privacy.html">プライバシーポリシー</a>
-    </nav>
-  </header>
+{% include site-header.html current="support" %}
   <main>
     <section class="hero" aria-labelledby="page-title">
       <p class="eyebrow">サポートセンター</p>
@@ -24,7 +18,7 @@
       <p>壁の写真から、オリジナルのボルダリング課題を。Pinto は、ホールドや登る順番を書き込んで、課題を作成・共有できる iPhone アプリです。</p>
       <div class="actions">
         <a class="button primary" href="#guide">使い方を見る</a>
-        <a class="button" href="updates.html#news">お知らせを見る</a>
+        <a class="button" href="news.html">お知らせを見る</a>
       </div>
     </section>
 

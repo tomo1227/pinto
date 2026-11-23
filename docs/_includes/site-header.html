@@ -1,0 +1,9 @@
+  <header class="site-header">
+    <nav aria-label="サイト内ナビゲーション">
+      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true"></span>Pinto</a>
+      <a href="./"{% if include.current == "support" %} aria-current="page"{% endif %}>サポート</a>
+      <a href="news.html"{% if include.current == "news" %} aria-current="page"{% endif %}>お知らせ</a>
+      <a href="releases.html"{% if include.current == "releases" %} aria-current="page"{% endif %}>リリースノート</a>
+      <a href="privacy.html"{% if include.current == "privacy" %} aria-current="page"{% endif %}>プライバシーポリシー</a>
+    </nav>
+  </header>
