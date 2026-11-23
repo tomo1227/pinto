@@ -252,6 +252,37 @@ final class PintoTests: XCTestCase {
     }
   }
 
+  func testAddedFontFamiliesUseDistinctFacesAndSurviveSaving() throws {
+    XCTAssertEqual(
+      TextFamily.allCases,
+      [
+        .sans, .serif, .monospace, .roundedGothic, .condensed, .handwritten,
+      ])
+    let source = image()
+    var renderedImages = Set<Data>()
+    for (family, face, boldFace) in [
+      (TextFamily.roundedGothic, "HiraMaruProN-W4", "HiraMaruProN-W4"),
+      (.condensed, "AvenirNextCondensed-DemiBold", "AvenirNextCondensed-Bold"),
+      (.handwritten, "MarkerFelt-Thin", "MarkerFelt-Wide"),
+    ] {
+      var style = MarkStyle(fontFamily: family)
+      XCTAssertEqual(SceneRenderer.font(style, unit: 1).fontName, face)
+      var content = WallContent(name: "書体")
+      content.textStyle = style
+      content.texts = [
+        WallText(position: WallPoint(x: 0.1, y: 0.5), text: "Pinto 岩 123", style: style)
+      ]
+      let saved = try JSONEncoder().encode(content)
+      let restored = try JSONDecoder().decode(WallContent.self, from: saved)
+      XCTAssertEqual(restored.textStyle.fontFamily, family)
+      XCTAssertEqual(restored.texts.first?.style.fontFamily, family)
+      let rendered = try XCTUnwrap(SceneRenderer.render(image: source, content: restored).pngData())
+      XCTAssertTrue(renderedImages.insert(rendered).inserted)
+      style.isBold = true
+      XCTAssertEqual(SceneRenderer.font(style, unit: 1).fontName, boldFace)
+    }
+  }
+
   func testAutosavePersistsEditsAndUndoRedoWithoutChangingHistory() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }

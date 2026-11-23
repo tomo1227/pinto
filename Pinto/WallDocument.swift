@@ -11,12 +11,16 @@ struct WallPoint: Codable, Equatable {
 
 enum TextFamily: String, Codable, CaseIterable {
   case sans, serif, monospace
+  case roundedGothic, condensed, handwritten
 
   var label: String {
     switch self {
     case .sans: return "ゴシック体"
     case .serif: return "明朝体"
     case .monospace: return "等幅"
+    case .roundedGothic: return "丸ゴシック"
+    case .condensed: return "Avenir Next Condensed"
+    case .handwritten: return "Marker Felt"
     }
   }
 }

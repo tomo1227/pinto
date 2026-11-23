@@ -439,7 +439,7 @@ struct EditorView: View {
   private var styleControls: some View {
     VStack(alignment: .leading, spacing: 4) {
       if model.editingText {
-        ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal) {
           HStack(spacing: 8) {
             ForEach(TextFamily.allCases, id: \.self) { family in
               Button {
@@ -465,6 +465,7 @@ struct EditorView: View {
               .accessibilityAddTraits(model.activeStyle.fontFamily == family ? .isSelected : [])
             }
           }
+          .scrollBounceBehavior(.basedOnSize)
         }
         styleSliderRow("文字サイズ", \.fontSize, in: 6...120)
       } else {

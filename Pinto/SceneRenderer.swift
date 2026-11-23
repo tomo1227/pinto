@@ -1,3 +1,4 @@
+import OSLog
 import UIKit
 
 extension UIColor {
@@ -11,6 +12,8 @@ extension UIColor {
 }
 
 enum SceneRenderer {
+  private static let logger = Logger(subsystem: "com.tomokiota.pinto", category: "SceneRenderer")
+
   static func markUnit(for size: CGSize) -> CGFloat {
     min(size.width, size.height) / 600
   }
@@ -50,20 +53,43 @@ enum SceneRenderer {
     case ...700: weight = .bold
     default: weight = .black
     }
-    let font = UIFont.systemFont(ofSize: style.fontSize * unit, weight: weight)
-    let design: UIFontDescriptor.SystemDesign
+    let size = style.fontSize * unit
+    let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
+    var descriptor: UIFontDescriptor
     switch style.fontFamily {
-    case .sans: design = .default
-    case .serif: design = .serif
-    case .monospace: design = .monospaced
+    case .sans:
+      descriptor = systemFont.fontDescriptor
+    case .serif:
+      descriptor = systemFont.fontDescriptor.withDesign(.serif) ?? systemFont.fontDescriptor
+    case .monospace:
+      descriptor = systemFont.fontDescriptor.withDesign(.monospaced) ?? systemFont.fontDescriptor
+    case .roundedGothic:
+      descriptor = namedFont("HiraMaruProN-W4", fallback: systemFont).fontDescriptor
+    case .condensed:
+      let face: String
+      switch style.fontWeight {
+      case ...400: face = "AvenirNextCondensed-Regular"
+      case ...600: face = "AvenirNextCondensed-DemiBold"
+      case ...700: face = "AvenirNextCondensed-Bold"
+      default: face = "AvenirNextCondensed-Heavy"
+      }
+      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
+    case .handwritten:
+      let face = style.isBold ? "MarkerFelt-Wide" : "MarkerFelt-Thin"
+      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
     }
-    var descriptor = font.fontDescriptor.withDesign(design) ?? font.fontDescriptor
     if style.isItalic {
       descriptor =
         descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic))
         ?? descriptor.withMatrix(CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0))
     }
-    return UIFont(descriptor: descriptor, size: font.pointSize)
+    return UIFont(descriptor: descriptor, size: size)
+  }
+
+  private static func namedFont(_ name: String, fallback: UIFont) -> UIFont {
+    if let font = UIFont(name: name, size: fallback.pointSize) { return font }
+    logger.error("Built-in font \(name, privacy: .public) is unavailable. Using the system font.")
+    return fallback
   }
 
   static func textRect(_ text: WallText, size: CGSize) -> CGRect {
