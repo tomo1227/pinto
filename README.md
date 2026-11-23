@@ -4,6 +4,8 @@ iOS 17 以上の iPhone 向けの SwiftUI + UIKit アプリです。サーバー
 
 利用者向けの操作手順は [ユーザーマニュアル](./USER_GUIDE.md) を参照してください。アプリ内では課題一覧の右上の「？」から、通信なしで閲覧できます。
 
+お問い合わせは [Pinto サポート](https://tomo1227.github.io/pinto/)、データの取り扱いは [プライバシーポリシー](https://tomo1227.github.io/pinto/privacy.html) をご覧ください。
+
 ## Xcode で開く
 
 1. Mac の Xcode 15 以降で [Pinto.xcodeproj](./Pinto.xcodeproj) を開きます。

@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.75;
+}
+
+body {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  overflow-wrap: anywhere;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  border-bottom: 1px solid GrayText;
+  padding-bottom: 0.75rem;
+}
+
+nav [aria-current="page"] {
+  font-weight: 700;
+}
+
+h1,
+h2 {
+  line-height: 1.35;
+}
+
+h2 {
+  margin-top: 2rem;
+}
+
+dt {
+  margin-top: 1rem;
+  font-weight: 700;
+}
+
+dd {
+  margin-left: 0;
+}
