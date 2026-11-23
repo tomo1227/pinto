@@ -213,6 +213,20 @@ struct EditorView: View {
                         colorControls
                         styleControls
                         if model.tool == .route {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("ルートの数字色")
+                                Toggle("ホールドと同じ色", isOn: Binding(
+                                    get: { model.content.routeNumberColor == nil },
+                                    set: { sameColor in
+                                        model.change { $0.routeNumberColor = sameColor ? nil : $0.holdStyle.color }
+                                    }
+                                ))
+                                if let color = model.content.routeNumberColor {
+                                    colorPalette(selectedColor: color, labelPrefix: "ルートの数字色: ") { hex in
+                                        model.change { $0.routeNumberColor = hex }
+                                    }
+                                }
+                            }
                             VStack(alignment: .leading, spacing: 2) {
                                 HStack {
                                     Text("ルートの数字サイズ")
@@ -273,18 +287,25 @@ struct EditorView: View {
     }
 
     private var colorControls: some View {
+        colorPalette(selectedColor: model.activeStyle.color) { hex in
+            model.updateStyle { $0.color = hex }
+        }
+    }
+
+    private func colorPalette(selectedColor: String, labelPrefix: String = "",
+                              onSelect: @escaping (String) -> Void) -> some View {
         HStack(spacing: 8) {
             ForEach(WallCatalog.colors, id: \.self) { hex in
                 Button {
-                    model.updateStyle { $0.color = hex }
+                    onSelect(hex)
                 } label: {
                     Circle().fill(Color(uiColor: UIColor(hex: hex)))
                         .frame(width: 26, height: 26)
                         .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
-                        .overlay(Circle().stroke(model.activeStyle.color == hex ? Color.accentColor : .clear, lineWidth: 2))
+                        .overlay(Circle().stroke(selectedColor == hex ? Color.accentColor : .clear, lineWidth: 2))
                 }
-                .accessibilityLabel(colorLabel(hex))
-                .accessibilityAddTraits(model.activeStyle.color == hex ? .isSelected : [])
+                    .accessibilityLabel(labelPrefix + colorLabel(hex))
+                    .accessibilityAddTraits(selectedColor == hex ? .isSelected : [])
             }
         }
     }

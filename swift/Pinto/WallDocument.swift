@@ -74,6 +74,7 @@ struct WallContent: Codable, Equatable {
     var texts: [WallText] = []
     var route: [UUID] = []
     var routeNumberSize: Double? = nil
+    var routeNumberColor: String? = nil
     var holdStyle = MarkStyle()
     var textStyle = MarkStyle()
     var lineStyle = MarkStyle(color: "#F2D13D", width: 4, outlineColor: "#202522", outlineWidth: 2)

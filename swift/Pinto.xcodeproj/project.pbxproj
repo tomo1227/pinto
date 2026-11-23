@@ -20,6 +20,7 @@
 		A1000000000000000000000B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* PrivacyInfo.xcprivacy */; };
 		A1000000000000000000000C /* PintoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* PintoTests.swift */; };
 		A1000000000000000000000D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Assets.xcassets */; };
+		A1000000000000000000000E /* USER_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* USER_GUIDE.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +50,7 @@
 		A2000000000000000000000E /* Pinto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Pinto.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A2000000000000000000000F /* PintoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PintoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000011 /* USER_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = USER_GUIDE.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +77,7 @@
 				A70000000000000000000002 /* Pinto */,
 				A70000000000000000000003 /* PintoTests */,
 				A70000000000000000000004 /* Products */,
+				A20000000000000000000011 /* USER_GUIDE.md */,
 			);
 			sourceTree = "<group>";
 		};
@@ -199,6 +202,7 @@
 			files = (
 				A1000000000000000000000B /* PrivacyInfo.xcprivacy in Resources */,
 				A1000000000000000000000D /* Assets.xcassets in Resources */,
+				A1000000000000000000000E /* USER_GUIDE.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

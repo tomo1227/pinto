@@ -80,7 +80,7 @@ enum SceneRenderer {
                 let label = "\(index + 1)" as NSString
                 let attributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.boldSystemFont(ofSize: CGFloat(content.effectiveRouteNumberSize) * unit),
-                    .foregroundColor: UIColor(hex: hold.style.color)
+                    .foregroundColor: UIColor(hex: content.routeNumberColor ?? hold.style.color)
                 ]
                 let dimensions = label.size(withAttributes: attributes)
                 let center = point(hold.position, in: size)

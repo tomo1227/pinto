@@ -57,10 +57,12 @@ struct WallFiles {
         func valid(_ point: WallPoint) -> Bool {
             point.x.isFinite && point.y.isFinite && (0...1).contains(point.x) && (0...1).contains(point.y)
         }
-        func validStyle(_ style: MarkStyle) -> Bool {
+        func validColor(_ color: String) -> Bool {
             let colorPattern = "^#[0-9A-Fa-f]{6}$"
-            return style.color.range(of: colorPattern, options: .regularExpression) != nil
-                && style.outlineColor.range(of: colorPattern, options: .regularExpression) != nil
+            return color.range(of: colorPattern, options: .regularExpression) != nil
+        }
+        func validStyle(_ style: MarkStyle) -> Bool {
+            validColor(style.color) && validColor(style.outlineColor)
                 && (1...20).contains(style.width) && (0...12).contains(style.outlineWidth)
                 && (6...120).contains(style.fontSize)
                 && [300, 400, 600, 700, 900].contains(style.fontWeight)
@@ -72,6 +74,7 @@ struct WallFiles {
               Set(content.route).count == content.route.count,
               content.route.allSatisfy({ ids.contains($0) }),
               content.routeNumberSize.map({ $0.isFinite && (6...60).contains($0) }) ?? true,
+              content.routeNumberColor.map(validColor) ?? true,
               content.holds.allSatisfy({
                   valid($0.position) && $0.radiusX.isFinite && $0.radiusX > 0 && $0.radiusX <= 1
                       && $0.radiusY.isFinite && $0.radiusY > 0 && $0.radiusY <= 1 && validStyle($0.style)

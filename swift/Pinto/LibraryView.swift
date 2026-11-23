@@ -8,6 +8,7 @@ struct LibraryView: View {
     @EnvironmentObject private var store: WallStore
     @State private var path: [UUID] = []
     @State private var registering = false
+    @State private var showingManual = false
     @State private var search = ""
     @AppStorage("libraryGrid") private var grid = true
     @State private var deleting: WallDocument?
@@ -58,7 +59,9 @@ struct LibraryView: View {
                     Button { grid.toggle() } label: { Image(systemName: grid ? "list.bullet" : "square.grid.2x2") }
                         .accessibilityLabel(grid ? "リスト表示" : "グリッド表示")
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { showingManual = true } label: { Image(systemName: "questionmark.circle") }
+                        .accessibilityLabel("ユーザーマニュアル")
                     Button { registering = true } label: { Image(systemName: "plus") }
                         .disabled(!store.ready).accessibilityLabel("壁・課題を登録")
                 }
@@ -75,6 +78,9 @@ struct LibraryView: View {
                     try store.save(document)
                     path.append(document.id)
                 }
+            }
+            .sheet(isPresented: $showingManual) {
+                UserManualView()
             }
             .confirmationDialog("「\(deleting?.content.name ?? "")」を端末から削除しますか？",
                                 isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
@@ -161,6 +167,118 @@ struct LibraryView: View {
             }
             Text(document.updatedAt, format: .dateTime.year().month().day())
                 .font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+}
+
+enum UserManual {
+    struct Block: Identifiable {
+        let id: Int
+        var text: AttributedString
+        let headingLevel: Int?
+        let listMarker: String?
+    }
+
+    static func load(bundle: Bundle = .main) throws -> [Block] {
+        guard let url = bundle.url(forResource: "USER_GUIDE", withExtension: "md") else {
+            throw CocoaError(.fileReadNoSuchFile)
+        }
+        return try blocks(markdown: String(contentsOf: url, encoding: .utf8))
+    }
+
+    static func blocks(markdown: String) throws -> [Block] {
+        let parsed = try AttributedString(markdown: markdown)
+        var blocks: [Block] = []
+        for run in parsed.runs {
+            guard let intent = run.presentationIntent else { continue }
+            var identity: Int?
+            var headingLevel: Int?
+            var ordinal: Int?
+            var ordered = false
+            for component in intent.components {
+                switch component.kind {
+                case .header(let level):
+                    identity = component.identity
+                    headingLevel = level
+                case .paragraph:
+                    identity = component.identity
+                case .listItem(let number):
+                    ordinal = number
+                case .orderedList:
+                    ordered = true
+                default: break
+                }
+            }
+            guard let identity else { continue }
+            let text = AttributedString(parsed[run.range])
+            if blocks.last?.id == identity {
+                blocks[blocks.count - 1].text.append(text)
+            } else {
+                let marker = ordinal.map { ordered ? "\($0)." : "\u{2022}" }
+                blocks.append(Block(id: identity, text: text, headingLevel: headingLevel, listMarker: marker))
+            }
+        }
+        guard !blocks.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+        return blocks
+    }
+}
+
+@MainActor
+private struct UserManualView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var blocks: [UserManual.Block] = []
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let error {
+                    ContentUnavailableView("マニュアルを開けません", systemImage: "exclamationmark.triangle",
+                                           description: Text(error))
+                } else if blocks.isEmpty {
+                    ProgressView()
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 16) {
+                            ForEach(blocks) { block in
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    if let marker = block.listMarker {
+                                        Text(marker)
+                                            .accessibilityHidden(true)
+                                    }
+                                    Text(block.text)
+                                        .font(font(for: block.headingLevel))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .accessibilityAddTraits(block.headingLevel == nil ? [] : .isHeader)
+                                }
+                                .padding(.leading, block.listMarker == nil ? 0 : 8)
+                            }
+                        }
+                        .padding(20)
+                        .textSelection(.enabled)
+                    }
+                }
+            }
+            .navigationTitle("ユーザーマニュアル")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+            .task {
+                do { blocks = try UserManual.load() }
+                catch { self.error = error.localizedDescription }
+            }
+        }
+    }
+
+    private func font(for headingLevel: Int?) -> Font {
+        switch headingLevel {
+        case 1: return .title2.bold()
+        case 2: return .title3.bold()
+        case .some: return .headline
+        case nil: return .body
         }
     }
 }

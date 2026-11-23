@@ -49,6 +49,39 @@ final class PintoTests: XCTestCase {
         WallDocument(imageData: try image().normalizedPNG(), content: WallContent(name: "テスト壁"))
     }
 
+    func testUserManualIsBundledAndIncludesCurrentInstructions() throws {
+        let blocks = try UserManual.load()
+        XCTAssertEqual(String(try XCTUnwrap(blocks.first).text.characters), "Pinto ユーザーマニュアル")
+        XCTAssertEqual(blocks.first?.headingLevel, 1)
+        let content = blocks.map { String($0.text.characters) }.joined(separator: "\n")
+        XCTAssertTrue(content.contains("ルートの数字色"))
+        XCTAssertTrue(content.contains("左にスワイプ"))
+        XCTAssertTrue(content.contains("自動保存"))
+    }
+
+    func testUserManualPreservesHeadingsListsAndInlineFormatting() throws {
+        let blocks = try UserManual.blocks(markdown: """
+        # 見出し
+
+        本文の**太字**です。
+
+        1. 最初
+        2. 次
+
+        - 箇条書き
+        """)
+        XCTAssertEqual(blocks.count, 5)
+        XCTAssertEqual(blocks[0].headingLevel, 1)
+        XCTAssertEqual(String(blocks[1].text.characters), "本文の太字です。")
+        XCTAssertTrue(blocks[1].text.runs.contains {
+            $0.inlinePresentationIntent?.contains(.stronglyEmphasized) == true
+        })
+        XCTAssertEqual(blocks[2].listMarker, "1.")
+        XCTAssertEqual(blocks[3].listMarker, "2.")
+        XCTAssertEqual(blocks[4].listMarker, "\u{2022}")
+        XCTAssertThrowsError(try UserManual.blocks(markdown: ""))
+    }
+
     func testDocumentRoundTripPreservesAllEditorProperties() throws {
         var document = try makeDocument()
         var style = MarkStyle(color: "#7654A6", width: 7, outlineColor: "#FFFEFA", outlineWidth: 3)
@@ -220,6 +253,70 @@ final class PintoTests: XCTestCase {
         document.content.routeNumberSize = 40
         let large = try XCTUnwrap(SceneRenderer.render(image: image(), content: document.content).pngData())
         XCTAssertNotEqual(small, large)
+    }
+
+    func testRouteNumberColorDefaultsToHoldColorAndRendersIndependently() throws {
+        var document = try makeDocument()
+        let restored = try JSONDecoder().decode(WallDocument.self, from: JSONEncoder().encode(document))
+        XCTAssertNil(restored.content.routeNumberColor)
+        let hold = Hold(position: WallPoint(x: 0.5, y: 0.5),
+                        style: MarkStyle(color: "#2589C7"))
+        document.content.holds = [hold]
+        document.content.route = [hold.id]
+        document.content.routeNumberSize = 40
+        let legacy = SceneRenderer.render(image: image(), content: document.content)
+        document.content.routeNumberColor = hold.style.color
+        XCTAssertEqual(SceneRenderer.render(image: image(), content: document.content).pngData(), legacy.pngData())
+        document.content.routeNumberColor = "#E55050"
+        let colored = SceneRenderer.render(image: image(), content: document.content)
+        XCTAssertNotEqual(colored.pngData(), legacy.pngData())
+        var hasRedNumber = false
+        for positionY in 380..<420 {
+            for positionX in 290..<310 {
+                let color = pixel(colored, x: positionX, y: positionY)
+                if color.count == 4 && color[0] > 200 && color[1] < 120 && color[2] < 120 {
+                    hasRedNumber = true
+                }
+            }
+        }
+        XCTAssertTrue(hasRedNumber)
+        XCTAssertEqual(document.content.holds, [hold])
+    }
+
+    func testRouteNumberColorPersistsAndSupportsUndoRedo() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let files = try WallFiles(directory: directory)
+        defer { removeTestDirectory(directory) }
+        let document = try makeDocument()
+        let model = try EditorModel(document: document)
+        for color in WallCatalog.colors {
+            model.change { $0.routeNumberColor = color }
+            XCTAssertTrue(model.dirty)
+            var saved = document
+            saved.content = model.content
+            try files.save(saved)
+            XCTAssertEqual(try files.read(files.url(for: saved.id)).content.routeNumberColor, color)
+            model.undo()
+            XCTAssertEqual(model.content, document.content)
+            model.redo()
+            XCTAssertEqual(model.content.routeNumberColor, color)
+            model.change { $0.routeNumberColor = nil }
+            saved.content = model.content
+            try files.save(saved)
+            XCTAssertNil(try files.read(files.url(for: saved.id)).content.routeNumberColor)
+        }
+    }
+
+    func testRouteNumberColorRejectsInvalidSavedColors() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let files = try WallFiles(directory: directory)
+        defer { removeTestDirectory(directory) }
+        var document = try makeDocument()
+        for color in ["", "red", "#123", "#GGGGGG", "#12345678"] {
+            document.content.routeNumberColor = color
+            try files.save(document)
+            XCTAssertThrowsError(try files.read(files.url(for: document.id)))
+        }
     }
 
     func testRouteNumberSizeChangesPersistAndSupportUndoRedo() throws {
