@@ -1,3 +1,4 @@
+import SwiftUI
 import UIKit
 import XCTest
 
@@ -1135,6 +1136,149 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.texts[0].text, "再編集")
     XCTAssertEqual(model.content.texts[0].style, editedStyle)
     XCTAssertEqual(model.content.textStyle, editedStyle)
+  }
+
+  func testEditorControlsPanelSharesHeightCapAndFitsSmallerSpace() {
+    let panel = EditorControlsPanel {
+      Color.clear.frame(height: 400)
+    }
+    let controller = UIHostingController(rootView: panel)
+    XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 500)).height, 240)
+    XCTAssertEqual(controller.sizeThatFits(in: CGSize(width: 320, height: 150)).height, 150)
+  }
+
+  func testEmptyTextEntryRendersNoBackgroundOrPlaceholder() throws {
+    let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 144))
+    entry.update(text: "", style: MarkStyle())
+    entry.layoutIfNeeded()
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = false
+    let renderer = UIGraphicsImageRenderer(size: entry.bounds.size, format: format)
+    let rendered = renderer.image { entry.layer.render(in: $0.cgContext) }
+    let transparent = renderer.image { _ in }
+    XCTAssertEqual(try XCTUnwrap(rendered.pngData()), try XCTUnwrap(transparent.pngData()))
+    XCTAssertEqual(entry.accessibilityLabel, "文字を入力")
+  }
+
+  func testTextEntryRendersOutlineColorAndFullFontSizeRange() throws {
+    func ink(for style: MarkStyle, editing: Bool = true) throws
+      -> (height: Int, red: Int, blue: Int)
+    {
+      let rendered: UIImage
+      if editing {
+        let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 220))
+        entry.update(text: "H", style: style)
+        entry.layoutIfNeeded()
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        rendered = UIGraphicsImageRenderer(size: entry.bounds.size, format: format).image {
+          entry.layer.render(in: $0.cgContext)
+        }
+      } else {
+        var content = WallContent(name: "文字の枠線")
+        content.texts = [WallText(position: WallPoint(x: 0.3, y: 0.5), text: "H", style: style)]
+        rendered = SceneRenderer.render(
+          image: image(size: CGSize(width: 600, height: 600)), content: content)
+      }
+      let image = try XCTUnwrap(rendered.cgImage)
+      var rgba = [UInt8](repeating: 0, count: image.width * image.height * 4)
+      try rgba.withUnsafeMutableBytes { bytes in
+        let context = try XCTUnwrap(
+          CGContext(
+            data: bytes.baseAddress, width: image.width, height: image.height,
+            bitsPerComponent: 8, bytesPerRow: image.width * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+      }
+      var rows = Set<Int>()
+      var red = 0
+      var blue = 0
+      for i in stride(from: 0, to: rgba.count, by: 4) where rgba[i + 3] > 128 {
+        if rgba[i] > 128 && rgba[i + 2] < 128 {
+          red += 1
+          rows.insert(i / 4 / image.width)
+        }
+        if rgba[i + 2] > 128 && rgba[i] < 128 {
+          blue += 1
+          rows.insert(i / 4 / image.width)
+        }
+      }
+      return (rows.count, red, blue)
+    }
+
+    var style = MarkStyle(color: "#FF0000", outlineColor: "#0000FF")
+    var previousHeight = 0
+    for size in [6.0, 18, 56, 90, 120] {
+      style.fontSize = size
+      let result = try ink(for: style)
+      XCTAssertGreaterThan(result.height, previousHeight, "Font size \(size) must grow")
+      XCTAssertGreaterThan(result.red, 0)
+      XCTAssertEqual(result.blue, 0)
+      previousHeight = result.height
+    }
+    style.outlineWidth = 3
+    let thin = try ink(for: style)
+    XCTAssertGreaterThan(thin.blue, 0)
+    XCTAssertGreaterThan(thin.red, 0)
+    style.outlineWidth = 8
+    XCTAssertGreaterThan(try ink(for: style).blue, thin.blue)
+    for size in [24.0, 60, 120] {
+      style.fontSize = size
+      for width in [3.0, 8, 12] {
+        style.outlineWidth = width
+        let entry = try ink(for: style)
+        let committed = try ink(for: style, editing: false)
+        XCTAssertEqual(
+          Double(entry.red) / Double(committed.red), 1, accuracy: 0.12,
+          "Fill coverage at font size \(size), outline \(width)")
+        XCTAssertEqual(
+          Double(entry.blue) / Double(committed.blue), 1, accuracy: 0.18,
+          "Outline coverage at font size \(size), outline \(width)")
+      }
+    }
+  }
+
+  func testTextEntryRestylesWithoutReplacingDraftOrSelection() throws {
+    let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 144))
+    var style = MarkStyle()
+    entry.update(text: "入力", style: style)
+    entry.selectedRange = NSRange(location: 1, length: 1)
+
+    style.fontSize = 120
+    style.outlineWidth = 6
+    entry.update(text: "入力", style: style)
+    XCTAssertEqual(entry.text, "入力")
+    XCTAssertEqual(entry.selectedRange, NSRange(location: 1, length: 1))
+    let font = try XCTUnwrap(
+      entry.textStorage.attribute(.font, at: 1, effectiveRange: nil) as? UIFont)
+    XCTAssertEqual(font.pointSize, 120)
+
+    var draft = ""
+    entry.onTextChange = { draft = $0 }
+    entry.insertText("力テスト")
+    XCTAssertEqual(draft, "入力テスト")
+    let strokeWidth = entry.textStorage.attribute(.strokeWidth, at: 4, effectiveRange: nil)
+    XCTAssertEqual(strokeWidth as? Double, -10)
+  }
+
+  func testTextEntryDefersRestylingUntilJapaneseCompositionEnds() {
+    let entry = StyledTextEntryView(frame: CGRect(x: 0, y: 0, width: 240, height: 144))
+    var style = MarkStyle()
+    entry.update(text: "", style: style)
+    entry.setMarkedText("かな", selectedRange: NSRange(location: 2, length: 0))
+    XCTAssertNotNil(entry.markedTextRange)
+
+    style.outlineWidth = 6
+    entry.update(text: "かな", style: style)
+    XCTAssertNotNil(entry.markedTextRange)
+    XCTAssertNil(entry.textStorage.attribute(.strokeWidth, at: 0, effectiveRange: nil))
+
+    entry.unmarkText()
+    XCTAssertNil(entry.markedTextRange)
+    XCTAssertEqual(entry.text, "かな")
+    let width = entry.textStorage.attribute(.strokeWidth, at: 0, effectiveRange: nil)
+    XCTAssertEqual(width as? Double, -50)
   }
 
   func testEmptyTextCompletionDeletesExistingTextWithUndoAndRedo() throws {

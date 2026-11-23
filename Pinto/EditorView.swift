@@ -14,7 +14,6 @@ struct EditorView: View {
   @State private var isSavingImage = false
   @State private var shareSheet: ImageShareSheet?
   @State private var editorDockExpanded = true
-  @FocusState private var textInputFocused: Bool
   private let controlLabelWidth: CGFloat = 104
 
   var body: some View {
@@ -183,56 +182,44 @@ struct EditorView: View {
         }
       }
 
-      Spacer(minLength: 16)
-      TextField("文字を入力", text: $model.textDraft, axis: .vertical)
-        .font(textPreviewFont)
-        .foregroundStyle(Color(uiColor: UIColor(hex: model.activeStyle.color)))
-        .multilineTextAlignment(.center)
-        .lineLimit(1...5)
-        .textFieldStyle(.plain)
-        .submitLabel(.done)
-        .focused($textInputFocused)
-        .onSubmit(finishTextEntry)
-        .frame(maxWidth: .infinity)
-      Spacer(minLength: 16)
-      ScrollView(.vertical, showsIndicators: false) {
+      Spacer(minLength: 0)
+      StyledTextEntry(text: $model.textDraft, style: model.activeStyle)
+        .frame(minHeight: 52, idealHeight: 144, maxHeight: 144)
+      Spacer(minLength: 0)
+      EditorControlsPanel {
         VStack(alignment: .leading, spacing: 10) {
           textColorControls
           styleControls
         }
-        .padding(12)
       }
-      .frame(maxHeight: 200)
       .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
     .padding(.horizontal, 20)
-    .padding(.vertical, 16)
+    .padding(.top, 16)
     .background { Color.black.opacity(0.76).ignoresSafeArea() }
     .preferredColorScheme(.dark)
-    .onAppear { textInputFocused = true }
-  }
-
-  private var textPreviewFont: Font {
-    var style = model.activeStyle
-    style.fontSize = min(56, max(18, style.fontSize))
-    return Font(SceneRenderer.font(style, unit: 1))
   }
 
   private func cancelTextEntry() {
-    textInputFocused = false
     model.textPrompt = false
   }
 
   private func finishTextEntry() {
     model.commitText()
-    textInputFocused = false
     model.textPrompt = false
+  }
+
+  private var activeToolHasEditingControls: Bool {
+    switch model.tool {
+    case .hold, .route, .text: return true
+    case .pan, .eraser: return false
+    }
   }
 
   private var editorDock: some View {
     VStack(spacing: 0) {
-      if editorDockExpanded {
-        ScrollView(.vertical, showsIndicators: false) {
+      if activeToolHasEditingControls && editorDockExpanded {
+        EditorControlsPanel {
           VStack(alignment: .leading, spacing: 10) {
             if model.tool == .route {
               colorControls(title: "線の色")
@@ -302,10 +289,7 @@ struct EditorView: View {
               .disabled(model.selection == nil)
             }
           }
-          .padding(.horizontal, 12)
-          .padding(.vertical, 8)
         }
-        .frame(maxHeight: 240)
       }
       Divider()
       tools
@@ -328,10 +312,6 @@ struct EditorView: View {
       }
     }
     .pickerStyle(.segmented)
-  }
-
-  private func toggleEditorDock() {
-    setEditorDockExpanded(!editorDockExpanded)
   }
 
   private func setEditorDockExpanded(_ expanded: Bool) {
@@ -532,8 +512,8 @@ struct EditorView: View {
   private func selectTool(_ tool: EditorTool) {
     let isCurrentTool = model.tool == tool
     model.tool = tool
-    if isCurrentTool {
-      toggleEditorDock()
+    if activeToolHasEditingControls {
+      setEditorDockExpanded(!isCurrentTool || !editorDockExpanded)
     }
   }
 
@@ -598,6 +578,150 @@ struct EditorView: View {
   private func colorLabel(_ hex: String) -> String {
     let names = ["黒", "白", "赤", "オレンジ", "黄", "緑", "青", "紫"]
     return names[WallCatalog.colors.firstIndex(of: hex) ?? 0]
+  }
+}
+
+struct EditorControlsPanel<Content: View>: View {
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    ScrollView(.vertical, showsIndicators: false) {
+      content
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+    .frame(maxHeight: 240)
+  }
+}
+
+private struct StyledTextEntry: UIViewRepresentable {
+  @Binding var text: String
+  let style: MarkStyle
+
+  func makeUIView(context: Context) -> StyledTextEntryView {
+    StyledTextEntryView(frame: .zero)
+  }
+
+  func updateUIView(_ view: StyledTextEntryView, context: Context) {
+    let binding = $text
+    view.onTextChange = {
+      if binding.wrappedValue != $0 { binding.wrappedValue = $0 }
+    }
+    view.update(text: text, style: style)
+  }
+}
+
+final class StyledTextEntryView: UITextView, UITextViewDelegate {
+  var onTextChange: ((String) -> Void)?
+  private var style = MarkStyle()
+  private var appliedStyle: MarkStyle?
+  private var didRequestFocus = false
+
+  override init(frame: CGRect, textContainer: NSTextContainer? = nil) {
+    let container = textContainer ?? NSTextContainer()
+    let storage = NSTextStorage()
+    let layout = OutlinedTextLayoutManager()
+    storage.addLayoutManager(layout)
+    layout.addTextContainer(container)
+    super.init(frame: frame, textContainer: container)
+    delegate = self
+    backgroundColor = .clear
+    textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+    accessibilityLabel = "文字を入力"
+  }
+
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  override func didMoveToWindow() {
+    super.didMoveToWindow()
+    guard window != nil, !didRequestFocus else { return }
+    didRequestFocus = true
+    becomeFirstResponder()
+  }
+
+  func update(text: String, style: MarkStyle) {
+    self.style = style
+    if markedTextRange == nil, self.text != text {
+      let attributes = entryAttributes()
+      appliedStyle = style
+      attributedText = NSAttributedString(string: text, attributes: attributes)
+      typingAttributes = attributes
+    }
+    applyStyleIfNeeded()
+  }
+
+  func textViewDidChange(_ textView: UITextView) {
+    applyStyleIfNeeded()
+    onTextChange?(text)
+  }
+
+  func textViewDidChangeSelection(_ textView: UITextView) {
+    applyStyleIfNeeded()
+  }
+
+  override func unmarkText() {
+    super.unmarkText()
+    applyStyleIfNeeded()
+  }
+
+  private func entryAttributes() -> [NSAttributedString.Key: Any] {
+    let paragraph = NSMutableParagraphStyle()
+    paragraph.alignment = .center
+    var attributes = SceneRenderer.textAttributes(style, unit: 1)
+    attributes[.paragraphStyle] = paragraph
+    return attributes
+  }
+
+  private func applyStyleIfNeeded() {
+    // Replacing attributes while Japanese input is still marked can interrupt conversion.
+    guard appliedStyle != style, markedTextRange == nil else { return }
+    appliedStyle = style
+    let attributes = entryAttributes()
+    textStorage.setAttributes(attributes, range: NSRange(location: 0, length: textStorage.length))
+    typingAttributes = attributes
+  }
+}
+
+private final class OutlinedTextLayoutManager: NSLayoutManager {
+  private var drawsOutline = false
+
+  override func drawGlyphs(forGlyphRange glyphsToShow: NSRange, at origin: CGPoint) {
+    let characters = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
+    var hasOutline = false
+    textStorage?.enumerateAttribute(.strokeWidth, in: characters) { value, _, stop in
+      if let width = value as? Double, width < 0 {
+        hasOutline = true
+        stop.pointee = true
+      }
+    }
+    if hasOutline {
+      // Draw every outline before any fill so strokes cannot cover adjacent font runs.
+      drawsOutline = true
+      super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
+      drawsOutline = false
+    }
+    super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
+  }
+
+  override func showCGGlyphs(
+    _ glyphs: UnsafePointer<CGGlyph>, positions: UnsafePointer<CGPoint>, count glyphCount: Int,
+    font: UIFont, textMatrix: CGAffineTransform, attributes: [NSAttributedString.Key: Any],
+    in context: CGContext
+  ) {
+    guard let width = attributes[.strokeWidth] as? Double, width < 0 else {
+      guard !drawsOutline else { return }
+      super.showCGGlyphs(
+        glyphs, positions: positions, count: glyphCount, font: font, textMatrix: textMatrix,
+        attributes: attributes, in: context)
+      return
+    }
+
+    context.saveGState()
+    context.setTextDrawingMode(drawsOutline ? .stroke : .fill)
+    super.showCGGlyphs(
+      glyphs, positions: positions, count: glyphCount, font: font, textMatrix: textMatrix,
+      attributes: attributes, in: context)
+    context.restoreGState()
   }
 }
 

@@ -103,6 +103,19 @@ enum SceneRenderer {
       width: dimensions.width, height: dimensions.height)
   }
 
+  static func textAttributes(_ style: MarkStyle, unit: CGFloat) -> [NSAttributedString.Key: Any] {
+    var attributes: [NSAttributedString.Key: Any] = [
+      .font: font(style, unit: unit),
+      .foregroundColor: UIColor(hex: style.color),
+    ]
+    if style.outlineWidth > 0 {
+      attributes[.strokeColor] = UIColor(hex: style.outlineColor)
+      // A negative width paints both the fill and the stroke.
+      attributes[.strokeWidth] = -style.outlineWidth / style.fontSize * 200
+    }
+    return attributes
+  }
+
   static func draw(image: UIImage, content: WallContent, size: CGSize, context: CGContext) {
     context.saveGState()
     context.clip(to: CGRect(origin: .zero, size: size))
@@ -138,18 +151,15 @@ enum SceneRenderer {
     }
     for text in content.texts {
       let rect = textRect(text, size: size)
-      var attributes: [NSAttributedString.Key: Any] = [
-        .font: font(text.style, unit: unit),
-        .foregroundColor: UIColor(hex: text.style.color),
-      ]
-      if text.style.outlineWidth > 0 {
-        attributes[.strokeColor] = UIColor(hex: text.style.outlineColor)
-        attributes[.strokeWidth] = text.style.outlineWidth / text.style.fontSize * 200
-        (text.text as NSString).draw(at: rect.origin, withAttributes: attributes)
+      var attributes = textAttributes(text.style, unit: unit)
+      let label = text.text as NSString
+      if let strokeWidth = attributes[.strokeWidth] as? Double {
+        attributes[.strokeWidth] = -strokeWidth
+        label.draw(at: rect.origin, withAttributes: attributes)
         attributes.removeValue(forKey: .strokeWidth)
         attributes.removeValue(forKey: .strokeColor)
       }
-      (text.text as NSString).draw(at: rect.origin, withAttributes: attributes)
+      label.draw(at: rect.origin, withAttributes: attributes)
     }
     context.restoreGState()
   }
