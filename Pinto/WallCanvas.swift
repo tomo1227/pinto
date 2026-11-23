@@ -72,6 +72,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private var pinchResizes = false
   private var viewportPan: UIPanGestureRecognizer?
   private var trashDrag: UILongPressGestureRecognizer?
+  private let resetViewportButton = UIButton(type: .system)
   private let trashTarget = UIImageView(image: UIImage(systemName: "trash.fill"))
   private var trashDragStart: CGPoint?
   private var trashHovered = false
@@ -86,6 +87,17 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     accessibilityLabel = "課題の編集キャンバス"
     accessibilityHint =
       "タップして配置。ドラッグして移動。選択枠の四角い点をドラッグしてサイズ変更。選択物を長押ししてゴミ箱へドラッグすると削除。選択中は2本指でもサイズ変更。キャンバスを2本指で移動・拡大。"
+    var resetConfiguration = UIButton.Configuration.filled()
+    resetConfiguration.image = UIImage(systemName: "arrow.counterclockwise")
+    resetConfiguration.cornerStyle = .capsule
+    resetConfiguration.baseBackgroundColor = .secondarySystemBackground
+    resetConfiguration.baseForegroundColor = .label
+    resetViewportButton.configuration = resetConfiguration
+    resetViewportButton.accessibilityLabel = "画像を元の位置に戻す"
+    resetViewportButton.accessibilityHint = "表示位置と拡大率を初期状態に戻します"
+    resetViewportButton.accessibilityIdentifier = "canvasResetViewport"
+    resetViewportButton.addTarget(self, action: #selector(resetViewport), for: .touchUpInside)
+    addSubview(resetViewportButton)
     trashTarget.contentMode = .center
     trashTarget.preferredSymbolConfiguration = UIImage.SymbolConfiguration(
       pointSize: 28, weight: .semibold)
@@ -123,6 +135,12 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   override func layoutSubviews() {
     super.layoutSubviews()
+    let buttonSize: CGFloat = 44
+    let inset: CGFloat = 8
+    resetViewportButton.frame = CGRect(
+      x: max(bounds.minX, bounds.maxX - buttonSize - inset),
+      y: max(bounds.minY, bounds.maxY - buttonSize - inset),
+      width: buttonSize, height: buttonSize)
     trashTarget.bounds = CGRect(x: 0, y: 0, width: 64, height: 64)
     trashTarget.center = CGPoint(x: bounds.midX, y: max(32, bounds.maxY - 56))
   }
@@ -134,6 +152,11 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       lastRevision = model.viewportRevision
     }
     setNeedsDisplay()
+  }
+
+  @objc private func resetViewport() {
+    model.resetViewport()
+    refresh()
   }
 
   private var imageRect: CGRect {
@@ -449,6 +472,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
     -> Bool
   {
+    if touch.view?.isDescendant(of: resetViewportButton) == true { return false }
     guard gestureRecognizer === trashDrag else { return true }
     let point = touch.location(in: self)
     return (model.tool == .hold || model.tool == .text) && model.selection != nil

@@ -36,6 +36,24 @@ private final class SimulatedPan: UIPanGestureRecognizer {
   override func translation(in view: UIView?) -> CGPoint { testTranslation }
 }
 
+private final class SimulatedPinch: UIPinchGestureRecognizer {
+  var testState: UIGestureRecognizer.State = .possible
+  var testLocation = CGPoint.zero
+  var testScale: CGFloat = 1
+
+  override var state: UIGestureRecognizer.State {
+    get { testState }
+    set { testState = newValue }
+  }
+
+  override var scale: CGFloat {
+    get { testScale }
+    set { testScale = newValue }
+  }
+
+  override func location(in view: UIView?) -> CGPoint { testLocation }
+}
+
 @MainActor
 final class PintoTests: XCTestCase {
   private func image(size: CGSize = CGSize(width: 600, height: 800)) -> UIImage {
@@ -987,6 +1005,68 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .rectangle])
     model.updateHoldShape(.oval)
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .oval])
+  }
+
+  func testResetViewportButtonStaysAtCanvasEdgeAndRestoresPanAndZoomWithoutEditing() throws {
+    let model = try EditorModel(document: makeDocument())
+    model.content.autoDetectHolds = false
+    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    model.change { $0.holds[0].radiusX = 0.15 }
+    let content = model.content
+    let selection = model.selection
+    let history = model.history.past
+    let canvas = CanvasView(model: model)
+    canvas.frame = CGRect(x: 0, y: 0, width: 800, height: 800)
+    canvas.layoutIfNeeded()
+    let button = try XCTUnwrap(
+      canvas.subviews.first { $0.accessibilityIdentifier == "canvasResetViewport" } as? UIButton)
+    let buttonFrame = CGRect(x: 748, y: 748, width: 44, height: 44)
+    XCTAssertEqual(button.frame, buttonFrame)
+    let imageSize = CGSize(width: 600, height: 800)
+    let holdFrame = SceneRenderer.holdRect(content.holds[0], content: content, size: imageSize)
+      .offsetBy(dx: 100, dy: 0)
+    let handle = CanvasView.ResizeHandle.e.position(in: holdFrame.insetBy(dx: -5, dy: -5))
+    XCTAssertEqual(canvas.resizeHandle(at: handle), .e)
+
+    model.tool = .pan
+    let pinch = SimulatedPinch()
+    pinch.testLocation = CGPoint(x: 400, y: 400)
+    pinch.state = .began
+    canvas.perform(NSSelectorFromString("pinched:"), with: pinch)
+    pinch.state = .changed
+    pinch.scale = 0.5
+    canvas.perform(NSSelectorFromString("pinched:"), with: pinch)
+    pinch.state = .ended
+    canvas.perform(NSSelectorFromString("pinched:"), with: pinch)
+    canvas.layoutIfNeeded()
+    XCTAssertEqual(button.frame, buttonFrame)
+
+    let pan = SimulatedPan()
+    pan.testState = .began
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    pan.testState = .changed
+    pan.testTranslation = CGPoint(x: 100, y: -50)
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    canvas.layoutIfNeeded()
+    XCTAssertEqual(button.frame, buttonFrame)
+
+    pan.testTranslation = CGPoint(x: 1000, y: -1000)
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    pan.testState = .ended
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    canvas.layoutIfNeeded()
+    XCTAssertEqual(button.frame, buttonFrame)
+    XCTAssertTrue(canvas.hitTest(button.center, with: nil)?.isDescendant(of: button) == true)
+
+    model.tool = .hold
+    XCTAssertNil(canvas.resizeHandle(at: handle))
+    button.sendActions(for: .touchUpInside)
+    canvas.layoutIfNeeded()
+    XCTAssertEqual(button.frame, buttonFrame)
+    XCTAssertEqual(canvas.resizeHandle(at: handle), .e)
+    XCTAssertEqual(model.content, content)
+    XCTAssertEqual(model.selection, selection)
+    XCTAssertEqual(model.history.past, history)
   }
 
   func testResizeHandlesDoNotStartTrashDragOrAppearInRouteTool() throws {
