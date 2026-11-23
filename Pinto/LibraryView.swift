@@ -208,6 +208,36 @@ enum UserManual {
     let listMarker: String?
   }
 
+  struct Entry: Identifiable {
+    let block: Block
+    let children: [Entry]
+
+    var id: Int { block.id }
+  }
+
+  static func outline(from blocks: [Block]) -> [Entry] {
+    var index = blocks.startIndex
+
+    func entries(below level: Int) -> [Entry] {
+      var result: [Entry] = []
+      while index < blocks.endIndex {
+        let block = blocks[index]
+        if let heading = block.headingLevel, heading <= level { break }
+        index += 1
+        let children: [Entry]
+        if let heading = block.headingLevel, heading > 1 {
+          children = entries(below: heading)
+        } else {
+          children = []
+        }
+        result.append(Entry(block: block, children: children))
+      }
+      return result
+    }
+
+    return entries(below: 0)
+  }
+
   static func load(bundle: Bundle = .main) throws -> [Block] {
     guard let url = bundle.url(forResource: "USER_GUIDE", withExtension: "md") else {
       throw CocoaError(.fileReadNoSuchFile)
@@ -256,7 +286,8 @@ enum UserManual {
 @MainActor
 private struct UserManualView: View {
   @Environment(\.dismiss) private var dismiss
-  @State private var blocks: [UserManual.Block] = []
+  @State private var outline: [UserManual.Entry] = []
+  @State private var expandedHeadings: Set<Int> = []
   @State private var error: String?
 
   var body: some View {
@@ -266,27 +297,16 @@ private struct UserManualView: View {
           ContentUnavailableView(
             "マニュアルを開けません", systemImage: "exclamationmark.triangle",
             description: Text(error))
-        } else if blocks.isEmpty {
+        } else if outline.isEmpty {
           ProgressView()
         } else {
           ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
-              ForEach(blocks) { block in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                  if let marker = block.listMarker {
-                    Text(marker)
-                      .accessibilityHidden(true)
-                  }
-                  Text(block.text)
-                    .font(font(for: block.headingLevel))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityAddTraits(block.headingLevel == nil ? [] : .isHeader)
-                }
-                .padding(.leading, block.listMarker == nil ? 0 : 8)
+              ForEach(outline) { entry in
+                UserManualEntryView(entry: entry, expandedHeadings: $expandedHeadings)
               }
             }
             .padding(20)
-            .textSelection(.enabled)
           }
         }
       }
@@ -298,9 +318,63 @@ private struct UserManualView: View {
         }
       }
       .task {
-        do { blocks = try UserManual.load() } catch { self.error = error.localizedDescription }
+        do {
+          outline = UserManual.outline(from: try UserManual.load())
+        } catch {
+          self.error = error.localizedDescription
+        }
       }
     }
+  }
+}
+
+@MainActor
+private struct UserManualEntryView: View {
+  let entry: UserManual.Entry
+  @Binding var expandedHeadings: Set<Int>
+
+  var body: some View {
+    if entry.children.isEmpty {
+      row.textSelection(.enabled)
+    } else {
+      DisclosureGroup(isExpanded: isExpanded) {
+        VStack(alignment: .leading, spacing: 12) {
+          ForEach(entry.children) { child in
+            UserManualEntryView(entry: child, expandedHeadings: $expandedHeadings)
+          }
+        }
+        .padding(.top, 8)
+      } label: {
+        row.foregroundStyle(.primary)
+      }
+    }
+  }
+
+  private var isExpanded: Binding<Bool> {
+    Binding(
+      get: { expandedHeadings.contains(entry.id) },
+      set: { expanded in
+        if expanded {
+          expandedHeadings.insert(entry.id)
+        } else {
+          expandedHeadings.remove(entry.id)
+        }
+      })
+  }
+
+  private var row: some View {
+    let block = entry.block
+    return HStack(alignment: .firstTextBaseline, spacing: 8) {
+      if let marker = block.listMarker {
+        Text(marker)
+          .accessibilityHidden(true)
+      }
+      Text(block.text)
+        .font(font(for: block.headingLevel))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityAddTraits(block.headingLevel == nil ? [] : .isHeader)
+    }
+    .padding(.leading, block.listMarker == nil ? 0 : 8)
   }
 
   private func font(for headingLevel: Int?) -> Font {
