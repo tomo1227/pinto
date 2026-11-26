@@ -22,6 +22,7 @@
 		A1000000000000000000000D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Assets.xcassets */; };
 		A1000000000000000000000E /* USER_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* USER_GUIDE.md */; };
 		A1000000000000000000000F /* WallThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* WallThumbnailCache.swift */; };
+		A10000000000000000000010 /* WallImageWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* WallImageWorker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		A20000000000000000000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000011 /* USER_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = USER_GUIDE.md; sourceTree = "<group>"; };
 		A20000000000000000000012 /* WallThumbnailCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallThumbnailCache.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* WallImageWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallImageWorker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +93,7 @@
 				A20000000000000000000003 /* WallStore.swift */,
 				A20000000000000000000004 /* SceneRenderer.swift */,
 				A20000000000000000000012 /* WallThumbnailCache.swift */,
+				A20000000000000000000013 /* WallImageWorker.swift */,
 				A20000000000000000000005 /* HoldDetection.swift */,
 				A20000000000000000000006 /* EditorModel.swift */,
 				A20000000000000000000007 /* WallCanvas.swift */,
@@ -228,6 +231,7 @@
 				A10000000000000000000003 /* WallStore.swift in Sources */,
 				A10000000000000000000004 /* SceneRenderer.swift in Sources */,
 				A1000000000000000000000F /* WallThumbnailCache.swift in Sources */,
+				A10000000000000000000010 /* WallImageWorker.swift in Sources */,
 				A10000000000000000000005 /* HoldDetection.swift in Sources */,
 				A10000000000000000000006 /* EditorModel.swift in Sources */,
 				A10000000000000000000007 /* WallCanvas.swift in Sources */,

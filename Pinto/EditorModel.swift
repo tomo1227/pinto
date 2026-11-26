@@ -136,29 +136,40 @@ final class EditorModel: ObservableObject {
   func saveImageToPhotos(using saveImage: (Data) async throws -> Void = PhotoLibrary.savePNG)
     async throws
   {
-    let rendered = SceneRenderer.render(image: image, content: content)
-    guard let data = rendered.pngData() else { throw PintoError.exportFailed }
+    let data = try await WallImageWorker.shared.exportPNG(image: image, content: content)
+    try Task.checkCancellation()
     try await saveImage(data)
+  }
+
+  func renderForSharing() async throws -> UIImage {
+    try await WallImageWorker.shared.render(image: image, content: content)
   }
 
   func resetViewport() { viewportRevision += 1 }
 
-  func addHold(at position: WallPoint) {
+  func addHold(at position: WallPoint) async {
+    let style = content.holdStyle
+    let shape = content.newHoldShape
     do {
-      let detected =
-        content.autoDetectHolds
-        ? try HoldDetection.detect(
-          image: image, position: position, style: content.holdStyle, shape: content.newHoldShape)
-        : nil
+      try Task.checkCancellation()
+      let detected: Hold?
+      if content.autoDetectHolds {
+        detected = try await WallImageWorker.shared.detectHold(
+          in: image, at: position, style: style, shape: shape)
+      } else {
+        detected = nil
+      }
+      try Task.checkCancellation()
+      guard tool == .hold else { return }
       let radius = min(image.size.width, image.size.height) * 0.035
       let hold =
         detected
         ?? Hold(
           position: position, radiusX: radius / image.size.width,
-          radiusY: radius / image.size.height, style: content.holdStyle,
-          shape: content.newHoldShape)
+          radiusY: radius / image.size.height, style: style, shape: shape)
       change { $0.holds.append(hold) }
       selection = .hold(hold.id)
+    } catch is CancellationError {
     } catch {
       errorMessage = "ホールドの輪郭を検出できませんでした。\n\(error.localizedDescription)"
     }

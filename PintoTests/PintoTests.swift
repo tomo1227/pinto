@@ -887,10 +887,10 @@ final class PintoTests: XCTestCase {
     XCTAssertThrowsError(try files.read(files.url(for: wall.id)))
   }
 
-  func testEditorGestureIsOneUndoStepAndStyleIsUndoable() throws {
+  func testEditorGestureIsOneUndoStepAndStyleIsUndoable() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.2, y: 0.3))
+    await model.addHold(at: WallPoint(x: 0.2, y: 0.3))
     let start = model.content
     let count = model.history.past.count
     model.beginGesture()
@@ -915,10 +915,10 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content, moved)
   }
 
-  func testCancelledGestureRestoresContent() throws {
+  func testCancelledGestureRestoresContent() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.3, y: 0.3))
+    await model.addHold(at: WallPoint(x: 0.3, y: 0.3))
     let start = model.content
     model.beginGesture()
     model.moveSelection(to: WallPoint(x: -1, y: 2))
@@ -1040,11 +1040,11 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds[0].radiusY, hold.radiusY, accuracy: 0.001)
   }
 
-  func testChangingHoldShapeUpdatesSelectionAndNextHoldWithUndoAndRedo() throws {
+  func testChangingHoldShapeUpdatesSelectionAndNextHoldWithUndoAndRedo() async throws {
     let model = try EditorModel(document: makeDocument())
     model.change { $0.autoDetectHolds = false }
     let position = WallPoint(x: 0.3, y: 0.4)
-    model.addHold(at: position)
+    await model.addHold(at: position)
     let original = model.content.holds[0]
     XCTAssertEqual(original.effectiveShape, .oval)
     model.updateHoldShape(.rectangle)
@@ -1056,16 +1056,16 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds, [original])
     XCTAssertEqual(model.activeHoldShape, .oval)
     model.redo()
-    model.addHold(at: WallPoint(x: 0.7, y: 0.8))
+    await model.addHold(at: WallPoint(x: 0.7, y: 0.8))
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .rectangle])
     model.updateHoldShape(.oval)
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .oval])
   }
 
-  func testResetViewportButtonStaysAtCanvasEdgeAndRestoresPanAndZoomWithoutEditing() throws {
+  func testResetViewportButtonStaysAtCanvasEdgeAndRestoresPanAndZoomWithoutEditing() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
     model.change { $0.holds[0].radiusX = 0.15 }
     let content = model.content
     let selection = model.selection
@@ -1124,10 +1124,10 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.history.past, history)
   }
 
-  func testResizeHandlesDoNotStartTrashDragOrAppearInRouteTool() throws {
+  func testResizeHandlesDoNotStartTrashDragOrAppearInRouteTool() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
     let canvas = CanvasView(model: model)
     canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
     canvas.layoutIfNeeded()
@@ -1145,7 +1145,7 @@ final class PintoTests: XCTestCase {
     XCTAssertNil(canvas.resizeHandle(at: start))
   }
 
-  func testLongPressTrashDeletesHoldsAndTextInOneUndoStep() throws {
+  func testLongPressTrashDeletesHoldsAndTextInOneUndoStep() async throws {
     for isText in [false, true] {
       let model = try EditorModel(document: makeDocument())
       if isText {
@@ -1156,7 +1156,7 @@ final class PintoTests: XCTestCase {
         model.textPrompt = false
       } else {
         model.content.autoDetectHolds = false
-        model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+        await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
         model.appendToRoute(try XCTUnwrap(model.content.holds.first).id)
       }
       let original = model.content
@@ -1197,11 +1197,11 @@ final class PintoTests: XCTestCase {
     }
   }
 
-  func testLongPressTrashCancelsOrMovesWhenDroppedOutside() throws {
+  func testLongPressTrashCancelsOrMovesWhenDroppedOutside() async throws {
     for cancelled in [false, true] {
       let model = try EditorModel(document: makeDocument())
       model.content.autoDetectHolds = false
-      model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+      await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
       let original = model.content
       let count = model.history.past.count
       let canvas = CanvasView(model: model)
@@ -1236,10 +1236,10 @@ final class PintoTests: XCTestCase {
     }
   }
 
-  func testStationaryLongPressOverTrashDoesNotDelete() throws {
+  func testStationaryLongPressOverTrashDoesNotDelete() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 744.0 / 800))
+    await model.addHold(at: WallPoint(x: 0.5, y: 744.0 / 800))
     let original = model.content
     let canvas = CanvasView(model: model)
     canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
@@ -1553,7 +1553,7 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(CanvasView.ResizeHandle.hit(at: CGPoint(x: 9, y: 9), in: smallFrame), .se)
   }
 
-  func testAllResizeCornersExpandAndShrinkHoldsAndTextWithUndo() throws {
+  func testAllResizeCornersExpandAndShrinkHoldsAndTextWithUndo() async throws {
     let frame = CGRect(x: 0, y: 0, width: 100, height: 80)
     let corners: [CanvasView.ResizeHandle] = [.nw, .ne, .se, .sw]
     for corner in corners {
@@ -1569,7 +1569,7 @@ final class PintoTests: XCTestCase {
           model.commitText()
         } else {
           model.content.autoDetectHolds = false
-          model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+          await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
         }
         let original = model.content
         let historyCount = model.history.past.count
@@ -1644,10 +1644,10 @@ final class PintoTests: XCTestCase {
     XCTAssertFalse(first === newImage)
   }
 
-  func testSelectionDrawsOutlinedSquareHandlesInAllEightDirections() throws {
+  func testSelectionDrawsOutlinedSquareHandlesInAllEightDirections() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
     let canvas = CanvasView(model: model)
     canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
     let format = UIGraphicsImageRendererFormat()
@@ -1797,7 +1797,18 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(pixel(oval, x: 350, y: 360), white)
   }
 
-  func testDetectionFindsHoldAtCorrectImageCoordinatesAndRejectsFlatWall() throws {
+  func testCancelledHoldPlacementDoesNotChangeDocument() async throws {
+    let model = try EditorModel(document: makeDocument())
+    let original = model.content
+    let placement = Task { await model.addHold(at: WallPoint(x: 0.5, y: 0.5)) }
+    placement.cancel()
+    await placement.value
+    XCTAssertEqual(model.content, original)
+    XCTAssertFalse(model.canUndo)
+    XCTAssertNil(model.errorMessage)
+  }
+
+  func testDetectionFindsHoldAtCorrectImageCoordinatesAndRejectsFlatWall() async throws {
     let size = CGSize(width: 600, height: 800)
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
@@ -1818,7 +1829,7 @@ final class PintoTests: XCTestCase {
       imageData: try source.normalizedPNG(), content: WallContent(name: "自動検出"))
     document.content.newHoldShape = .rectangle
     let model = try EditorModel(document: document)
-    model.addHold(at: WallPoint(x: 135.0 / 600, y: 140.0 / 800))
+    await model.addHold(at: WallPoint(x: 135.0 / 600, y: 140.0 / 800))
     let rectangle = try XCTUnwrap(model.content.holds.first)
     XCTAssertEqual(rectangle.effectiveShape, .rectangle)
     XCTAssertEqual(rectangle.position, detected.position)
@@ -1828,7 +1839,7 @@ final class PintoTests: XCTestCase {
         image: image(), position: WallPoint(x: 0.5, y: 0.5), style: MarkStyle()))
   }
 
-  func testAutomaticHoldSizingKeepsPhotoClearOfThickLineAndOutline() throws {
+  func testAutomaticHoldSizingKeepsPhotoClearOfThickLineAndOutline() async throws {
     let size = CGSize(width: 1200, height: 900)
     let silhouette = CGRect(x: 144, y: 210, width: 96, height: 36)
     let position = WallPoint(x: silhouette.midX / size.width, y: silhouette.midY / size.height)
@@ -1851,7 +1862,7 @@ final class PintoTests: XCTestCase {
         content.holdStyle = MarkStyle(
           color: "#000000", width: 20, outlineColor: "#0000FF", outlineWidth: outlineWidth)
         let model = try EditorModel(document: WallDocument(imageData: data, content: content))
-        model.addHold(at: position)
+        await model.addHold(at: position)
         let hold = try XCTUnwrap(model.selectedHold)
         XCTAssertEqual(hold.effectiveShape, shape)
         let rect = SceneRenderer.holdRect(hold, content: model.content, size: size)

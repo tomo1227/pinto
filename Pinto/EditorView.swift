@@ -74,14 +74,7 @@ struct EditorView: View {
         }
         .disabled(isSavingImage)
         .accessibilityLabel("画像を写真ライブラリに保存")
-        Button {
-          shareSheet = ImageShareSheet(
-            image: SceneRenderer.render(image: model.image, content: model.content),
-            onError: { error in
-              model.errorMessage = "画像を共有できませんでした。\n\(error.localizedDescription)"
-            }
-          )
-        } label: {
+        Button(action: shareImage) {
           Image(systemName: "square.and.arrow.up")
         }
         .disabled(isSavingImage)
@@ -601,7 +594,26 @@ struct EditorView: View {
         model.errorMessage =
           "編集データは端末内に保存しましたが、写真ライブラリに画像を保存できませんでした。\n\(error.localizedDescription)"
       }
+
     }
+  }
+
+  private func shareImage() {
+    guard !isSavingImage else { return }
+    isSavingImage = true
+    Task {
+      defer { isSavingImage = false }
+      do {
+        let image = try await model.renderForSharing()
+        shareSheet = ImageShareSheet(image: image, onError: reportShareFailure)
+      } catch {
+        reportShareFailure(error)
+      }
+    }
+  }
+
+  private func reportShareFailure(_ error: Error) {
+    model.errorMessage = "画像を共有できませんでした。\n\(error.localizedDescription)"
   }
 
   private func colorLabel(_ hex: String) -> String {

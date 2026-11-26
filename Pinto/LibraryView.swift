@@ -723,7 +723,7 @@ struct NewWallView: View {
     do {
       guard let image else { throw PintoError.invalidImage }
       let document = WallDocument(
-        imageData: try image.normalizedPNG(),
+        imageData: try await WallImageWorker.shared.normalize(image),
         content: WallContent(name: name.trimmingCharacters(in: .whitespacesAndNewlines)))
       try await onCreate(document)
       dismiss()

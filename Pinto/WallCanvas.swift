@@ -10,6 +10,10 @@ struct WallCanvas: UIViewRepresentable {
   func updateUIView(_ view: CanvasView, context: Context) {
     view.refresh()
   }
+
+  static func dismantleUIView(_ view: CanvasView, coordinator: ()) {
+    view.cancelHoldPlacements()
+  }
 }
 
 @MainActor
@@ -84,6 +88,8 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private let trashTarget = UIImageView(image: UIImage(systemName: "trash.fill"))
   private var trashDragStart: CGPoint?
   private var trashHovered = false
+  private var pendingHoldPositions: [WallPoint] = []
+  private var holdPlacementTask: Task<Void, Never>?
 
   init(model: EditorModel) {
     self.model = model
@@ -164,6 +170,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   func refresh() {
+    if model.tool != .hold { cancelHoldPlacements() }
     if lastRevision != model.viewportRevision {
       zoom = 1
       offset = .zero
@@ -315,7 +322,11 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     case .route:
       if case .hold(let id) = target { model.appendToRoute(id) }
     case .hold:
-      if let target { model.selection = target } else { model.addHold(at: normalized(point)) }
+      if let target {
+        model.selection = target
+      } else {
+        enqueueHold(at: normalized(point))
+      }
     case .text:
       if case .text(let id) = target,
         let text = model.content.texts.first(where: { $0.id == id })
@@ -328,6 +339,38 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       }
     }
     updateLayers()
+  }
+
+  func cancelHoldPlacements() {
+    holdPlacementTask?.cancel()
+    holdPlacementTask = nil
+    pendingHoldPositions.removeAll()
+  }
+
+  private func enqueueHold(at position: WallPoint) {
+    pendingHoldPositions.append(position)
+    guard holdPlacementTask == nil else { return }
+    holdPlacementTask = Task { [weak self, model] in
+      while !Task.isCancelled, let position = self?.nextHoldPosition(), model.tool == .hold {
+        if let target = self?.targetForHoldPlacement(at: position) {
+          model.selection = target
+        } else {
+          await model.addHold(at: position)
+        }
+        self?.updateLayers()
+      }
+      if !Task.isCancelled { self?.cancelHoldPlacements() }
+    }
+  }
+
+  private func nextHoldPosition() -> WallPoint? {
+    pendingHoldPositions.isEmpty ? nil : pendingHoldPositions.removeFirst()
+  }
+
+  private func targetForHoldPlacement(at position: WallPoint) -> EditorSelection? {
+    let frame = imageRect
+    let point = SceneRenderer.point(position, in: frame.size)
+    return hit(CGPoint(x: frame.minX + point.x, y: frame.minY + point.y))
   }
 
   @objc private func trashDragged(_ gesture: UILongPressGestureRecognizer) {
