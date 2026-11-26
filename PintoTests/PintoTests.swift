@@ -1312,6 +1312,18 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content, original)
   }
 
+  func testNewWallTextEntryDefaultsToWhite() throws {
+    let model = try EditorModel(document: makeDocument())
+    model.tool = .text
+    model.promptText(at: WallPoint(x: 0.5, y: 0.5))
+
+    XCTAssertEqual(model.activeStyle.color, "#FFFEFA")
+    model.textDraft = "テキスト"
+    model.commitText()
+    XCTAssertEqual(model.content.texts.first?.style.color, "#FFFEFA")
+    XCTAssertEqual(model.content.holdStyle.color, "#202522")
+  }
+
   func testTextEntryStylesApplyToNewAndExistingText() throws {
     let model = try EditorModel(document: makeDocument())
     model.tool = .text
@@ -1346,6 +1358,7 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.texts.count, 1)
     XCTAssertEqual(model.content.texts[0].id, text.id)
     XCTAssertEqual(model.content.texts[0].text, "再編集")
+    XCTAssertEqual(model.content.texts[0].style.color, "#E55050")
     XCTAssertEqual(model.content.texts[0].style, editedStyle)
     XCTAssertEqual(model.content.textStyle, editedStyle)
   }

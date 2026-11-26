@@ -101,7 +101,7 @@ struct WallContent: Codable, Equatable {
   var routeNumberColor: String? = nil
   var holdStyle = MarkStyle()
   var newHoldShape: HoldShape? = nil
-  var textStyle = MarkStyle()
+  var textStyle = MarkStyle(color: "#FFFEFA")
   var lineStyle = defaultLineStyle
 
   var effectiveRouteNumberSize: Double { routeNumberSize ?? Self.defaultRouteNumberSize }
