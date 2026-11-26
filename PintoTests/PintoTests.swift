@@ -889,6 +889,9 @@ final class PintoTests: XCTestCase {
     for step in 1...10 {
       model.moveSelection(to: WallPoint(x: Double(step) / 10, y: 0.5))
     }
+    XCTAssertEqual(model.content, start)
+    XCTAssertEqual(model.history.past.count, count)
+    XCTAssertEqual(model.canvasContent.holds[0].position.x, 1)
     model.endGesture()
     XCTAssertEqual(model.history.past.count, count + 1)
     model.undo()
@@ -911,9 +914,11 @@ final class PintoTests: XCTestCase {
     let start = model.content
     model.beginGesture()
     model.moveSelection(to: WallPoint(x: -1, y: 2))
-    XCTAssertEqual(model.content.holds[0].position, WallPoint(x: 0, y: 1))
+    XCTAssertEqual(model.canvasContent.holds[0].position, WallPoint(x: 0, y: 1))
+    XCTAssertEqual(model.content, start)
     model.cancelGesture()
     XCTAssertEqual(model.content, start)
+    XCTAssertEqual(model.canvasContent, start)
   }
 
   func testHoldHandlesResizeInEveryDirectionWithUndoAndRedo() throws {
@@ -979,8 +984,9 @@ final class PintoTests: XCTestCase {
       gesture.testTranslation = CGPoint(x: 20, y: 0)
       gesture.testState = .changed
       canvas.perform(NSSelectorFromString("panned:"), with: gesture)
-      XCTAssertEqual(model.content.holds[0].radiusX * 600, 40, accuracy: 0.0001)
-      XCTAssertEqual(model.content.holds[0].radiusY * 800, 40, accuracy: 0.0001)
+      XCTAssertEqual(model.canvasContent.holds[0].radiusX * 600, 40, accuracy: 0.0001)
+      XCTAssertEqual(model.canvasContent.holds[0].radiusY * 800, 40, accuracy: 0.0001)
+      XCTAssertEqual(model.content, document.content)
       gesture.testState = cancelled ? .cancelled : .ended
       canvas.perform(NSSelectorFromString("panned:"), with: gesture)
       if cancelled {
@@ -1567,19 +1573,21 @@ final class PintoTests: XCTestCase {
           XCTAssertEqual(scale.width, expected, accuracy: 0.0001)
           XCTAssertEqual(scale.height, expected, accuracy: 0.0001)
           model.resizeSelection(x: scale.width, y: scale.height, from: original)
+          XCTAssertEqual(model.content, original)
+          let preview = model.canvasContent
           if isText {
             XCTAssertEqual(
-              model.content.texts[0].style.fontSize,
+              preview.texts[0].style.fontSize,
               original.texts[0].style.fontSize * expected, accuracy: 0.0001)
-            XCTAssertEqual(model.content.texts[0].position, original.texts[0].position)
+            XCTAssertEqual(preview.texts[0].position, original.texts[0].position)
           } else {
             XCTAssertEqual(
-              model.content.holds[0].radiusX,
+              preview.holds[0].radiusX,
               original.holds[0].radiusX * expected, accuracy: 0.0001)
             XCTAssertEqual(
-              model.content.holds[0].radiusY,
+              preview.holds[0].radiusY,
               original.holds[0].radiusY * expected, accuracy: 0.0001)
-            XCTAssertEqual(model.content.holds[0].position, original.holds[0].position)
+            XCTAssertEqual(preview.holds[0].position, original.holds[0].position)
           }
         }
         model.endGesture()

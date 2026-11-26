@@ -187,11 +187,12 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   private func updateLayers() {
     let frame = imageRect
+    let content = model.canvasContent
     let viewportChanged = wallPhoto.frame != frame
-    let contentChanged = displayedContent != model.content
+    let contentChanged = displayedContent != content
     if viewportChanged { wallPhoto.frame = frame }
     if viewportChanged || contentChanged {
-      displayedContent = model.content
+      displayedContent = content
       annotations.setNeedsDisplay()
     }
     if viewportChanged || contentChanged || displayedSelection != model.selection
@@ -208,7 +209,8 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     guard imageFrame.width > 0 else { return }
     context.saveGState()
     context.translateBy(x: imageFrame.minX, y: imageFrame.minY)
-    SceneRenderer.drawAnnotations(content: model.content, size: imageFrame.size, context: context)
+    SceneRenderer.drawAnnotations(
+      content: model.canvasContent, size: imageFrame.size, context: context)
     context.restoreGState()
   }
 
@@ -258,14 +260,15 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   private func selectionRect() -> CGRect? {
+    let content = model.canvasContent
     let rect: CGRect?
     switch model.selection {
     case .hold(let id):
-      rect = model.content.holds.first(where: { $0.id == id }).map {
-        SceneRenderer.holdRect($0, content: model.content, size: imageRect.size)
+      rect = content.holds.first(where: { $0.id == id }).map {
+        SceneRenderer.holdRect($0, content: content, size: imageRect.size)
       }
     case .text(let id):
-      rect = model.content.texts.first(where: { $0.id == id }).map {
+      rect = content.texts.first(where: { $0.id == id }).map {
         SceneRenderer.textRect($0, size: imageRect.size)
       }
     case nil: rect = nil
@@ -276,13 +279,14 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private func hit(_ point: CGPoint) -> EditorSelection? {
     let p = local(point)
     let size = imageRect.size
-    for text in model.content.texts.reversed() {
+    let content = model.canvasContent
+    for text in content.texts.reversed() {
       if SceneRenderer.textRect(text, size: size).insetBy(dx: -8, dy: -8).contains(p) {
         return .text(text.id)
       }
     }
-    for hold in model.content.holds.reversed() {
-      if SceneRenderer.holdPath(hold, content: model.content, size: size, padding: 8).contains(p) {
+    for hold in content.holds.reversed() {
+      if SceneRenderer.holdPath(hold, content: content, size: size, padding: 8).contains(p) {
         return .hold(hold.id)
       }
     }

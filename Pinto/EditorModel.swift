@@ -44,6 +44,8 @@ final class EditorModel: ObservableObject {
   let image: UIImage
   private(set) var document: WallDocument
   private var gestureStart: WallContent?
+  private var gestureSelection: EditorSelection?
+  private var gesturePreview: WallContent?
   private var textPosition = WallPoint(x: 0.5, y: 0.5)
   private var editingTextID: UUID?
   private var saveTask: Task<Void, Error>?
@@ -61,24 +63,39 @@ final class EditorModel: ObservableObject {
   var canRedo: Bool { !history.future.isEmpty }
 
   func change(_ update: (inout WallContent) -> Void) {
+    cancelGesture()
     let before = content
     update(&content)
     history.record(before, replacing: content)
   }
 
-  func beginGesture() { gestureStart = content }
+  var canvasContent: WallContent {
+    guard gestureSelection == selection else { return content }
+    return gesturePreview ?? content
+  }
+
+  func beginGesture() {
+    gestureStart = content
+    gestureSelection = selection
+    gesturePreview = content
+  }
 
   func endGesture() {
-    if let before = gestureStart { history.record(before, replacing: content) }
-    gestureStart = nil
+    defer { cancelGesture() }
+    guard gestureStart == content, gestureSelection == selection,
+      let preview = gesturePreview, preview != content
+    else { return }
+    change { $0 = preview }
   }
 
   func cancelGesture() {
-    if let before = gestureStart { content = before }
     gestureStart = nil
+    gestureSelection = nil
+    gesturePreview = nil
   }
 
   func undo() {
+    cancelGesture()
     if let previous = history.undo(content) {
       content = previous
       selection = nil
@@ -86,6 +103,7 @@ final class EditorModel: ObservableObject {
   }
 
   func redo() {
+    cancelGesture()
     if let next = history.redo(content) {
       content = next
       selection = nil
@@ -267,35 +285,38 @@ final class EditorModel: ObservableObject {
   }
 
   func moveSelection(to point: WallPoint) {
+    guard gesturePreview != nil, gestureSelection == selection else { return }
     switch selection {
     case .hold(let id):
-      if let index = content.holds.firstIndex(where: { $0.id == id }) {
-        content.holds[index].position = point.clamped()
+      if let index = gesturePreview?.holds.firstIndex(where: { $0.id == id }) {
+        gesturePreview?.holds[index].position = point.clamped()
       }
     case .text(let id):
-      if let index = content.texts.firstIndex(where: { $0.id == id }) {
-        content.texts[index].position = point.clamped()
+      if let index = gesturePreview?.texts.firstIndex(where: { $0.id == id }) {
+        gesturePreview?.texts[index].position = point.clamped()
       }
     case nil: break
     }
   }
 
   func resizeSelection(x: Double, y: Double, from original: WallContent) {
+    guard gesturePreview != nil, gestureSelection == selection else { return }
     switch selection {
     case .hold(let id):
       if let old = original.holds.first(where: { $0.id == id }),
-        let index = content.holds.firstIndex(where: { $0.id == id })
+        let index = gesturePreview?.holds.firstIndex(where: { $0.id == id })
       {
-        content.holds[index].radiusX = min(
+        gesturePreview?.holds[index].radiusX = min(
           0.5, max(1 / (image.size.width * image.scale), old.radiusX * x))
-        content.holds[index].radiusY = min(
+        gesturePreview?.holds[index].radiusY = min(
           0.5, max(1 / (image.size.height * image.scale), old.radiusY * y))
       }
     case .text(let id):
       if let old = original.texts.first(where: { $0.id == id }),
-        let index = content.texts.firstIndex(where: { $0.id == id })
+        let index = gesturePreview?.texts.firstIndex(where: { $0.id == id })
       {
-        content.texts[index].style.fontSize = min(120, max(6, old.style.fontSize * max(x, y)))
+        gesturePreview?.texts[index].style.fontSize = min(
+          120, max(6, old.style.fontSize * max(x, y)))
       }
     case nil: break
     }
