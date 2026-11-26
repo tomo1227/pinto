@@ -1,6 +1,8 @@
 import UIKit
 
 enum HoldDetection {
+  private typealias RGB = SIMD3<Double>
+
   static func detect(
     image: UIImage, position: WallPoint, style: MarkStyle, shape: HoldShape? = nil
   ) throws -> Hold? {
@@ -63,12 +65,13 @@ enum HoldDetection {
     guard width >= 8, height >= 8, pixels.count == width * height * 4,
       (0..<width).contains(seedX), (0..<height).contains(seedY)
     else { return nil }
-    func color(_ x: Int, _ y: Int) -> [Double] {
+    func color(_ x: Int, _ y: Int) -> RGB {
       let index = (y * width + x) * 4
-      return (0..<3).map { Double(pixels[index + $0]) }
+      return RGB(Double(pixels[index]), Double(pixels[index + 1]), Double(pixels[index + 2]))
     }
-    func distance(_ a: [Double], _ b: [Double]) -> Double {
-      sqrt(zip(a, b).reduce(0) { $0 + pow($1.0 - $1.1, 2) })
+    func distance(_ a: RGB, _ b: RGB) -> Double {
+      let delta = a - b
+      return sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z)
     }
     let background = backgroundColor(width: width, height: height, colorAt: color)
     let seed = color(seedX, seedY)
@@ -127,9 +130,9 @@ enum HoldDetection {
   }
 
   private static func backgroundColor(
-    width: Int, height: Int, colorAt: (Int, Int) -> [Double]
-  ) -> [Double] {
-    var samples: [[Double]] = []
+    width: Int, height: Int, colorAt: (Int, Int) -> RGB
+  ) -> RGB {
+    var samples: [RGB] = []
     for x in stride(from: 2, to: width - 2, by: 4) {
       samples.append(colorAt(x, 1))
       samples.append(colorAt(x, height - 2))
@@ -138,9 +141,10 @@ enum HoldDetection {
       samples.append(colorAt(1, y))
       samples.append(colorAt(width - 2, y))
     }
-    return (0..<3).map { channel in
+    func median(_ channel: Int) -> Double {
       let sorted = samples.map { $0[channel] }.sorted()
       return sorted[sorted.count / 2]
     }
+    return RGB(median(0), median(1), median(2))
   }
 }
