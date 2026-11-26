@@ -18,6 +18,7 @@ dependencies:
     - github.com/dimillian/skills/swiftui-view-refactor
     - github.com/openai/**
     - github.com/twostraws/swiftui-agent-skill/swiftui-pro
+    - github.com/twostraws/swift-testing-agent-skill/swift-testing-pro
     - github.com/vercel-labs/**
   deny: []
   require_pinned_constraint: true

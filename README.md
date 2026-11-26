@@ -75,6 +75,10 @@ xcodebuild -project Pinto.xcodeproj -scheme Pinto \
 
 `make apm_ci` で Copilot 用のスキルを復元できます。Copilot Chat では、たとえば「`swiftui-performance-audit` を使って、写真を取り込んだ後に編集画面の描画が重くなる原因を調べて。コードはまだ変更しないで」と依頼できます。コードだけで原因を絞れない場合は、Instruments で計測する手順も提案します。
 
+### Copilot で Swift Testing をレビューする
+
+Copilot Chat で「`swift-testing-pro` を使って、Pinto のテストをレビューして」と依頼できます。このスキルも `make apm_ci` で復元できます。
+
 ビューの構成を整理したいときは、「`swiftui-view-refactor` を使って、編集画面をどうサブビューに分割するか提案して。挙動は変えず、コードはまだ変更しないで」と依頼できます。
 
 ### Debug 実行時のメモリ確認（目安: 300 MB）

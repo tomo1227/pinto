@@ -131,6 +131,46 @@ dependencies:
   - path: LICENSE
     source: LICENSE
     hash: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+- repo_url: twostraws/swift-testing-agent-skill
+  name: swift-testing-pro
+  host: github.com
+  resolved_commit: 29921fb187f1165cb8975791c7e11fbb23d03398
+  resolved_ref: 1.0.0
+  version: 1.0.0
+  virtual_path: swift-testing-pro
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/swift-testing-pro
+  - .agents/skills/swift-testing-pro/LICENSE
+  - .agents/skills/swift-testing-pro/SKILL.md
+  - .agents/skills/swift-testing-pro/agents/openai.yaml
+  - .agents/skills/swift-testing-pro/assets/swift-testing-pro-icon.png
+  - .agents/skills/swift-testing-pro/assets/swift-testing-pro-icon.svg
+  - .agents/skills/swift-testing-pro/references/async-tests.md
+  - .agents/skills/swift-testing-pro/references/core-rules.md
+  - .agents/skills/swift-testing-pro/references/migrating-from-xctest.md
+  - .agents/skills/swift-testing-pro/references/new-features.md
+  - .agents/skills/swift-testing-pro/references/writing-better-tests.md
+  deployed_file_hashes:
+    .agents/skills/swift-testing-pro/LICENSE: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
+    .agents/skills/swift-testing-pro/SKILL.md: sha256:ad4f1bff44b5b7fce20b282481e651876efce024d13b16cb969bc433036ac059
+    .agents/skills/swift-testing-pro/agents/openai.yaml: sha256:f7a35b0befd4eb136cf87047543379a63efebb4f0f7eb4490489325d09383c4f
+    .agents/skills/swift-testing-pro/assets/swift-testing-pro-icon.png: sha256:13cbe2849191cc3fda400fc065d5fe6afa5b78f09e347d783bfa2b6d852a2b66
+    .agents/skills/swift-testing-pro/assets/swift-testing-pro-icon.svg: sha256:92d3d0b2855da2404beaacd3ea574b79a26535c9d99a0739edfd5e35d764a9e0
+    .agents/skills/swift-testing-pro/references/async-tests.md: sha256:52892a8f7014c11c132013f87f271c1becd76776fffc087e8086b8cb2d888201
+    .agents/skills/swift-testing-pro/references/core-rules.md: sha256:2271efdca6c2b7b3365501172147884b6e786bcee7bef680fb4f4718929d6180
+    .agents/skills/swift-testing-pro/references/migrating-from-xctest.md: sha256:35b64812402ad1d15b496993e1721daaf4e80672bf9cce47078f772fd271f93f
+    .agents/skills/swift-testing-pro/references/new-features.md: sha256:988df5cb556893c789f9aecdc4c8773fdbbda787ab1dad766bf1182a7b9a4819
+    .agents/skills/swift-testing-pro/references/writing-better-tests.md: sha256:25da3455f6cec4f10d3dff0bf3e8e1372568c75691916541b4d517f451cb8bf1
+  content_hash: sha256:bea12381ed2b9f0ffae55d9b768c447b356a20e53cf6b68a34097c64f569819a
+  constraint: 1.0.0
+  resolved_tag: 1.0.0
+  resolved_at: '2026-11-26T17:11:23+00:00'
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
 - repo_url: twostraws/swiftui-agent-skill
   materialization_repo_url: twostraws/SwiftUI-Agent-Skill
   name: swiftui-pro
@@ -310,6 +350,105 @@ deployments:
   - github/awesome-copilot/skills/git-commit
   active_owner: github/awesome-copilot/skills/git-commit
   content_hash: sha256:a95bb7e996516a1c73df745b0598ba650d7161eb1da559712e8fabb5dacb7c5c
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:ad4f1bff44b5b7fce20b282481e651876efce024d13b16cb969bc433036ac059
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:f7a35b0befd4eb136cf87047543379a63efebb4f0f7eb4490489325d09383c4f
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/assets/swift-testing-pro-icon.png
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:13cbe2849191cc3fda400fc065d5fe6afa5b78f09e347d783bfa2b6d852a2b66
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/assets/swift-testing-pro-icon.svg
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:92d3d0b2855da2404beaacd3ea574b79a26535c9d99a0739edfd5e35d764a9e0
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/references/async-tests.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:52892a8f7014c11c132013f87f271c1becd76776fffc087e8086b8cb2d888201
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/references/core-rules.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:2271efdca6c2b7b3365501172147884b6e786bcee7bef680fb4f4718929d6180
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/references/migrating-from-xctest.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:35b64812402ad1d15b496993e1721daaf4e80672bf9cce47078f772fd271f93f
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/references/new-features.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:988df5cb556893c789f9aecdc4c8773fdbbda787ab1dad766bf1182a7b9a4819
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swift-testing-pro/references/writing-better-tests.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swift-testing-agent-skill/swift-testing-pro
+  active_owner: twostraws/swift-testing-agent-skill/swift-testing-pro
+  content_hash: sha256:25da3455f6cec4f10d3dff0bf3e8e1372568c75691916541b4d517f451cb8bf1
 - kind: project-relative
   target: copilot
   value: .agents/skills/swiftui-performance-audit
