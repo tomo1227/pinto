@@ -349,18 +349,18 @@ final class PintoTests: XCTestCase {
     }
     let edited = model.content
 
-    try await model.autosave(to: store)
+    try await model.autosave(to: store) { XCTAssertEqual($0, .milliseconds(500)) }
 
     XCTAssertFalse(model.dirty)
     XCTAssertTrue(model.canUndo)
     XCTAssertEqual(store.walls.first?.content, edited)
     XCTAssertEqual(try files.read(files.url(for: document.id)).content, edited)
     model.undo()
-    try await model.autosave(to: store)
+    try await model.autosave(to: store) { _ in }
     XCTAssertEqual(try files.read(files.url(for: document.id)).content, document.content)
     XCTAssertTrue(model.canRedo)
     model.redo()
-    try await model.autosave(to: store)
+    try await model.autosave(to: store) { _ in }
     XCTAssertEqual(try files.read(files.url(for: document.id)).content, edited)
     XCTAssertFalse(model.dirty)
   }
@@ -375,8 +375,8 @@ final class PintoTests: XCTestCase {
     let files = try WallFiles(directory: directory)
     let model = try EditorModel(document: document)
     model.change { $0.name = "途中の編集" }
-    let pending = Task { try await model.autosave(to: store) }
-    await Task.yield()
+    let (pending, resume) = await startPausedAutosave(model, to: store)
+    defer { resume.finish() }
     model.change { $0.name = "最新の編集" }
     pending.cancel()
     do {
@@ -386,7 +386,7 @@ final class PintoTests: XCTestCase {
     }
     XCTAssertEqual(try files.read(files.url(for: document.id)), document)
     XCTAssertTrue(model.dirty)
-    try await model.autosave(to: store)
+    try await model.autosave(to: store) { _ in }
     XCTAssertEqual(try files.read(files.url(for: document.id)).content.name, "最新の編集")
     XCTAssertFalse(model.dirty)
   }
@@ -395,11 +395,13 @@ final class PintoTests: XCTestCase {
     let model = try EditorModel(document: makeDocument())
     let unavailableStore = WallStore()
     let original = model.document
-    try await model.autosave(to: unavailableStore)
+    try await model.autosave(to: unavailableStore) { _ in
+      XCTFail("Unchanged content must not schedule a save")
+    }
     XCTAssertEqual(model.document, original)
     model.change { $0.name = "保存に失敗する編集" }
     do {
-      try await model.autosave(to: unavailableStore)
+      try await model.autosave(to: unavailableStore) { _ in }
       XCTFail("Autosave must report write failures")
     } catch {
       XCTAssertEqual((error as NSError).domain, NSCocoaErrorDomain)
@@ -417,15 +419,34 @@ final class PintoTests: XCTestCase {
     await store.load(directory: directory)
     let model = try EditorModel(document: makeDocument())
     model.change { $0.name = "戻る直前の編集" }
-    let pending = Task { try await model.autosave(to: store) }
-    await Task.yield()
+    let (pending, resume) = await startPausedAutosave(model, to: store)
+    defer {
+      pending.cancel()
+      resume.finish()
+    }
     try await model.save(to: store)
     let saved = model.document
+    resume.finish()
     try await pending.value
     XCTAssertEqual(model.document, saved)
     XCTAssertFalse(model.dirty)
     let files = try WallFiles(directory: directory)
     XCTAssertEqual(try files.read(files.url(for: saved.id)), saved)
+  }
+
+  private func startPausedAutosave(_ model: EditorModel, to store: WallStore) async
+    -> (Task<Void, Error>, AsyncStream<Void>.Continuation)
+  {
+    let waiting = expectation(description: "Autosave entered its debounce")
+    let (gate, resume) = AsyncStream<Void>.makeStream()
+    let pending = Task {
+      try await model.autosave(to: store) { _ in
+        waiting.fulfill()
+        for await _ in gate {}
+      }
+    }
+    await fulfillment(of: [waiting], timeout: 1)
+    return (pending, resume)
   }
 
   func testRouteNumberIndexFollowsRouteOrderNotHoldOrder() {
