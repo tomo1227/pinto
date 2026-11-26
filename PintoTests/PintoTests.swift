@@ -1408,20 +1408,25 @@ final class PintoTests: XCTestCase {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
       }
-      var rows = Set<Int>()
-      var red = 0
-      var blue = 0
-      for i in stride(from: 0, to: rgba.count, by: 4) where rgba[i + 3] > 128 {
-        if rgba[i] > 128 && rgba[i + 2] < 128 {
-          red += 1
-          rows.insert(i / 4 / image.width)
+      let bytesPerRow = image.width * 4
+      return rgba.withUnsafeBufferPointer { buffer in
+        var height = 0
+        var red = 0
+        var blue = 0
+        for rowStart in stride(from: 0, to: buffer.count, by: bytesPerRow) {
+          let previousTotal = red + blue
+          for i in stride(from: rowStart, to: rowStart + bytesPerRow, by: 4)
+          where buffer[i + 3] > 128 {
+            if buffer[i] > 128 && buffer[i + 2] < 128 {
+              red += 1
+            } else if buffer[i + 2] > 128 && buffer[i] < 128 {
+              blue += 1
+            }
+          }
+          if red + blue > previousTotal { height += 1 }
         }
-        if rgba[i + 2] > 128 && rgba[i] < 128 {
-          blue += 1
-          rows.insert(i / 4 / image.width)
-        }
+        return (height, red, blue)
       }
-      return (rows.count, red, blue)
     }
 
     var style = MarkStyle(color: "#FF0000", outlineColor: "#0000FF")
