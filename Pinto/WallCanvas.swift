@@ -64,8 +64,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   private let model: EditorModel
-  private var zoom: CGFloat = 1
-  private var offset = CGPoint.zero
+  private var viewport = CanvasViewport()
   private var lastRevision = 0
   private var gestureOriginal: WallContent?
   private var dragOrigin = CGPoint.zero
@@ -173,8 +172,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   func refresh() {
     if model.tool != .hold { cancelHoldPlacements() }
     if lastRevision != model.viewportRevision {
-      zoom = 1
-      offset = .zero
+      viewport = CanvasViewport()
       lastRevision = model.viewportRevision
     }
     updateLayers()
@@ -186,13 +184,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   private var imageRect: CGRect {
-    let size = model.image.size
-    let scale = min(bounds.width / size.width, bounds.height / size.height) * zoom
-    let width = size.width * scale
-    let height = size.height * scale
-    return CGRect(
-      x: (bounds.width - width) / 2 + offset.x,
-      y: (bounds.height - height) / 2 + offset.y, width: width, height: height)
+    viewport.imageRect(in: bounds, imageSize: model.image.size)
   }
 
   private func updateLayers() {
@@ -291,12 +283,11 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   private func local(_ point: CGPoint) -> CGPoint {
-    CGPoint(x: point.x - imageRect.minX, y: point.y - imageRect.minY)
+    CanvasViewport.local(point, in: imageRect)
   }
 
   private func normalized(_ point: CGPoint) -> WallPoint {
-    let point = local(point)
-    return WallPoint(x: point.x / imageRect.width, y: point.y / imageRect.height).clamped()
+    CanvasViewport.normalized(point, in: imageRect)
   }
 
   private func selectionRect() -> CGRect? {
@@ -394,9 +385,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   private func targetForHoldPlacement(at position: WallPoint) -> EditorSelection? {
-    let frame = imageRect
-    let point = SceneRenderer.point(position, in: frame.size)
-    return hit(CGPoint(x: frame.minX + point.x, y: frame.minY + point.y))
+    hit(CanvasViewport.canvasPoint(position, in: imageRect))
   }
 
   @objc private func trashDragged(_ gesture: UILongPressGestureRecognizer) {
@@ -505,7 +494,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   private func beginPan(at start: CGPoint) -> Bool {
     movingViewport = model.tool == .pan
-    dragOrigin = offset
+    dragOrigin = viewport.offset
     guard !movingViewport else { return false }
     resizeHandle = resizeHandle(at: start)
     if resizeHandle == nil { model.selection = hit(start) }
@@ -520,7 +509,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   private func updatePan(translation: CGPoint) {
     if movingViewport {
-      offset = CGPoint(x: dragOrigin.x + translation.x, y: dragOrigin.y + translation.y)
+      viewport.pan(by: translation, from: dragOrigin)
       return
     }
     guard let original = gestureOriginal else { return }
@@ -561,15 +550,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       if pinchResizes, let original = gestureOriginal {
         model.resizeSelection(x: gesture.scale, y: gesture.scale, from: original)
       } else {
-        let oldRect = imageRect
-        let anchor = gesture.location(in: self)
-        let nextZoom = min(8, max(0.5, zoom * gesture.scale))
-        let ratio = nextZoom / zoom
-        offset.x =
-          anchor.x - bounds.midX - (anchor.x - oldRect.minX) * ratio + oldRect.width * ratio / 2
-        offset.y =
-          anchor.y - bounds.midY - (anchor.y - oldRect.minY) * ratio + oldRect.height * ratio / 2
-        zoom = nextZoom
+        viewport.magnify(
+          by: gesture.scale, at: gesture.location(in: self), in: bounds, imageSize: model.image.size
+        )
         gesture.scale = 1
       }
     case .ended:
@@ -636,8 +619,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   @objc private func viewportPanned(_ gesture: UIPanGestureRecognizer) {
     guard gesture.state == .changed else { return }
     let translation = gesture.translation(in: self)
-    offset.x += translation.x
-    offset.y += translation.y
+    viewport.pan(by: translation)
     gesture.setTranslation(.zero, in: self)
     updateLayers()
   }

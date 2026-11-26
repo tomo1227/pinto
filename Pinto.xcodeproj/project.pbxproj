@@ -14,6 +14,7 @@
 		A10000000000000000000005 /* HoldDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* HoldDetection.swift */; };
 		A10000000000000000000006 /* EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* EditorModel.swift */; };
 		A10000000000000000000007 /* WallCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* WallCanvas.swift */; };
+		356A85F2FE8D4633880233CA /* CanvasViewport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004DD8A7F22C439F8E53FD87 /* CanvasViewport.swift */; };
 		A10000000000000000000008 /* EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* EditorView.swift */; };
 		A10000000000000000000009 /* WallSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* WallSettingsView.swift */; };
 		A1000000000000000000000A /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* LibraryView.swift */; };
@@ -62,6 +63,7 @@
 		A20000000000000000000005 /* HoldDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldDetection.swift; sourceTree = "<group>"; };
 		A20000000000000000000006 /* EditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorModel.swift; sourceTree = "<group>"; };
 		A20000000000000000000007 /* WallCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallCanvas.swift; sourceTree = "<group>"; };
+		004DD8A7F22C439F8E53FD87 /* CanvasViewport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasViewport.swift; sourceTree = "<group>"; };
 		A20000000000000000000008 /* EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorView.swift; sourceTree = "<group>"; };
 		A20000000000000000000009 /* WallSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallSettingsView.swift; sourceTree = "<group>"; };
 		A2000000000000000000000A /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
@@ -135,6 +137,7 @@
 				A20000000000000000000005 /* HoldDetection.swift */,
 				A20000000000000000000006 /* EditorModel.swift */,
 				A20000000000000000000007 /* WallCanvas.swift */,
+				004DD8A7F22C439F8E53FD87 /* CanvasViewport.swift */,
 				E519A3FD4B77454ABFE48C73 /* StyledTextEntry.swift */,
 				A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */,
 				4AC4D304289E447BBE39588A /* ImageShareSheet.swift */,
@@ -292,6 +295,7 @@
 				A10000000000000000000005 /* HoldDetection.swift in Sources */,
 				A10000000000000000000006 /* EditorModel.swift in Sources */,
 				A10000000000000000000007 /* WallCanvas.swift in Sources */,
+				356A85F2FE8D4633880233CA /* CanvasViewport.swift in Sources */,
 				9DBBECD252E247998E36FBAE /* StyledTextEntry.swift in Sources */,
 				CEF903823E114D7782F33664 /* ResettableSlider.swift in Sources */,
 				628C77EE7F3842CA90D31925 /* ImageShareSheet.swift in Sources */,

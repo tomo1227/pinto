@@ -1062,6 +1062,30 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .oval])
   }
 
+  func testCanvasViewportPreservesPinchAnchorAndConvertsCoordinates() {
+    let bounds = CGRect(x: 0, y: 0, width: 800, height: 600)
+    let imageSize = CGSize(width: 600, height: 800)
+    var viewport = CanvasViewport()
+    let original = viewport.imageRect(in: bounds, imageSize: imageSize)
+    XCTAssertEqual(original, CGRect(x: 175, y: 0, width: 450, height: 600))
+
+    viewport.pan(by: CGPoint(x: 20, y: -30))
+    let panned = viewport.imageRect(in: bounds, imageSize: imageSize)
+    XCTAssertEqual(panned, original.offsetBy(dx: 20, dy: -30))
+    let position = WallPoint(x: 0.25, y: 0.75)
+    let anchor = CanvasViewport.canvasPoint(position, in: panned)
+    XCTAssertEqual(CanvasViewport.normalized(anchor, in: panned), position)
+
+    for (scale, expectedZoom) in [(CGFloat(100), CGFloat(8)), (0.001, 0.5)] {
+      viewport.magnify(by: scale, at: anchor, in: bounds, imageSize: imageSize)
+      XCTAssertEqual(viewport.zoom, expectedZoom)
+      let rect = viewport.imageRect(in: bounds, imageSize: imageSize)
+      let point = CanvasViewport.canvasPoint(position, in: rect)
+      XCTAssertEqual(point.x, anchor.x, accuracy: 0.001)
+      XCTAssertEqual(point.y, anchor.y, accuracy: 0.001)
+    }
+  }
+
   func testCanvasPanReusesAnnotationsUntilDrawingMarginIsExhausted() throws {
     let model = try EditorModel(document: makeDocument())
     model.change {
