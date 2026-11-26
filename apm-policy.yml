@@ -14,6 +14,8 @@ dependencies:
     - github.com/microsoft/**
     - github.com/github/**
     - github.com/anthropics/**
+    - github.com/dimillian/skills/swiftui-performance-audit
+    - github.com/dimillian/skills/swiftui-view-refactor
     - github.com/openai/**
     - github.com/twostraws/swiftui-agent-skill/swiftui-pro
     - github.com/vercel-labs/**

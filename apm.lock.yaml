@@ -3,6 +3,70 @@ apm_version: 0.38.1
 manifest_targets:
 - copilot
 dependencies:
+- repo_url: dimillian/skills
+  materialization_repo_url: Dimillian/Skills
+  name: swiftui-performance-audit
+  host: github.com
+  resolved_commit: 05ba982bfeb0d77d3c97d4542b0ee15034d05f84
+  resolved_ref: 05ba982bfeb0d77d3c97d4542b0ee15034d05f84
+  version: unknown
+  virtual_path: swiftui-performance-audit
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/swiftui-performance-audit
+  - .agents/skills/swiftui-performance-audit/LICENSE
+  - .agents/skills/swiftui-performance-audit/SKILL.md
+  - .agents/skills/swiftui-performance-audit/agents/openai.yaml
+  - .agents/skills/swiftui-performance-audit/references/code-smells.md
+  - .agents/skills/swiftui-performance-audit/references/demystify-swiftui-performance-wwdc23.md
+  - .agents/skills/swiftui-performance-audit/references/optimizing-swiftui-performance-instruments.md
+  - .agents/skills/swiftui-performance-audit/references/profiling-intake.md
+  - .agents/skills/swiftui-performance-audit/references/report-template.md
+  - .agents/skills/swiftui-performance-audit/references/understanding-hangs-in-your-app.md
+  - .agents/skills/swiftui-performance-audit/references/understanding-improving-swiftui-performance.md
+  deployed_file_hashes:
+    .agents/skills/swiftui-performance-audit/LICENSE: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
+    .agents/skills/swiftui-performance-audit/SKILL.md: sha256:6cfb3f9f3e1938aca3eb1cf3ac9f265cca15559b0c9b3dcd3ab2e580be3cea2f
+    .agents/skills/swiftui-performance-audit/agents/openai.yaml: sha256:64d8aba830402802fe9d01bdea7745ab249eae0e734e248c3c348c899a79ab9a
+    .agents/skills/swiftui-performance-audit/references/code-smells.md: sha256:c9834da9bde40952100147c7fa0dab12c21bcd762878da7c07b6cd260093ebb8
+    .agents/skills/swiftui-performance-audit/references/demystify-swiftui-performance-wwdc23.md: sha256:7cffafe3903293479b73f71d822fe5209d307645d55f18d4fbbdf90a5f708d52
+    .agents/skills/swiftui-performance-audit/references/optimizing-swiftui-performance-instruments.md: sha256:f3980f725406cd4158ace27e058b7b7a57478025f48d50512e99a20f9fa0fa9b
+    .agents/skills/swiftui-performance-audit/references/profiling-intake.md: sha256:636ae046936183a7ac5412458926d0a8babe4e05396955d3608f9a7320913bcd
+    .agents/skills/swiftui-performance-audit/references/report-template.md: sha256:c09e67323c3c0ebcacd647be9117f258d11ec58001ba0e5683c13c2bc4d21ff2
+    .agents/skills/swiftui-performance-audit/references/understanding-hangs-in-your-app.md: sha256:3631b56751e5853fd04c1397f7cc5eb9f8d7f057a83509244fa82a4b57fc56fc
+    .agents/skills/swiftui-performance-audit/references/understanding-improving-swiftui-performance.md: sha256:fd7a624c10af787c5673b748dee95d789ead1329e69f6471a9495682d0775643
+  content_hash: sha256:47c869f3b761a357234ef9f52a97cab109e093a15236f2cd6070cad7c6ccb9c2
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
+- repo_url: dimillian/skills
+  materialization_repo_url: Dimillian/Skills
+  name: swiftui-view-refactor
+  host: github.com
+  resolved_commit: 05ba982bfeb0d77d3c97d4542b0ee15034d05f84
+  resolved_ref: 05ba982bfeb0d77d3c97d4542b0ee15034d05f84
+  version: unknown
+  virtual_path: swiftui-view-refactor
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/swiftui-view-refactor
+  - .agents/skills/swiftui-view-refactor/LICENSE
+  - .agents/skills/swiftui-view-refactor/SKILL.md
+  - .agents/skills/swiftui-view-refactor/agents/openai.yaml
+  - .agents/skills/swiftui-view-refactor/references/mv-patterns.md
+  deployed_file_hashes:
+    .agents/skills/swiftui-view-refactor/LICENSE: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
+    .agents/skills/swiftui-view-refactor/SKILL.md: sha256:5a9bac2cc642e97253891285a553b8cc3ffa31b46d6573c4c9d37eb7735d0083
+    .agents/skills/swiftui-view-refactor/agents/openai.yaml: sha256:31e4415b55e1f04b29fb4a2c3c8267adaa3c7089ec21e5072900f38a5c95142e
+    .agents/skills/swiftui-view-refactor/references/mv-patterns.md: sha256:8140a642ad16f33d416b987ddcb04755727d2409f535bd1c83ebc7ecfd438515
+  content_hash: sha256:2462eedf86698a82c4aceade043f69ebf0b86d24355f3729ad83dca622fd71d0
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
 - repo_url: github/awesome-copilot
   name: git-commit
   host: github.com
@@ -248,6 +312,105 @@ deployments:
   content_hash: sha256:a95bb7e996516a1c73df745b0598ba650d7161eb1da559712e8fabb5dacb7c5c
 - kind: project-relative
   target: copilot
+  value: .agents/skills/swiftui-performance-audit
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:6cfb3f9f3e1938aca3eb1cf3ac9f265cca15559b0c9b3dcd3ab2e580be3cea2f
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:64d8aba830402802fe9d01bdea7745ab249eae0e734e248c3c348c899a79ab9a
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/code-smells.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:c9834da9bde40952100147c7fa0dab12c21bcd762878da7c07b6cd260093ebb8
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/demystify-swiftui-performance-wwdc23.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:7cffafe3903293479b73f71d822fe5209d307645d55f18d4fbbdf90a5f708d52
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/optimizing-swiftui-performance-instruments.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:f3980f725406cd4158ace27e058b7b7a57478025f48d50512e99a20f9fa0fa9b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/profiling-intake.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:636ae046936183a7ac5412458926d0a8babe4e05396955d3608f9a7320913bcd
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/report-template.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:c09e67323c3c0ebcacd647be9117f258d11ec58001ba0e5683c13c2bc4d21ff2
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/understanding-hangs-in-your-app.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:3631b56751e5853fd04c1397f7cc5eb9f8d7f057a83509244fa82a4b57fc56fc
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-performance-audit/references/understanding-improving-swiftui-performance.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-performance-audit
+  active_owner: dimillian/skills/swiftui-performance-audit
+  content_hash: sha256:fd7a624c10af787c5673b748dee95d789ead1329e69f6471a9495682d0775643
+- kind: project-relative
+  target: copilot
   value: .agents/skills/swiftui-pro
   runtime: null
   scope: project
@@ -408,6 +571,51 @@ deployments:
   - twostraws/swiftui-agent-skill/swiftui-pro
   active_owner: twostraws/swiftui-agent-skill/swiftui-pro
   content_hash: sha256:e9c7ce9ef17e23b713a2565ee9d7f5db11e036adbae1a6b9c14d21d8b3dddce7
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-view-refactor
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-view-refactor
+  active_owner: dimillian/skills/swiftui-view-refactor
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-view-refactor/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-view-refactor
+  active_owner: dimillian/skills/swiftui-view-refactor
+  content_hash: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-view-refactor/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-view-refactor
+  active_owner: dimillian/skills/swiftui-view-refactor
+  content_hash: sha256:5a9bac2cc642e97253891285a553b8cc3ffa31b46d6573c4c9d37eb7735d0083
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-view-refactor/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-view-refactor
+  active_owner: dimillian/skills/swiftui-view-refactor
+  content_hash: sha256:31e4415b55e1f04b29fb4a2c3c8267adaa3c7089ec21e5072900f38a5c95142e
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-view-refactor/references/mv-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - dimillian/skills/swiftui-view-refactor
+  active_owner: dimillian/skills/swiftui-view-refactor
+  content_hash: sha256:8140a642ad16f33d416b987ddcb04755727d2409f535bd1c83ebc7ecfd438515
 - kind: project-relative
   target: copilot
   value: .github/agents/apm-expert.agent.md

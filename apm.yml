@@ -13,6 +13,8 @@ dependencies:
     - microsoft/apm/packages/apm-guide#v0.36.0
     - github/awesome-copilot/skills/git-commit#f10fdb8b2660ce85c98f220b2f1ca24653768a5c
     - twostraws/SwiftUI-Agent-Skill/swiftui-pro#f2920b63995263f57b3e198674e89a602efba6d2
+    - Dimillian/Skills/swiftui-performance-audit#05ba982bfeb0d77d3c97d4542b0ee15034d05f84
+    - Dimillian/Skills/swiftui-view-refactor#05ba982bfeb0d77d3c97d4542b0ee15034d05f84
   mcp: []
 # apm pack に含めるローカルコンテンツ
 includes: []

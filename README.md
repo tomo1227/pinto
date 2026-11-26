@@ -71,6 +71,12 @@ xcodebuild -project Pinto.xcodeproj -scheme Pinto \
   -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
 
+### Copilot で SwiftUI をレビューする
+
+`make apm_ci` で Copilot 用のスキルを復元できます。Copilot Chat では、たとえば「`swiftui-performance-audit` を使って、写真を取り込んだ後に編集画面の描画が重くなる原因を調べて。コードはまだ変更しないで」と依頼できます。コードだけで原因を絞れない場合は、Instruments で計測する手順も提案します。
+
+ビューの構成を整理したいときは、「`swiftui-view-refactor` を使って、編集画面をどうサブビューに分割するか提案して。挙動は変えず、コードはまだ変更しないで」と依頼できます。
+
 ### Debug 実行時のメモリ確認（目安: 300 MB）
 
 1. Xcode の **Product → Scheme → Edit Scheme → Run → Arguments** を開き、**Arguments Passed On Launch** に `-PintoMemoryCheck` を追加して有効にします。
