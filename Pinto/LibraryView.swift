@@ -25,7 +25,8 @@ struct LibraryView: View {
             wallItem(document)
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if selectedIDs == nil {
-                  Button("削除", systemImage: "trash", role: .destructive) {
+                  // This only opens the alert; a destructive swipe action animates row removal.
+                  Button("削除", systemImage: "trash") {
                     pendingDeletion = [document.id]
                   }
                   .tint(.red)
@@ -115,22 +116,23 @@ struct LibraryView: View {
       .sheet(isPresented: $showingFilters) {
         LibraryFilterView(draft: filters) { filters = $0 }
       }
-      .confirmationDialog(
-        deletionTitle,
+      .alert(
+        "削除しますか？",
         isPresented: Binding(
           get: { !pendingDeletion.isEmpty }, set: { if !$0 { pendingDeletion = [] } }
         ),
-        titleVisibility: .visible,
         presenting: pendingDeletion
       ) { ids in
-        Button("課題と編集データを削除", role: .destructive) {
+        Button("キャンセル", role: .cancel) {}
+        Button("削除する", role: .destructive) {
           store.delete(ids)
           if let selectedIDs {
             let remaining = selectedIDs.intersection(store.walls.map(\.id))
             self.selectedIDs = remaining.isEmpty ? nil : remaining
           }
         }
-        Button("キャンセル", role: .cancel) {}
+      } message: { ids in
+        deletionMessage(for: ids)
       }
       .alert(
         "読み込み・保存エラー",
@@ -186,13 +188,13 @@ struct LibraryView: View {
     }
   }
 
-  private var deletionTitle: String {
-    if pendingDeletion.count == 1,
-      let document = store.walls.first(where: { pendingDeletion.contains($0.id) })
+  private func deletionMessage(for ids: Set<UUID>) -> Text {
+    if ids.count == 1,
+      let document = store.walls.first(where: { ids.contains($0.id) })
     {
-      return "「\(document.content.name)」を端末から削除しますか？"
+      return Text("「\(document.content.name)」とその編集データを端末から削除します。")
     }
-    return "\(pendingDeletion.count)件の課題を端末から削除しますか？"
+    return Text("\(ids.count)件の課題とその編集データを端末から削除します。")
   }
 
   private func wallItem(_ document: WallDocument) -> some View {
