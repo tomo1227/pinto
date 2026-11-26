@@ -531,28 +531,42 @@ private struct UserManualEntryView: View {
 
 @MainActor
 private struct WallThumbnail: View {
+  @Environment(\.displayScale) private var displayScale
   let document: WallDocument
-  @State private var image: UIImage?
+  @State private var rendered: (WallThumbnailCache.Key, UIImage)?
   @State private var failed = false
 
   var body: some View {
-    ZStack {
-      Color(uiColor: .systemGray5)
-      if let image {
-        Image(uiImage: image).resizable().scaledToFit()
-      } else if failed {
-        Label("画像を読み込めません", systemImage: "exclamationmark.triangle")
-      } else {
-        ProgressView()
+    GeometryReader { geometry in
+      let size = geometry.size
+      let maxPixels = Int((max(size.width, size.height) * displayScale).rounded(.up))
+      let key = WallThumbnailCache.Key(
+        id: document.id, updatedAt: document.updatedAt, maxPixels: maxPixels)
+      ZStack {
+        Color(uiColor: .systemGray5)
+        if let (renderedKey, image) = rendered, renderedKey == key {
+          Image(uiImage: image).resizable().scaledToFit()
+        } else if failed {
+          Label("画像を読み込めません", systemImage: "exclamationmark.triangle")
+        } else {
+          ProgressView()
+        }
       }
+      .task(id: key) { await load(key) }
     }
     .accessibilityLabel("\(document.content.name)の編集済み画像")
-    .task(id: document.updatedAt) {
-      guard let source = UIImage(data: document.imageData) else {
-        failed = true
-        return
-      }
-      image = SceneRenderer.render(image: source, content: document.content, maxDimension: 640)
+  }
+
+  private func load(_ key: WallThumbnailCache.Key) async {
+    guard key.maxPixels > 0 else { return }
+    failed = false
+    do {
+      let image = try await WallThumbnailCache.shared.image(for: key, document: document)
+      try Task.checkCancellation()
+      rendered = (key, image)
+    } catch is CancellationError {
+    } catch {
+      if !Task.isCancelled { failed = true }
     }
   }
 }

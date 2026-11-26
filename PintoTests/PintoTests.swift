@@ -1572,6 +1572,28 @@ final class PintoTests: XCTestCase {
     }
   }
 
+  func testThumbnailsAreDownsampledAndCachedByRevisionAndSize() async throws {
+    let document = try makeDocument()
+    let cache = WallThumbnailCache()
+    let key = WallThumbnailCache.Key(id: document.id, updatedAt: document.updatedAt, maxPixels: 80)
+    let first = try await cache.image(for: key, document: document)
+    let cached = try await cache.image(for: key, document: document)
+    XCTAssertEqual(first.cgImage?.height, 80)
+    XCTAssertTrue(first === cached)
+
+    let largerKey = WallThumbnailCache.Key(
+      id: document.id, updatedAt: document.updatedAt, maxPixels: 160)
+    let larger = try await cache.image(for: largerKey, document: document)
+    XCTAssertEqual(larger.cgImage?.height, 160)
+
+    var updated = document
+    updated.updatedAt = document.updatedAt.addingTimeInterval(1)
+    let updatedKey = WallThumbnailCache.Key(
+      id: updated.id, updatedAt: updated.updatedAt, maxPixels: 80)
+    let newImage = try await cache.image(for: updatedKey, document: updated)
+    XCTAssertFalse(first === newImage)
+  }
+
   func testSelectionDrawsOutlinedSquareHandlesInAllEightDirections() throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
