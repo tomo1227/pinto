@@ -1,0 +1,26 @@
+name: APM CI
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  apm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Setup APM
+        uses: microsoft/apm-action@64544310be26812256300543071bfbaa8bc93aad # v1.12.0
+        with:
+          apm-version: "0.38.1"
+          setup-only: "true"
+      - name: Install APM dependencies
+        run: make apm_ci
+      - name: Audit APM dependencies
+        run: make apm_audit
