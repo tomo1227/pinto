@@ -23,6 +23,10 @@
 		A1000000000000000000000E /* USER_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* USER_GUIDE.md */; };
 		A1000000000000000000000F /* WallThumbnailCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* WallThumbnailCache.swift */; };
 		A10000000000000000000010 /* WallImageWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* WallImageWorker.swift */; };
+		9DBBECD252E247998E36FBAE /* StyledTextEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E519A3FD4B77454ABFE48C73 /* StyledTextEntry.swift */; };
+		CEF903823E114D7782F33664 /* ResettableSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */; };
+		628C77EE7F3842CA90D31925 /* ImageShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC4D304289E447BBE39588A /* ImageShareSheet.swift */; };
+		DDF2ECDB47014468AD9EBC61 /* EditorControlsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC501865FF8749D4BB3D5E2D /* EditorControlsPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +59,10 @@
 		A20000000000000000000011 /* USER_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = USER_GUIDE.md; sourceTree = "<group>"; };
 		A20000000000000000000012 /* WallThumbnailCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallThumbnailCache.swift; sourceTree = "<group>"; };
 		A20000000000000000000013 /* WallImageWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallImageWorker.swift; sourceTree = "<group>"; };
+		E519A3FD4B77454ABFE48C73 /* StyledTextEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyledTextEntry.swift; sourceTree = "<group>"; };
+		A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResettableSlider.swift; sourceTree = "<group>"; };
+		4AC4D304289E447BBE39588A /* ImageShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageShareSheet.swift; sourceTree = "<group>"; };
+		AC501865FF8749D4BB3D5E2D /* EditorControlsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorControlsPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +105,10 @@
 				A20000000000000000000005 /* HoldDetection.swift */,
 				A20000000000000000000006 /* EditorModel.swift */,
 				A20000000000000000000007 /* WallCanvas.swift */,
+				E519A3FD4B77454ABFE48C73 /* StyledTextEntry.swift */,
+				A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */,
+				4AC4D304289E447BBE39588A /* ImageShareSheet.swift */,
+				AC501865FF8749D4BB3D5E2D /* EditorControlsPanel.swift */,
 				A20000000000000000000008 /* EditorView.swift */,
 				A20000000000000000000009 /* WallSettingsView.swift */,
 				A2000000000000000000000A /* LibraryView.swift */,
@@ -235,6 +247,10 @@
 				A10000000000000000000005 /* HoldDetection.swift in Sources */,
 				A10000000000000000000006 /* EditorModel.swift in Sources */,
 				A10000000000000000000007 /* WallCanvas.swift in Sources */,
+				9DBBECD252E247998E36FBAE /* StyledTextEntry.swift in Sources */,
+				CEF903823E114D7782F33664 /* ResettableSlider.swift in Sources */,
+				628C77EE7F3842CA90D31925 /* ImageShareSheet.swift in Sources */,
+				DDF2ECDB47014468AD9EBC61 /* EditorControlsPanel.swift in Sources */,
 				A10000000000000000000008 /* EditorView.swift in Sources */,
 				A10000000000000000000009 /* WallSettingsView.swift in Sources */,
 				A1000000000000000000000A /* LibraryView.swift in Sources */,
