@@ -138,7 +138,6 @@ struct LibraryView: View {
         Text(store.errorMessage ?? "")
       }
     }
-    .tint(Color(uiColor: UIColor(hex: "#2F7A68")))
     .task { if !store.ready { await store.load() } }
   }
 

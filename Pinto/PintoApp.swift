@@ -14,6 +14,7 @@ struct PintoApp: App {
     WindowGroup {
       StartupView()
         .environmentObject(store)
+        .tint(Color.accentColor)
         #if DEBUG
           .overlay(alignment: .topTrailing, content: debugMemoryOverlay)
         #endif
@@ -86,10 +87,12 @@ private struct StartupRoute: View {
     ZStack(alignment: .topLeading) {
       Path { path in path.addLines(holds) }
         .trim(from: 0, to: drawn ? 1 : 0)
-        .stroke(Color.blue, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+        .stroke(
+          Color.accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+        )
       ForEach(holds.indices, id: \.self) { index in
         Circle()
-          .fill(Color.blue)
+          .fill(Color.accentColor)
           .frame(width: 8, height: 8)
           .position(holds[index])
           .opacity(drawn ? 1 : 0)
