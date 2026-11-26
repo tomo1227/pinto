@@ -79,6 +79,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private let wallPhoto = UIImageView()
   private let annotations = CanvasOverlay()
   private let selectionOverlay = CanvasOverlay()
+  private let annotationPanMargin: CGFloat = 32
+  private var annotationViewport = CGRect.null
+  private var annotationImageFrame = CGRect.null
   private var displayedContent: WallContent?
   private var displayedSelection: EditorSelection?
   private var displayedTool: EditorTool?
@@ -155,7 +158,6 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    annotations.frame = bounds
     selectionOverlay.frame = bounds
     updateLayers()
     let buttonSize: CGFloat = 44
@@ -203,10 +205,8 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       forPixelSize: CGSize(width: frame.width * scale, height: frame.height * scale))
     if wallPhoto.image !== displayImage { wallPhoto.image = displayImage }
     if viewportChanged { wallPhoto.frame = frame }
-    if viewportChanged || contentChanged {
-      displayedContent = content
-      annotations.setNeedsDisplay()
-    }
+    updateAnnotationLayer(frame: frame, contentChanged: contentChanged)
+    if contentChanged { displayedContent = content }
     if viewportChanged || contentChanged || displayedSelection != model.selection
       || displayedTool != model.tool
     {
@@ -216,8 +216,29 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     }
   }
 
+  private func updateAnnotationLayer(frame: CGRect, contentChanged: Bool) {
+    let viewport = bounds.insetBy(dx: -annotationPanMargin, dy: -annotationPanMargin)
+    let dx = frame.minX - annotationImageFrame.minX
+    let dy = frame.minY - annotationImageFrame.minY
+    // Reuse the backing store until panning would reveal pixels outside its margin.
+    if annotationViewport == viewport, annotationImageFrame.size == frame.size,
+      !contentChanged, abs(dx) <= annotationPanMargin, abs(dy) <= annotationPanMargin
+    {
+      annotations.transform = CGAffineTransform(translationX: dx, y: dy)
+    } else {
+      if annotationViewport != viewport {
+        annotationViewport = viewport
+        annotations.bounds = CGRect(origin: .zero, size: viewport.size)
+        annotations.center = CGPoint(x: viewport.midX, y: viewport.midY)
+      }
+      annotationImageFrame = frame
+      annotations.transform = .identity
+      annotations.setNeedsDisplay()
+    }
+  }
+
   private func drawAnnotations(in context: CGContext) {
-    let imageFrame = imageRect
+    let imageFrame = annotationImageFrame
     guard imageFrame.width > 0 else { return }
     let content = model.canvasContent
     if indexedRoute != content.route {
@@ -225,7 +246,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       routeNumbers = SceneRenderer.routeNumbers(for: indexedRoute)
     }
     context.saveGState()
-    context.translateBy(x: imageFrame.minX, y: imageFrame.minY)
+    context.translateBy(
+      x: imageFrame.minX - annotationViewport.minX,
+      y: imageFrame.minY - annotationViewport.minY)
     SceneRenderer.drawAnnotations(
       content: content, size: imageFrame.size, context: context, routeNumbers: routeNumbers)
     context.restoreGState()
