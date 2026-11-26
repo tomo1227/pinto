@@ -9,6 +9,19 @@ actor WallImageWorker {
     try Self.downsample(data: data, maxPixels: Self.editorPreviewMaxPixels)
   }
 
+  func importFile(_ url: URL) throws -> (original: UIImage, preview: UIImage) {
+    try Task.checkCancellation()
+    let scoped = url.startAccessingSecurityScopedResource()
+    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+    return try registrationImages(data: Data(contentsOf: url))
+  }
+
+  func registrationImages(data: Data) throws -> (original: UIImage, preview: UIImage) {
+    let preview = try Self.downsample(data: data, maxPixels: 1024)
+    guard let original = UIImage(data: data) else { throw PintoError.invalidImage }
+    return (original, preview)
+  }
+
   private static func downsample(data: Data, maxPixels: Int) throws -> UIImage {
     try Task.checkCancellation()
     let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary

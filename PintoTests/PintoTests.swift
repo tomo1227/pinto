@@ -1755,6 +1755,26 @@ final class PintoTests: XCTestCase {
     }
   }
 
+  func testFileImportPreparesSmallPreviewAndPreservesOriginalPixels() async throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "\(UUID().uuidString).png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let originalSize = CGSize(width: 800, height: 1600)
+    try image(size: originalSize).normalizedPNG().write(to: url)
+    let imported = try await WallImageWorker.shared.importFile(url)
+    XCTAssertEqual(imported.original.size, originalSize)
+    XCTAssertEqual(imported.preview.size, CGSize(width: 512, height: 1024))
+    let normalized = try await WallImageWorker.shared.normalize(imported.original)
+    XCTAssertEqual(UIImage(data: normalized)?.size, originalSize)
+
+    try Data("invalid image".utf8).write(to: url)
+    do {
+      _ = try await WallImageWorker.shared.importFile(url)
+      XCTFail("Invalid images must fail before preview")
+    } catch PintoError.invalidImage {
+    }
+  }
+
   func testEditorUsesDownsampledPreviewUntilOriginalPixelsAreNeeded() async throws {
     let originalSize = CGSize(width: 1400, height: 2800)
     let document = WallDocument(
