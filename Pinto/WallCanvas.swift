@@ -78,6 +78,8 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private var displayedContent: WallContent?
   private var displayedSelection: EditorSelection?
   private var displayedTool: EditorTool?
+  private var indexedRoute: [UUID] = []
+  private var routeNumbers: [UUID: Int] = [:]
   private let resetViewportButton = UIButton(type: .system)
   private let trashTarget = UIImageView(image: UIImage(systemName: "trash.fill"))
   private var trashDragStart: CGPoint?
@@ -207,10 +209,15 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private func drawAnnotations(in context: CGContext) {
     let imageFrame = imageRect
     guard imageFrame.width > 0 else { return }
+    let content = model.canvasContent
+    if indexedRoute != content.route {
+      indexedRoute = content.route
+      routeNumbers = SceneRenderer.routeNumbers(for: indexedRoute)
+    }
     context.saveGState()
     context.translateBy(x: imageFrame.minX, y: imageFrame.minY)
     SceneRenderer.drawAnnotations(
-      content: model.canvasContent, size: imageFrame.size, context: context)
+      content: content, size: imageFrame.size, context: context, routeNumbers: routeNumbers)
     context.restoreGState()
   }
 

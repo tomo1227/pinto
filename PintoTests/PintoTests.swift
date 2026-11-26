@@ -428,6 +428,14 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(try files.read(files.url(for: saved.id)), saved)
   }
 
+  func testRouteNumberIndexFollowsRouteOrderNotHoldOrder() {
+    let first = UUID()
+    let second = UUID()
+    XCTAssertEqual(SceneRenderer.routeNumbers(for: [second, first]), [second: 1, first: 2])
+    XCTAssertEqual(SceneRenderer.routeNumbers(for: [first]), [first: 1])
+    XCTAssertTrue(SceneRenderer.routeNumbers(for: []).isEmpty)
+  }
+
   func testRouteNumberSizeDefaultsAndAffectsRendering() throws {
     var document = try makeDocument()
     XCTAssertEqual(document.content.effectiveRouteNumberSize, 13)

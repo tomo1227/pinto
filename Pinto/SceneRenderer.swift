@@ -127,7 +127,15 @@ enum SceneRenderer {
     drawAnnotations(content: content, size: size, context: context)
   }
 
-  static func drawAnnotations(content: WallContent, size: CGSize, context: CGContext) {
+  static func routeNumbers(for route: [UUID]) -> [UUID: Int] {
+    Dictionary(
+      route.enumerated().map { ($0.element, $0.offset + 1) },
+      uniquingKeysWith: { first, _ in first })
+  }
+
+  static func drawAnnotations(
+    content: WallContent, size: CGSize, context: CGContext, routeNumbers: [UUID: Int]? = nil
+  ) {
     context.saveGState()
     context.clip(to: CGRect(origin: .zero, size: size))
     let unit = markUnit(for: size)
@@ -141,13 +149,19 @@ enum SceneRenderer {
         stroke(path, style: content.lineStyle, unit: unit)
       }
     }
+    let numbers =
+      content.effectiveShowRouteNumbers
+      ? routeNumbers ?? Self.routeNumbers(for: content.route) : [:]
+    let numberFont =
+      numbers.isEmpty
+      ? nil : UIFont.boldSystemFont(ofSize: CGFloat(content.effectiveRouteNumberSize) * unit)
     for hold in content.holds {
       let path = holdPath(hold, content: content, size: size)
       stroke(path, style: hold.style, unit: unit)
-      if content.effectiveShowRouteNumbers, let index = content.route.firstIndex(of: hold.id) {
-        let label = "\(index + 1)" as NSString
+      if let numberFont, let number = numbers[hold.id] {
+        let label = "\(number)" as NSString
         let attributes: [NSAttributedString.Key: Any] = [
-          .font: UIFont.boldSystemFont(ofSize: CGFloat(content.effectiveRouteNumberSize) * unit),
+          .font: numberFont,
           .foregroundColor: UIColor(hex: content.routeNumberColor ?? hold.style.color),
         ]
         let dimensions = label.size(withAttributes: attributes)
