@@ -1582,7 +1582,8 @@ final class PintoTests: XCTestCase {
     format.scale = 1
     let snapshot = UIGraphicsImageRenderer(size: canvas.bounds.size, format: format).image {
       renderer in
-      canvas.draw(canvas.bounds)
+      canvas.layoutIfNeeded()
+      canvas.layer.render(in: renderer.cgContext)
     }
     let hold = try XCTUnwrap(model.content.holds.first)
     let frame = SceneRenderer.holdRect(hold, content: model.content, size: canvas.bounds.size)

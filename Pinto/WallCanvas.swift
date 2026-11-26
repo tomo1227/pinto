@@ -72,6 +72,12 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private var pinchResizes = false
   private var viewportPan: UIPanGestureRecognizer?
   private var trashDrag: UILongPressGestureRecognizer?
+  private let wallPhoto = UIImageView()
+  private let annotations = CanvasOverlay()
+  private let selectionOverlay = CanvasOverlay()
+  private var displayedContent: WallContent?
+  private var displayedSelection: EditorSelection?
+  private var displayedTool: EditorTool?
   private let resetViewportButton = UIButton(type: .system)
   private let trashTarget = UIImageView(image: UIImage(systemName: "trash.fill"))
   private var trashDragStart: CGPoint?
@@ -81,9 +87,16 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     self.model = model
     super.init(frame: .zero)
     backgroundColor = UIColor(hex: "#E9E8E1")
-    contentMode = .redraw
     clipsToBounds = true
     isMultipleTouchEnabled = true
+    wallPhoto.image = model.image
+    wallPhoto.contentMode = .scaleToFill
+    wallPhoto.isUserInteractionEnabled = false
+    addSubview(wallPhoto)
+    addSubview(annotations)
+    addSubview(selectionOverlay)
+    annotations.paint = { [weak self] context in self?.drawAnnotations(in: context) }
+    selectionOverlay.paint = { [weak self] _ in self?.drawSelection() }
     accessibilityLabel = "課題の編集キャンバス"
     accessibilityHint =
       "タップして配置。ドラッグして移動。選択枠の四角い点をドラッグしてサイズ変更。選択物を長押ししてゴミ箱へドラッグすると削除。選択中は2本指でもサイズ変更。キャンバスを2本指で移動・拡大。"
@@ -135,6 +148,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   override func layoutSubviews() {
     super.layoutSubviews()
+    annotations.frame = bounds
+    selectionOverlay.frame = bounds
+    updateLayers()
     let buttonSize: CGFloat = 44
     let inset: CGFloat = 8
     resetViewportButton.frame = CGRect(
@@ -151,7 +167,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       offset = .zero
       lastRevision = model.viewportRevision
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   @objc private func resetViewport() {
@@ -169,15 +185,35 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       y: (bounds.height - height) / 2 + offset.y, width: width, height: height)
   }
 
-  override func draw(_ rect: CGRect) {
-    guard let context = UIGraphicsGetCurrentContext(), imageRect.width > 0 else { return }
+  private func updateLayers() {
+    let frame = imageRect
+    let viewportChanged = wallPhoto.frame != frame
+    let contentChanged = displayedContent != model.content
+    if viewportChanged { wallPhoto.frame = frame }
+    if viewportChanged || contentChanged {
+      displayedContent = model.content
+      annotations.setNeedsDisplay()
+    }
+    if viewportChanged || contentChanged || displayedSelection != model.selection
+      || displayedTool != model.tool
+    {
+      displayedSelection = model.selection
+      displayedTool = model.tool
+      selectionOverlay.setNeedsDisplay()
+    }
+  }
+
+  private func drawAnnotations(in context: CGContext) {
     let imageFrame = imageRect
+    guard imageFrame.width > 0 else { return }
     context.saveGState()
     context.translateBy(x: imageFrame.minX, y: imageFrame.minY)
-    SceneRenderer.draw(
-      image: model.image, content: model.content,
-      size: imageFrame.size, context: context)
+    SceneRenderer.drawAnnotations(content: model.content, size: imageFrame.size, context: context)
     context.restoreGState()
+  }
+
+  private func drawSelection() {
+    guard imageRect.width > 0 else { return }
     if let frame = selectionRect() {
       UIColor.systemBlue.setStroke()
       let selectionFrame = frame.insetBy(dx: -5, dy: -5)
@@ -280,7 +316,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
         model.promptText(at: normalized(point))
       }
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   @objc private func trashDragged(_ gesture: UILongPressGestureRecognizer) {
@@ -307,7 +343,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       hideTrashTarget()
     default: break
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   private func beginTrashDrag(at point: CGPoint) -> Bool {
@@ -384,7 +420,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       resizeHandle = nil
     default: break
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   private func beginPan(at start: CGPoint) -> Bool {
@@ -466,7 +502,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       pinchResizes = false
     default: break
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   func gestureRecognizer(
@@ -523,6 +559,24 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     offset.x += translation.x
     offset.y += translation.y
     gesture.setTranslation(.zero, in: self)
-    setNeedsDisplay()
+    updateLayers()
+  }
+}
+
+@MainActor
+private final class CanvasOverlay: UIView {
+  var paint: ((CGContext) -> Void)?
+
+  init() {
+    super.init(frame: .zero)
+    isOpaque = false
+    isUserInteractionEnabled = false
+    contentMode = .redraw
+  }
+
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  override func draw(_ rect: CGRect) {
+    if let context = UIGraphicsGetCurrentContext() { paint?(context) }
   }
 }

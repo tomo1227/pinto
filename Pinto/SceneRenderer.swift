@@ -123,9 +123,13 @@ enum SceneRenderer {
   }
 
   static func draw(image: UIImage, content: WallContent, size: CGSize, context: CGContext) {
+    image.draw(in: CGRect(origin: .zero, size: size))
+    drawAnnotations(content: content, size: size, context: context)
+  }
+
+  static func drawAnnotations(content: WallContent, size: CGSize, context: CGContext) {
     context.saveGState()
     context.clip(to: CGRect(origin: .zero, size: size))
-    image.draw(in: CGRect(origin: .zero, size: size))
     let unit = markUnit(for: size)
     if content.showLines {
       let holds = Dictionary(uniqueKeysWithValues: content.holds.map { ($0.id, $0) })
