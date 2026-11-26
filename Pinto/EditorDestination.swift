@@ -2,34 +2,42 @@ import SwiftUI
 
 @MainActor
 struct EditorDestination: View {
+  private enum LoadState {
+    case loading
+    case loaded(EditorModel)
+    case failed(String)
+  }
+
   @EnvironmentObject private var store: WallStore
   let id: UUID
-  @State private var model: EditorModel?
-  @State private var error: String?
+  @State private var state = LoadState.loading
 
   var body: some View {
     Group {
-      if let model {
+      switch state {
+      case .loaded(let model):
         EditorView(model: model)
-      } else if let error {
+      case .failed(let error):
         ContentUnavailableView(
           "編集画面を開けません", systemImage: "exclamationmark.triangle",
           description: Text(error))
-      } else {
+      case .loading:
         ProgressView()
       }
     }
-    .task {
-      guard model == nil else { return }
-      do {
-        let document = try await store.document(for: id)
-        let preview = try await WallImageWorker.shared.editorPreview(data: document.imageData)
-        try Task.checkCancellation()
-        model = try EditorModel(document: document, preview: preview)
-      } catch is CancellationError {
-      } catch {
-        self.error = error.localizedDescription
-      }
+    .task { await load() }
+  }
+
+  private func load() async {
+    if case .loaded = state { return }
+    do {
+      let document = try await store.document(for: id)
+      let preview = try await WallImageWorker.shared.editorPreview(data: document.imageData)
+      try Task.checkCancellation()
+      state = .loaded(try EditorModel(document: document, preview: preview))
+    } catch is CancellationError {
+    } catch {
+      state = .failed(error.localizedDescription)
     }
   }
 }
