@@ -45,45 +45,51 @@ enum SceneRenderer {
   }
 
   static func font(_ style: MarkStyle, unit: CGFloat) -> UIFont {
-    let weight: UIFont.Weight
-    switch style.fontWeight {
-    case ...300: weight = .light
-    case ...400: weight = .regular
-    case ...600: weight = .semibold
-    case ...700: weight = .bold
-    default: weight = .black
-    }
     let size = style.fontSize * unit
-    let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
-    var descriptor: UIFontDescriptor
+    let systemFont = UIFont.systemFont(ofSize: size, weight: systemFontWeight(style.fontWeight))
+    let descriptor = fontDescriptor(for: style, systemFont: systemFont)
+    guard style.isItalic else { return UIFont(descriptor: descriptor, size: size) }
+    let italicDescriptor =
+      descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic))
+      ?? descriptor.withMatrix(CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0))
+    return UIFont(descriptor: italicDescriptor, size: size)
+  }
+
+  private static func systemFontWeight(_ weight: Int) -> UIFont.Weight {
+    switch weight {
+    case ...300: return .light
+    case ...400: return .regular
+    case ...600: return .semibold
+    case ...700: return .bold
+    default: return .black
+    }
+  }
+
+  private static func fontDescriptor(for style: MarkStyle, systemFont: UIFont) -> UIFontDescriptor {
     switch style.fontFamily {
     case .sans:
-      descriptor = systemFont.fontDescriptor
+      return systemFont.fontDescriptor
     case .serif:
-      descriptor = systemFont.fontDescriptor.withDesign(.serif) ?? systemFont.fontDescriptor
+      return systemFont.fontDescriptor.withDesign(.serif) ?? systemFont.fontDescriptor
     case .monospace:
-      descriptor = systemFont.fontDescriptor.withDesign(.monospaced) ?? systemFont.fontDescriptor
+      return systemFont.fontDescriptor.withDesign(.monospaced) ?? systemFont.fontDescriptor
     case .roundedGothic:
-      descriptor = namedFont("HiraMaruProN-W4", fallback: systemFont).fontDescriptor
+      return namedFont("HiraMaruProN-W4", fallback: systemFont).fontDescriptor
     case .condensed:
-      let face: String
-      switch style.fontWeight {
-      case ...400: face = "AvenirNextCondensed-Regular"
-      case ...600: face = "AvenirNextCondensed-DemiBold"
-      case ...700: face = "AvenirNextCondensed-Bold"
-      default: face = "AvenirNextCondensed-Heavy"
-      }
-      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
+      return namedFont(condensedFontName(style.fontWeight), fallback: systemFont).fontDescriptor
     case .handwritten:
       let face = style.isBold ? "MarkerFelt-Wide" : "MarkerFelt-Thin"
-      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
+      return namedFont(face, fallback: systemFont).fontDescriptor
     }
-    if style.isItalic {
-      descriptor =
-        descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic))
-        ?? descriptor.withMatrix(CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0))
+  }
+
+  private static func condensedFontName(_ weight: Int) -> String {
+    switch weight {
+    case ...400: return "AvenirNextCondensed-Regular"
+    case ...600: return "AvenirNextCondensed-DemiBold"
+    case ...700: return "AvenirNextCondensed-Bold"
+    default: return "AvenirNextCondensed-Heavy"
     }
-    return UIFont(descriptor: descriptor, size: size)
   }
 
   private static func namedFont(_ name: String, fallback: UIFont) -> UIFont {

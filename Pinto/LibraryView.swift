@@ -374,16 +374,38 @@ enum UserManual {
     let parsed = try AttributedString(markdown: markdown)
     var blocks: [Block] = []
     for run in parsed.runs {
-      guard let intent = run.presentationIntent else { continue }
+      guard let intent = run.presentationIntent, let metadata = BlockMetadata(intent) else {
+        continue
+      }
+      let text = AttributedString(parsed[run.range])
+      if blocks.last?.id == metadata.id {
+        blocks[blocks.count - 1].text.append(text)
+      } else {
+        blocks.append(
+          Block(
+            id: metadata.id, text: text, headingLevel: metadata.headingLevel,
+            listMarker: metadata.listMarker))
+      }
+    }
+    guard !blocks.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+    return blocks
+  }
+
+  private struct BlockMetadata {
+    let id: Int
+    let headingLevel: Int?
+    let listMarker: String?
+
+    init?(_ intent: PresentationIntent) {
       var identity: Int?
-      var headingLevel: Int?
+      var heading: Int?
       var ordinal: Int?
       var ordered = false
       for component in intent.components {
         switch component.kind {
         case .header(let level):
           identity = component.identity
-          headingLevel = level
+          heading = level
         case .paragraph:
           identity = component.identity
         case .listItem(let number):
@@ -393,18 +415,11 @@ enum UserManual {
         default: break
         }
       }
-      guard let identity else { continue }
-      let text = AttributedString(parsed[run.range])
-      if blocks.last?.id == identity {
-        blocks[blocks.count - 1].text.append(text)
-      } else {
-        let marker = ordinal.map { ordered ? "\($0)." : "\u{2022}" }
-        blocks.append(
-          Block(id: identity, text: text, headingLevel: headingLevel, listMarker: marker))
-      }
+      guard let identity else { return nil }
+      id = identity
+      headingLevel = heading
+      listMarker = ordinal.map { ordered ? "\($0)." : "\u{2022}" }
     }
-    guard !blocks.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
-    return blocks
   }
 }
 

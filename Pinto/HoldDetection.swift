@@ -70,19 +70,7 @@ enum HoldDetection {
     func distance(_ a: [Double], _ b: [Double]) -> Double {
       sqrt(zip(a, b).reduce(0) { $0 + pow($1.0 - $1.1, 2) })
     }
-    var samples: [[Double]] = []
-    for x in stride(from: 2, to: width - 2, by: 4) {
-      samples.append(color(x, 1))
-      samples.append(color(x, height - 2))
-    }
-    for y in stride(from: 2, to: height - 2, by: 4) {
-      samples.append(color(1, y))
-      samples.append(color(width - 2, y))
-    }
-    let background = (0..<3).map { channel -> Double in
-      let sorted = samples.map { $0[channel] }.sorted()
-      return sorted[sorted.count / 2]
-    }
+    let background = backgroundColor(width: width, height: height, colorAt: color)
     let seed = color(seedX, seedY)
     let separation = distance(seed, background)
     guard separation >= 28 else { return nil }
@@ -136,5 +124,23 @@ enum HoldDetection {
     return CGRect(
       x: centerX - rx * scale - 1, y: centerY - ry * scale - 1,
       width: (rx * scale + 1) * 2, height: (ry * scale + 1) * 2)
+  }
+
+  private static func backgroundColor(
+    width: Int, height: Int, colorAt: (Int, Int) -> [Double]
+  ) -> [Double] {
+    var samples: [[Double]] = []
+    for x in stride(from: 2, to: width - 2, by: 4) {
+      samples.append(colorAt(x, 1))
+      samples.append(colorAt(x, height - 2))
+    }
+    for y in stride(from: 2, to: height - 2, by: 4) {
+      samples.append(colorAt(1, y))
+      samples.append(colorAt(width - 2, y))
+    }
+    return (0..<3).map { channel in
+      let sorted = samples.map { $0[channel] }.sorted()
+      return sorted[sorted.count / 2]
+    }
   }
 }

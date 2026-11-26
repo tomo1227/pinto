@@ -287,25 +287,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     let point = gesture.location(in: self)
     switch gesture.state {
     case .began:
-      guard model.tool == .hold || model.tool == .text, model.selection != nil,
-        resizeHandle(at: point) == nil,
-        hit(point) == model.selection, let frame = selectionRect()
-      else { return }
-      switch model.selection {
-      case .hold(let id):
-        guard let hold = model.content.holds.first(where: { $0.id == id }) else { return }
-        positionOrigin = hold.position
-      case .text(let id):
-        guard let text = model.content.texts.first(where: { $0.id == id }) else { return }
-        positionOrigin = text.position
-      case nil: return
-      }
-      guard frame.width > 0, imageRect.width > 0, imageRect.height > 0 else { return }
-      model.beginGesture()
-      trashDragStart = point
-      trashTarget.isHidden = false
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-      updateTrashDrag(at: point)
+      guard beginTrashDrag(at: point) else { return }
     case .changed:
       updateTrashDrag(at: point)
     case .ended:
@@ -326,6 +308,33 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     default: break
     }
     setNeedsDisplay()
+  }
+
+  private func beginTrashDrag(at point: CGPoint) -> Bool {
+    guard model.tool == .hold || model.tool == .text, model.selection != nil,
+      resizeHandle(at: point) == nil,
+      hit(point) == model.selection, let frame = selectionRect(),
+      let position = selectionPosition()
+    else { return false }
+    positionOrigin = position
+    guard frame.width > 0, imageRect.width > 0, imageRect.height > 0 else { return false }
+    model.beginGesture()
+    trashDragStart = point
+    trashTarget.isHidden = false
+    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    updateTrashDrag(at: point)
+    return true
+  }
+
+  private func selectionPosition() -> WallPoint? {
+    switch model.selection {
+    case .hold(let id):
+      return model.content.holds.first(where: { $0.id == id })?.position
+    case .text(let id):
+      return model.content.texts.first(where: { $0.id == id })?.position
+    case nil:
+      return nil
+    }
   }
 
   private func updateTrashDrag(at point: CGPoint) {
@@ -362,50 +371,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     case .began:
       let location = gesture.location(in: self)
       let start = CGPoint(x: location.x - translation.x, y: location.y - translation.y)
-      movingViewport = model.tool == .pan
-      dragOrigin = offset
-      guard !movingViewport else { return }
-      resizeHandle = resizeHandle(at: start)
-      if resizeHandle == nil { model.selection = hit(start) }
-      guard model.selection != nil, model.tool == .hold || model.tool == .text else { return }
-      gestureOriginal = model.content
-      model.beginGesture()
-      if let frame = selectionRect() { resizeBase = frame.size }
-      switch model.selection {
-      case .hold(let id):
-        guard let hold = model.content.holds.first(where: { $0.id == id }) else { return }
-        positionOrigin = hold.position
-      case .text(let id):
-        guard let text = model.content.texts.first(where: { $0.id == id }) else { return }
-        positionOrigin = text.position
-      case nil: break
-      }
+      guard beginPan(at: start) else { return }
     case .changed:
-      if movingViewport {
-        offset = CGPoint(x: dragOrigin.x + translation.x, y: dragOrigin.y + translation.y)
-      } else if let original = gestureOriginal {
-        if let handle = resizeHandle {
-          let direction = handle.direction
-          let scale = handle.scale(
-            translation: translation, size: resizeBase, isText: model.editingText)
-          var scaleX = scale.width
-          var scaleY = scale.height
-          if let hold = model.selectedHold, model.content.locksHoldAspectRatio(hold) {
-            let scale =
-              direction.x == 0
-              ? scaleY
-              : direction.y == 0 ? scaleX : max(scaleX, scaleY)
-            scaleX = scale
-            scaleY = scale
-          }
-          model.resizeSelection(x: scaleX, y: scaleY, from: original)
-        } else {
-          model.moveSelection(
-            to: WallPoint(
-              x: positionOrigin.x + translation.x / imageRect.width,
-              y: positionOrigin.y + translation.y / imageRect.height))
-        }
-      }
+      updatePan(translation: translation)
     case .ended:
       if gestureOriginal != nil { model.endGesture() }
       gestureOriginal = nil
@@ -417,6 +385,52 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     default: break
     }
     setNeedsDisplay()
+  }
+
+  private func beginPan(at start: CGPoint) -> Bool {
+    movingViewport = model.tool == .pan
+    dragOrigin = offset
+    guard !movingViewport else { return false }
+    resizeHandle = resizeHandle(at: start)
+    if resizeHandle == nil { model.selection = hit(start) }
+    guard model.selection != nil, model.tool == .hold || model.tool == .text else { return false }
+    gestureOriginal = model.content
+    model.beginGesture()
+    if let frame = selectionRect() { resizeBase = frame.size }
+    guard let position = selectionPosition() else { return false }
+    positionOrigin = position
+    return true
+  }
+
+  private func updatePan(translation: CGPoint) {
+    if movingViewport {
+      offset = CGPoint(x: dragOrigin.x + translation.x, y: dragOrigin.y + translation.y)
+      return
+    }
+    guard let original = gestureOriginal else { return }
+    if let handle = resizeHandle {
+      let scale = selectionResizeScale(for: handle, translation: translation)
+      model.resizeSelection(x: scale.width, y: scale.height, from: original)
+    } else {
+      model.moveSelection(
+        to: WallPoint(
+          x: positionOrigin.x + translation.x / imageRect.width,
+          y: positionOrigin.y + translation.y / imageRect.height))
+    }
+  }
+
+  private func selectionResizeScale(for handle: ResizeHandle, translation: CGPoint) -> CGSize {
+    let direction = handle.direction
+    let scale = handle.scale(
+      translation: translation, size: resizeBase, isText: model.editingText)
+    guard let hold = model.selectedHold, model.content.locksHoldAspectRatio(hold) else {
+      return scale
+    }
+    let uniformScale =
+      direction.x == 0
+      ? scale.height
+      : direction.y == 0 ? scale.width : max(scale.width, scale.height)
+    return CGSize(width: uniformScale, height: uniformScale)
   }
 
   @objc private func pinched(_ gesture: UIPinchGestureRecognizer) {
