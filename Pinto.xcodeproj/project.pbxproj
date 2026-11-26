@@ -27,6 +27,12 @@
 		CEF903823E114D7782F33664 /* ResettableSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */; };
 		628C77EE7F3842CA90D31925 /* ImageShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AC4D304289E447BBE39588A /* ImageShareSheet.swift */; };
 		DDF2ECDB47014468AD9EBC61 /* EditorControlsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC501865FF8749D4BB3D5E2D /* EditorControlsPanel.swift */; };
+		3B24CAA26C324AE79EA3AFD6 /* EditorTextEntryOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACF3A7B7591A422C8D8FFF65 /* EditorTextEntryOverlay.swift */; };
+		9282B4BA87894073806FEA3B /* EditorDock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3000C0DD5704BB79360D099 /* EditorDock.swift */; };
+		DF4403CA36854EA3AA4866C5 /* EditorToolControlsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819957F4BA42445EA0641D84 /* EditorToolControlsPanel.swift */; };
+		233909094157461EBF897BA6 /* EditorColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 818750F670DF4FB093305BD0 /* EditorColorPalette.swift */; };
+		FDEF1672F2D44270AC150BC5 /* EditorControlLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66AD6E5FBEFB4538A6459D0F /* EditorControlLabel.swift */; };
+		A107CAC78B614AD9AF313CE5 /* EditorSliderRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4415297065C244FFA975811A /* EditorSliderRow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -63,6 +69,12 @@
 		A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResettableSlider.swift; sourceTree = "<group>"; };
 		4AC4D304289E447BBE39588A /* ImageShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageShareSheet.swift; sourceTree = "<group>"; };
 		AC501865FF8749D4BB3D5E2D /* EditorControlsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorControlsPanel.swift; sourceTree = "<group>"; };
+		ACF3A7B7591A422C8D8FFF65 /* EditorTextEntryOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorTextEntryOverlay.swift; sourceTree = "<group>"; };
+		A3000C0DD5704BB79360D099 /* EditorDock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorDock.swift; sourceTree = "<group>"; };
+		819957F4BA42445EA0641D84 /* EditorToolControlsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorToolControlsPanel.swift; sourceTree = "<group>"; };
+		818750F670DF4FB093305BD0 /* EditorColorPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorColorPalette.swift; sourceTree = "<group>"; };
+		66AD6E5FBEFB4538A6459D0F /* EditorControlLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorControlLabel.swift; sourceTree = "<group>"; };
+		4415297065C244FFA975811A /* EditorSliderRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSliderRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +121,12 @@
 				A0F703C6B9B54ADDAAE45053 /* ResettableSlider.swift */,
 				4AC4D304289E447BBE39588A /* ImageShareSheet.swift */,
 				AC501865FF8749D4BB3D5E2D /* EditorControlsPanel.swift */,
+				ACF3A7B7591A422C8D8FFF65 /* EditorTextEntryOverlay.swift */,
+				A3000C0DD5704BB79360D099 /* EditorDock.swift */,
+				819957F4BA42445EA0641D84 /* EditorToolControlsPanel.swift */,
+				818750F670DF4FB093305BD0 /* EditorColorPalette.swift */,
+				66AD6E5FBEFB4538A6459D0F /* EditorControlLabel.swift */,
+				4415297065C244FFA975811A /* EditorSliderRow.swift */,
 				A20000000000000000000008 /* EditorView.swift */,
 				A20000000000000000000009 /* WallSettingsView.swift */,
 				A2000000000000000000000A /* LibraryView.swift */,
@@ -251,6 +269,12 @@
 				CEF903823E114D7782F33664 /* ResettableSlider.swift in Sources */,
 				628C77EE7F3842CA90D31925 /* ImageShareSheet.swift in Sources */,
 				DDF2ECDB47014468AD9EBC61 /* EditorControlsPanel.swift in Sources */,
+				3B24CAA26C324AE79EA3AFD6 /* EditorTextEntryOverlay.swift in Sources */,
+				9282B4BA87894073806FEA3B /* EditorDock.swift in Sources */,
+				DF4403CA36854EA3AA4866C5 /* EditorToolControlsPanel.swift in Sources */,
+				233909094157461EBF897BA6 /* EditorColorPalette.swift in Sources */,
+				FDEF1672F2D44270AC150BC5 /* EditorControlLabel.swift in Sources */,
+				A107CAC78B614AD9AF313CE5 /* EditorSliderRow.swift in Sources */,
 				A10000000000000000000008 /* EditorView.swift in Sources */,
 				A10000000000000000000009 /* WallSettingsView.swift in Sources */,
 				A1000000000000000000000A /* LibraryView.swift in Sources */,
