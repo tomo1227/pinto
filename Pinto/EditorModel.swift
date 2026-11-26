@@ -46,6 +46,7 @@ final class EditorModel: ObservableObject {
   private var gestureStart: WallContent?
   private var textPosition = WallPoint(x: 0.5, y: 0.5)
   private var editingTextID: UUID?
+  private var saveTask: Task<Void, Error>?
 
   init(document: WallDocument) throws {
     guard let image = UIImage(data: document.imageData) else { throw PintoError.invalidImage }
@@ -91,20 +92,27 @@ final class EditorModel: ObservableObject {
     }
   }
 
-  func save(to store: WallStore) throws {
-    var next = document
-    next.content = content
-    next.updatedAt = Date()
-    try store.save(next)
-    document = next
-    savedContent = content
+  func save(to store: WallStore) async throws {
+    while let saveTask { try await saveTask.value }
+    guard dirty else { return }
+    let task = Task {
+      defer { saveTask = nil }
+      var next = document
+      next.content = content
+      next.updatedAt = Date()
+      try await store.save(next)
+      document = next
+      savedContent = next.content
+    }
+    saveTask = task
+    try await task.value
   }
 
   func autosave(to store: WallStore) async throws {
     guard dirty else { return }
     try await Task.sleep(for: .milliseconds(500))
     try Task.checkCancellation()
-    if dirty { try save(to: store) }
+    if dirty { try await save(to: store) }
   }
 
   func saveImageToPhotos(using saveImage: (Data) async throws -> Void = PhotoLibrary.savePNG)

@@ -53,8 +53,36 @@ struct WallFiles {
     directory.appendingPathComponent(id.uuidString).appendingPathExtension("pinto")
   }
 
+  func photoURL(for id: UUID) -> URL {
+    directory.appendingPathComponent(id.uuidString).appendingPathExtension("png")
+  }
+
   func read(_ url: URL) throws -> WallDocument {
-    let document = try JSONDecoder().decode(WallDocument.self, from: Data(contentsOf: url))
+    let metadata = try readMetadata(url)
+    let data = try Data(contentsOf: photoURL(for: metadata.id), options: .mappedIfSafe)
+    guard UIImage(data: data) != nil else { throw PintoError.invalidDocument }
+    return metadata.document(with: data)
+  }
+
+  func readMetadata(_ url: URL) throws -> WallMetadata {
+    let data = try Data(contentsOf: url, options: .mappedIfSafe)
+    let decoder = JSONDecoder()
+    let metadata = try decoder.decode(WallMetadata.self, from: data)
+    try validate(metadata, at: url)
+    if metadata.separatePhoto != true {
+      let legacy = try decoder.decode(WallDocument.self, from: data)
+      guard UIImage(data: legacy.imageData) != nil else { throw PintoError.invalidDocument }
+      // Publish the smaller metadata only after the photo is durably in place.
+      try legacy.imageData.write(to: photoURL(for: metadata.id), options: .atomic)
+      try saveMetadata(legacy.metadata)
+      return legacy.metadata
+    } else if !FileManager.default.fileExists(atPath: photoURL(for: metadata.id).path) {
+      throw PintoError.invalidDocument
+    }
+    return metadata
+  }
+
+  private func validate(_ document: WallMetadata, at url: URL) throws {
     guard document.version == 1 else { throw PintoError.unsupportedDocument }
     let content = document.content
     let ids = Set(content.holds.map(\.id))
@@ -84,10 +112,8 @@ struct WallFiles {
           && $0.radiusY.isFinite && $0.radiusY > 0 && $0.radiusY <= 1 && validStyle($0.style)
       }),
       content.texts.allSatisfy({ valid($0.position) && validStyle($0.style) && !$0.text.isEmpty }),
-      [content.holdStyle, content.textStyle, content.lineStyle].allSatisfy(validStyle),
-      UIImage(data: document.imageData) != nil
+      [content.holdStyle, content.textStyle, content.lineStyle].allSatisfy(validStyle)
     else { throw PintoError.invalidDocument }
-    return document
   }
 
   func list() throws -> [URL] {
@@ -96,36 +122,73 @@ struct WallFiles {
   }
 
   func save(_ document: WallDocument) throws {
-    let data = try JSONEncoder().encode(document)
-    try data.write(to: url(for: document.id), options: .atomic)
+    let photo = photoURL(for: document.id)
+    if !FileManager.default.fileExists(atPath: photo.path) {
+      try document.imageData.write(to: photo, options: .atomic)
+    }
+    try saveMetadata(document.metadata)
+  }
+
+  private func saveMetadata(_ metadata: WallMetadata) throws {
+    let data = try JSONEncoder().encode(metadata)
+    try data.write(to: url(for: metadata.id), options: .atomic)
   }
 
   func delete(_ id: UUID) throws {
-    try FileManager.default.removeItem(at: url(for: id))
+    let manager = FileManager.default
+    let metadata = url(for: id)
+    let photo = photoURL(for: id)
+    guard manager.fileExists(atPath: metadata.path) else { throw CocoaError(.fileNoSuchFile) }
+    if manager.fileExists(atPath: photo.path) { try manager.removeItem(at: photo) }
+    try manager.removeItem(at: metadata)
+  }
+}
+
+private actor WallDisk {
+  func load(directory: URL?) throws -> (WallFiles, [WallMetadata], [String]) {
+    let files = try WallFiles(directory: directory)
+    var loaded: [WallMetadata] = []
+    var failures: [String] = []
+    for url in try files.list() {
+      do {
+        loaded.append(try files.readMetadata(url))
+      } catch {
+        failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
+      }
+    }
+    return (files, loaded.sorted { $0.updatedAt > $1.updatedAt }, failures)
+  }
+
+  func read(_ id: UUID, from files: WallFiles) throws -> WallDocument {
+    try files.read(files.url(for: id))
+  }
+
+  func save(_ document: WallDocument, to files: WallFiles) throws {
+    try files.save(document)
+  }
+
+  func delete(_ id: UUID, from files: WallFiles) throws {
+    try files.delete(id)
   }
 }
 
 @MainActor
 final class WallStore: ObservableObject {
-  @Published private(set) var walls: [WallDocument] = []
+  @Published private(set) var walls: [WallMetadata] = []
   @Published var errorMessage: String?
   @Published private(set) var ready = false
+  @Published private(set) var loading = false
+  private let disk = WallDisk()
   private var files: WallFiles?
 
-  func load(directory: URL? = nil) {
+  func load(directory: URL? = nil) async {
+    guard !loading else { return }
+    loading = true
+    defer { loading = false }
     do {
-      let files = try WallFiles(directory: directory)
+      let (files, loaded, failures) = try await disk.load(directory: directory)
       self.files = files
-      var loaded: [WallDocument] = []
-      var failures: [String] = []
-      for url in try files.list() {
-        do {
-          loaded.append(try files.read(url))
-        } catch {
-          failures.append("\(url.lastPathComponent): \(error.localizedDescription)")
-        }
-      }
-      walls = loaded.sorted { $0.updatedAt > $1.updatedAt }
+      walls = loaded
       ready = true
       if !failures.isEmpty { errorMessage = failures.joined(separator: "\n") }
     } catch {
@@ -134,16 +197,22 @@ final class WallStore: ObservableObject {
     }
   }
 
-  func save(_ document: WallDocument) throws {
+  func photoURL(for id: UUID) -> URL? { files?.photoURL(for: id) }
+
+  func document(for id: UUID) async throws -> WallDocument {
+    guard let files, ready else { throw CocoaError(.fileReadUnknown) }
+    return try await disk.read(id, from: files)
+  }
+
+  func save(_ document: WallDocument) async throws {
     guard let files, ready else {
       throw CocoaError(.fileWriteUnknown)
     }
-    try files.save(document)
-    walls.removeAll { $0.id == document.id }
-    walls.insert(document, at: 0)
+    try await disk.save(document, to: files)
+    walls = [document.metadata] + walls.filter { $0.id != document.id }
   }
 
-  func delete(_ ids: Set<UUID>) {
+  func delete(_ ids: Set<UUID>) async {
     guard let files, ready else {
       errorMessage = "課題を削除できませんでした。\n端末内の保存先を開けません。"
       return
@@ -152,7 +221,7 @@ final class WallStore: ObservableObject {
     var failures: [String] = []
     for wall in walls where ids.contains(wall.id) {
       do {
-        try files.delete(wall.id)
+        try await disk.delete(wall.id, from: files)
         deleted.insert(wall.id)
       } catch {
         failures.append("\(wall.content.name): \(error.localizedDescription)")

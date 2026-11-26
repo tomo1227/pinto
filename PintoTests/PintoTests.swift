@@ -338,9 +338,9 @@ final class PintoTests: XCTestCase {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let document = try makeDocument()
-    try store.save(document)
+    try await store.save(document)
     let files = try WallFiles(directory: directory)
     let model = try EditorModel(document: document)
     model.change {
@@ -369,9 +369,9 @@ final class PintoTests: XCTestCase {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let document = try makeDocument()
-    try store.save(document)
+    try await store.save(document)
     let files = try WallFiles(directory: directory)
     let model = try EditorModel(document: document)
     model.change { $0.name = "途中の編集" }
@@ -414,12 +414,12 @@ final class PintoTests: XCTestCase {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let model = try EditorModel(document: makeDocument())
     model.change { $0.name = "戻る直前の編集" }
     let pending = Task { try await model.autosave(to: store) }
     await Task.yield()
-    try model.save(to: store)
+    try await model.save(to: store)
     let saved = model.document
     try await pending.value
     XCTAssertEqual(model.document, saved)
@@ -774,48 +774,75 @@ final class PintoTests: XCTestCase {
     try files.save(wall)
     XCTAssertEqual(try files.list().count, 1)
     XCTAssertEqual(try files.read(files.url(for: wall.id)), wall)
+    let photoURL = files.photoURL(for: wall.id)
+    let sentinel = Date(timeIntervalSince1970: 1000)
+    try FileManager.default.setAttributes(
+      [.modificationDate: sentinel], ofItemAtPath: photoURL.path)
     wall.content.name = "更新済み"
     try files.save(wall)
     XCTAssertEqual(try files.list().count, 1)
     XCTAssertEqual(try files.read(files.url(for: wall.id)).content.name, "更新済み")
+    XCTAssertEqual(
+      try photoURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
+      sentinel)
     try files.delete(wall.id)
     XCTAssertTrue(try files.list().isEmpty)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: photoURL.path))
   }
 
-  func testStoreDeletesOnlySelectedWalls() throws {
+  func testLegacyWallMigratesWithoutChangingImageOrEdits() async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { removeTestDirectory(directory) }
+    let files = try WallFiles(directory: directory)
+    var wall = try makeDocument()
+    wall.content.name = "旧形式の課題"
+    let url = files.url(for: wall.id)
+    try JSONEncoder().encode(wall).write(to: url)
+    let store = WallStore()
+
+    await store.load(directory: directory)
+
+    XCTAssertEqual(store.walls, [wall.metadata])
+    let restored = try await store.document(for: wall.id)
+    XCTAssertEqual(restored, wall)
+    let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+    XCTAssertNil(json?["imageData"])
+  }
+
+  func testStoreDeletesOnlySelectedWalls() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let first = try makeDocument()
     let second = try makeDocument()
     let unselected = try makeDocument()
-    for wall in [first, second, unselected] { try store.save(wall) }
+    for wall in [first, second, unselected] { try await store.save(wall) }
 
-    store.delete([first.id, second.id])
+    await store.delete([first.id, second.id])
 
-    XCTAssertEqual(store.walls, [unselected])
+    XCTAssertEqual(store.walls, [unselected.metadata])
     XCTAssertNil(store.errorMessage)
-    store.load(directory: directory)
-    XCTAssertEqual(store.walls, [unselected])
+    await store.load(directory: directory)
+    XCTAssertEqual(store.walls, [unselected.metadata])
   }
 
-  func testStoreReportsFailedDeletionWithoutBlockingOtherSelectedWalls() throws {
+  func testStoreReportsFailedDeletionWithoutBlockingOtherSelectedWalls() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let saved = try makeDocument()
     var missingFile = try makeDocument()
     missingFile.content.name = "削除できなかった壁"
-    try store.save(saved)
-    try store.save(missingFile)
+    try await store.save(saved)
+    try await store.save(missingFile)
     let files = try WallFiles(directory: directory)
     try files.delete(missingFile.id)
 
-    store.delete([saved.id, missingFile.id])
+    await store.delete([saved.id, missingFile.id])
 
-    XCTAssertEqual(store.walls, [missingFile])
+    XCTAssertEqual(store.walls, [missingFile.metadata])
     XCTAssertTrue(try files.list().isEmpty)
     XCTAssertTrue(try XCTUnwrap(store.errorMessage).contains(missingFile.content.name))
   }
@@ -1574,23 +1601,30 @@ final class PintoTests: XCTestCase {
 
   func testThumbnailsAreDownsampledAndCachedByRevisionAndSize() async throws {
     let document = try makeDocument()
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { removeTestDirectory(directory) }
+    let files = try WallFiles(directory: directory)
+    try files.save(document)
+    let photoURL = files.photoURL(for: document.id)
     let cache = WallThumbnailCache()
     let key = WallThumbnailCache.Key(id: document.id, updatedAt: document.updatedAt, maxPixels: 80)
-    let first = try await cache.image(for: key, document: document)
-    let cached = try await cache.image(for: key, document: document)
+    let first = try await cache.image(for: key, content: document.content, photoURL: photoURL)
+    let cached = try await cache.image(for: key, content: document.content, photoURL: photoURL)
     XCTAssertEqual(first.cgImage?.height, 80)
     XCTAssertTrue(first === cached)
 
     let largerKey = WallThumbnailCache.Key(
       id: document.id, updatedAt: document.updatedAt, maxPixels: 160)
-    let larger = try await cache.image(for: largerKey, document: document)
+    let larger = try await cache.image(
+      for: largerKey, content: document.content, photoURL: photoURL)
     XCTAssertEqual(larger.cgImage?.height, 160)
 
     var updated = document
     updated.updatedAt = document.updatedAt.addingTimeInterval(1)
     let updatedKey = WallThumbnailCache.Key(
       id: updated.id, updatedAt: updated.updatedAt, maxPixels: 80)
-    let newImage = try await cache.image(for: updatedKey, document: updated)
+    let newImage = try await cache.image(
+      for: updatedKey, content: updated.content, photoURL: photoURL)
     XCTAssertFalse(first === newImage)
   }
 

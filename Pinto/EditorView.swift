@@ -119,7 +119,7 @@ struct EditorView: View {
         .tint(Color(uiColor: .label))
     }
     .confirmationDialog("未保存の編集があります", isPresented: $showLeave, titleVisibility: .visible) {
-      Button("保存して戻る") { if save() { dismiss() } }
+      Button("保存して戻る", action: leaveEditor)
       Button("変更を破棄して戻る", role: .destructive) { dismiss() }
       Button("編集を続ける", role: .cancel) {}
     } message: {
@@ -146,13 +146,17 @@ struct EditorView: View {
       }
     }
     .onChange(of: scenePhase) { _, phase in
-      if phase != .active, model.dirty { save() }
+      if phase != .active, model.dirty { Task { await save() } }
     }
   }
 
   private func leaveEditor() {
+    Task { await saveAndDismiss() }
+  }
+
+  private func saveAndDismiss() async {
     do {
-      if model.dirty { try model.save(to: store) }
+      while model.dirty { try await model.save(to: store) }
       dismiss()
     } catch {
       leaveSaveError = error.localizedDescription
@@ -566,10 +570,10 @@ struct EditorView: View {
   }
 
   @discardableResult
-  private func save() -> Bool {
+  private func save() async -> Bool {
     guard model.dirty else { return true }
     do {
-      try model.save(to: store)
+      try await model.save(to: store)
       status = "端末内に保存しました"
       return true
     } catch {
@@ -584,11 +588,11 @@ struct EditorView: View {
 
   private func saveToPhotos() {
     guard !isSavingImage else { return }
-    guard save() else { return }
     isSavingImage = true
-    status = "写真ライブラリに保存中…"
     Task {
       defer { isSavingImage = false }
+      guard await save() else { return }
+      status = "写真ライブラリに保存中…"
       do {
         try await model.saveImageToPhotos()
         status = "写真ライブラリに画像を保存しました"

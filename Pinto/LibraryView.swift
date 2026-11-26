@@ -99,14 +99,14 @@ struct LibraryView: View {
       }
       .navigationDestination(for: UUID.self) { id in
         if let document = store.walls.first(where: { $0.id == id }) {
-          EditorDestination(document: document)
+          EditorDestination(id: document.id)
         } else {
           ContentUnavailableView("課題が見つかりません", systemImage: "photo")
         }
       }
       .sheet(isPresented: $registering) {
         NewWallView { document in
-          try store.save(document)
+          try await store.save(document)
           path.append(document.id)
         }
       }
@@ -125,11 +125,7 @@ struct LibraryView: View {
       ) { ids in
         Button("キャンセル", role: .cancel) {}
         Button("削除する", role: .destructive) {
-          store.delete(ids)
-          if let selectedIDs {
-            let remaining = selectedIDs.intersection(store.walls.map(\.id))
-            self.selectedIDs = remaining.isEmpty ? nil : remaining
-          }
+          Task { await delete(ids) }
         }
       } message: { ids in
         deletionMessage(for: ids)
@@ -146,18 +142,20 @@ struct LibraryView: View {
       }
     }
     .tint(Color(uiColor: UIColor(hex: "#2F7A68")))
-    .task { if !store.ready { store.load() } }
+    .task { if !store.ready { await store.load() } }
   }
 
-  private func libraryGrid(_ filtered: [WallDocument]) -> some View {
+  private func libraryGrid(_ filtered: [WallMetadata]) -> some View {
     ScrollView {
-      if !store.ready {
+      if store.loading {
+        ProgressView("課題を読み込み中…")
+      } else if !store.ready {
         ContentUnavailableView {
           Label("保存先を開けません", systemImage: "externaldrive.badge.exclamationmark")
         } description: {
           Text("端末の空き容量と保存先を確認して、再読み込みしてください。")
         } actions: {
-          Button("再読み込み") { store.load() }
+          Button("再読み込み") { Task { await store.load() } }
         }
       } else if store.walls.isEmpty {
         ContentUnavailableView {
@@ -194,10 +192,19 @@ struct LibraryView: View {
     {
       return Text("「\(document.content.name)」とその編集データを端末から削除します。")
     }
+
     return Text("\(ids.count)件の課題とその編集データを端末から削除します。")
   }
 
-  private func wallItem(_ document: WallDocument) -> some View {
+  private func delete(_ ids: Set<UUID>) async {
+    await store.delete(ids)
+    if let selectedIDs {
+      let remaining = selectedIDs.intersection(store.walls.map(\.id))
+      self.selectedIDs = remaining.isEmpty ? nil : remaining
+    }
+  }
+
+  private func wallItem(_ document: WallMetadata) -> some View {
     let isSelected = selectedIDs?.contains(document.id) == true
     let tap = {
       if var selection = selectedIDs {
@@ -235,18 +242,18 @@ struct LibraryView: View {
       .accessibilityAction(named: Text("選択")) { select() }
   }
 
-  private func card(_ document: WallDocument) -> some View {
+  private func card(_ document: WallMetadata) -> some View {
     Group {
       if grid {
         VStack(alignment: .leading, spacing: 8) {
-          WallThumbnail(document: document)
+          WallThumbnail(document: document, photoURL: store.photoURL(for: document.id))
             .frame(height: 190).clipped()
           details(document)
             .padding([.horizontal, .bottom], 12)
         }
       } else {
         HStack(spacing: 12) {
-          WallThumbnail(document: document)
+          WallThumbnail(document: document, photoURL: store.photoURL(for: document.id))
             .frame(width: 80, height: 80).clipped()
             .clipShape(RoundedRectangle(cornerRadius: 8))
           details(document)
@@ -261,7 +268,7 @@ struct LibraryView: View {
     .clipShape(RoundedRectangle(cornerRadius: 16))
   }
 
-  private func details(_ document: WallDocument) -> some View {
+  private func details(_ document: WallMetadata) -> some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(document.content.name).font(.headline).lineLimit(2)
       if !document.content.grade.isEmpty {
@@ -532,7 +539,8 @@ private struct UserManualEntryView: View {
 @MainActor
 private struct WallThumbnail: View {
   @Environment(\.displayScale) private var displayScale
-  let document: WallDocument
+  let document: WallMetadata
+  let photoURL: URL?
   @State private var rendered: (WallThumbnailCache.Key, UIImage)?
   @State private var failed = false
 
@@ -561,7 +569,9 @@ private struct WallThumbnail: View {
     guard key.maxPixels > 0 else { return }
     failed = false
     do {
-      let image = try await WallThumbnailCache.shared.image(for: key, document: document)
+      guard let photoURL else { throw PintoError.invalidImage }
+      let image = try await WallThumbnailCache.shared.image(
+        for: key, content: document.content, photoURL: photoURL)
       try Task.checkCancellation()
       rendered = (key, image)
     } catch is CancellationError {
@@ -573,7 +583,8 @@ private struct WallThumbnail: View {
 
 @MainActor
 private struct EditorDestination: View {
-  let document: WallDocument
+  @EnvironmentObject private var store: WallStore
+  let id: UUID
   @State private var model: EditorModel?
   @State private var error: String?
 
@@ -591,7 +602,12 @@ private struct EditorDestination: View {
     }
     .task {
       guard model == nil else { return }
-      do { model = try EditorModel(document: document) } catch {
+      do {
+        let document = try await store.document(for: id)
+        try Task.checkCancellation()
+        model = try EditorModel(document: document)
+      } catch is CancellationError {
+      } catch {
         self.error = error.localizedDescription
       }
     }
@@ -600,7 +616,7 @@ private struct EditorDestination: View {
 
 @MainActor
 struct NewWallView: View {
-  var onCreate: (WallDocument) throws -> Void
+  var onCreate: (WallDocument) async throws -> Void
   @Environment(\.dismiss) private var dismiss
   @State private var name = ""
   @State private var image: UIImage?
@@ -645,7 +661,7 @@ struct NewWallView: View {
       .toolbar {
         ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
         ToolbarItem(placement: .confirmationAction) {
-          Button("登録") { create() }
+          Button("登録") { Task { await create() } }
             .disabled(
               image == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || busy)
         }
@@ -700,13 +716,16 @@ struct NewWallView: View {
     }
   }
 
-  private func create() {
+  private func create() async {
+    guard !busy else { return }
+    busy = true
+    defer { busy = false }
     do {
       guard let image else { throw PintoError.invalidImage }
       let document = WallDocument(
         imageData: try image.normalizedPNG(),
         content: WallContent(name: name.trimmingCharacters(in: .whitespacesAndNewlines)))
-      try onCreate(document)
+      try await onCreate(document)
       dismiss()
     } catch { errorMessage = error.localizedDescription }
   }

@@ -20,7 +20,7 @@ actor WallThumbnailCache {
     return cache
   }()
 
-  func image(for key: Key, document: WallDocument) throws -> UIImage {
+  func image(for key: Key, content: WallContent, photoURL: URL) throws -> UIImage {
     try Task.checkCancellation()
     if let cached = images.object(forKey: key.cacheKey) { return cached }
     let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
@@ -31,11 +31,11 @@ actor WallThumbnailCache {
         kCGImageSourceShouldCacheImmediately: true,
         kCGImageSourceThumbnailMaxPixelSize: key.maxPixels,
       ] as CFDictionary
-    guard let source = CGImageSourceCreateWithData(document.imageData as CFData, sourceOptions),
+    guard let source = CGImageSourceCreateWithURL(photoURL as CFURL, sourceOptions),
       let bitmap = CGImageSourceCreateThumbnailAtIndex(source, 0, thumbnailOptions)
     else { throw PintoError.invalidImage }
     try Task.checkCancellation()
-    let image = SceneRenderer.render(image: UIImage(cgImage: bitmap), content: document.content)
+    let image = SceneRenderer.render(image: UIImage(cgImage: bitmap), content: content)
     images.setObject(image, forKey: key.cacheKey, cost: bitmap.width * bitmap.height * 4)
     return image
   }
