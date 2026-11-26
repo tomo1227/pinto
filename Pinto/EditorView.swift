@@ -39,7 +39,7 @@ struct EditorView: View {
     .toolbar(model.textPrompt ? .hidden : .visible, for: .navigationBar)
     .toolbar {
       ToolbarItem(placement: .principal) {
-        Text(model.content.name + (model.dirty ? " *" : ""))
+        Text(model.content.name)
           .lineLimit(1)
           .truncationMode(.middle)
           .foregroundStyle(.primary)
