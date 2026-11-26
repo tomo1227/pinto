@@ -14,7 +14,6 @@ struct EditorView: View {
   @State private var isSavingImage = false
   @State private var shareSheet: ImageShareSheet?
   @State private var editorDockExpanded = true
-  private let controlLabelWidth: CGFloat = 104
 
   var body: some View {
     ZStack {
@@ -27,12 +26,20 @@ struct EditorView: View {
         }
         .allowsHitTesting(!model.textPrompt)
       if model.textPrompt {
-        textEntryOverlay
+        EditorTextEntryOverlay(
+          style: model.activeStyle, cancelTextEntry: cancelTextEntry,
+          finishTextEntry: finishTextEntry, text: $model.textDraft
+        ) {
+          EditorToolControlsPanel(model: model, mode: .textEntry)
+        }
       }
     }
     .background(Color(uiColor: .systemBackground))
     .safeAreaInset(edge: .bottom, spacing: 0) {
-      if !model.textPrompt { editorDock }
+      if !model.textPrompt {
+        EditorDock(
+          requestReset: requestReset, model: model, editorDockExpanded: $editorDockExpanded)
+      }
     }
     .navigationBarTitleDisplayMode(.inline)
     .navigationBarBackButtonHidden()
@@ -96,14 +103,7 @@ struct EditorView: View {
     .background {
       Color.clear
         .alert("編集をすべてリセットしますか？", isPresented: $showReset) {
-          Button("全リセット", role: .destructive) {
-            model.change {
-              $0.holds = []
-              $0.texts = []
-              $0.route = []
-            }
-            model.selection = nil
-          }
+          Button("全リセット", role: .destructive, action: resetEdits)
 
           Button("キャンセル", role: .cancel) {}
         } message: {
@@ -130,17 +130,32 @@ struct EditorView: View {
     }
     .onChange(of: model.tool) { _, _ in model.selection = nil }
     .onChange(of: model.content) { _, _ in status = nil }
-    .task(id: model.content) {
-      do {
-        try await model.autosave(to: store)
-      } catch is CancellationError {
-      } catch {
-        reportSaveFailure(error)
-      }
+    .task(id: model.content) { await autosave() }
+    .onChange(of: scenePhase) { _, phase in saveWhenInactive(phase) }
+  }
+
+  private func requestReset() { showReset = true }
+
+  private func resetEdits() {
+    model.change {
+      $0.holds = []
+      $0.texts = []
+      $0.route = []
     }
-    .onChange(of: scenePhase) { _, phase in
-      if phase != .active, model.dirty { Task { await save() } }
+    model.selection = nil
+  }
+
+  private func autosave() async {
+    do {
+      try await model.autosave(to: store)
+    } catch is CancellationError {
+    } catch {
+      reportSaveFailure(error)
     }
+  }
+
+  private func saveWhenInactive(_ phase: ScenePhase) {
+    if phase != .active, model.dirty { Task { await save() } }
   }
 
   private func leaveEditor() {
@@ -157,51 +172,6 @@ struct EditorView: View {
     }
   }
 
-  private var textEntryOverlay: some View {
-    VStack(spacing: 12) {
-      HStack {
-        Button(action: cancelTextEntry) {
-          Image(systemName: "xmark")
-            .font(.headline)
-            .foregroundStyle(.primary)
-            .frame(width: 44, height: 44)
-            .background(.regularMaterial, in: Circle())
-        }
-        .accessibilityLabel("テキスト編集をキャンセル")
-        Spacer()
-        Button(action: finishTextEntry) {
-          Text("完了")
-            .font(.headline)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 10)
-            .background(.regularMaterial, in: Capsule())
-        }
-      }
-      .padding(.horizontal, 20)
-
-      Spacer(minLength: 0)
-      StyledTextEntry(text: $model.textDraft, style: model.activeStyle)
-        .frame(minHeight: 52, idealHeight: 144, maxHeight: 144)
-        .padding(.horizontal, 20)
-      Spacer(minLength: 0)
-      editorControlsPanel(contentInset: 20) {
-        VStack(alignment: .leading, spacing: 10) {
-          textColorControls
-          styleControls(editingText: true)
-        }
-      }
-      .background {
-        RoundedRectangle(cornerRadius: 12)
-          .fill(.regularMaterial)
-          .padding(.horizontal, 20)
-      }
-    }
-    .padding(.top, 16)
-    .background { Color.black.opacity(0.76).ignoresSafeArea() }
-    .preferredColorScheme(.dark)
-  }
-
   private func cancelTextEntry() {
     model.textPrompt = false
   }
@@ -209,357 +179,6 @@ struct EditorView: View {
   private func finishTextEntry() {
     model.commitText()
     model.textPrompt = false
-  }
-
-  private var activeToolHasEditingControls: Bool {
-    switch model.tool {
-    case .hold, .route, .text: return true
-    case .pan, .eraser: return false
-    }
-  }
-
-  private var editorDock: some View {
-    VStack(spacing: 0) {
-      if activeToolHasEditingControls && editorDockExpanded {
-        editorControlsPanel {
-          dockControls(for: model.tool, editingText: model.editingText)
-        }
-      }
-      Divider()
-      tools
-    }
-    .background(.bar)
-  }
-
-  private func editorControlsPanel<Content: View>(
-    contentInset: CGFloat = 0, @ViewBuilder content: () -> Content
-  ) -> some View {
-    EditorControlsPanel(
-      contentInset: contentInset,
-      holdControls: {
-        dockControls(for: .hold, editingText: false)
-      }, content: content)
-  }
-
-  private func dockControls(for tool: EditorTool, editingText: Bool) -> some View {
-    VStack(alignment: .leading, spacing: 10) {
-      if tool == .route {
-        colorControls(title: "線の色")
-      } else if editingText {
-        textColorControls
-      } else {
-        HStack(spacing: 8) {
-          if tool == .hold {
-            holdShapePicker
-              .frame(width: 76)
-              .frame(width: controlLabelWidth, alignment: .leading)
-          }
-          colorControls()
-        }
-      }
-      styleControls(editingText: editingText)
-      if tool == .route {
-        routeControls
-      }
-      HStack {
-        Spacer()
-        Button(role: .destructive) {
-          model.removeSelection()
-        } label: {
-          Label("削除", systemImage: "trash")
-        }
-        .disabled(model.selection == nil)
-      }
-    }
-  }
-
-  private var routeControls: some View {
-    VStack(alignment: .leading, spacing: 10) {
-      VStack(alignment: .leading, spacing: 8) {
-        if let color = model.content.routeNumberColor {
-          colorPalette(selectedColor: color, title: "ルートの数字色") { hex in
-            model.change { $0.routeNumberColor = hex }
-          }
-        } else {
-          controlLabel("ルートの数字色")
-        }
-        Toggle(
-          "ホールドと同じ色",
-          isOn: Binding(
-            get: { model.content.routeNumberColor == nil },
-            set: { sameColor in
-              model.change { $0.routeNumberColor = sameColor ? nil : $0.holdStyle.color }
-            }
-          ))
-      }
-      sliderRow(
-        "ルートの数字サイズ",
-        value: Binding(
-          get: { model.content.effectiveRouteNumberSize },
-          set: { value in model.change { $0.routeNumberSize = value } }
-        ),
-        in: 6...60, onReset: model.resetRouteNumberSize)
-      HStack {
-        Button {
-          model.change { $0.showLines.toggle() }
-        } label: {
-          Label("ルート線", systemImage: model.content.showLines ? "eye" : "eye.slash")
-        }
-        .accessibilityValue(model.content.showLines ? "表示" : "非表示")
-        Spacer()
-        Button {
-          model.change { $0.showRouteNumbers = !$0.effectiveShowRouteNumbers }
-        } label: {
-          Label(
-            "ルートの数字",
-            systemImage: model.content.effectiveShowRouteNumbers ? "eye" : "eye.slash")
-        }
-        .accessibilityValue(model.content.effectiveShowRouteNumbers ? "表示" : "非表示")
-      }
-    }
-  }
-
-  private var holdShapePicker: some View {
-    Picker(
-      "ホールドの形",
-      selection: Binding(
-        get: { model.activeHoldShape },
-        set: { model.updateHoldShape($0) }
-      )
-    ) {
-      ForEach(HoldShape.allCases, id: \.self) { shape in
-        Image(systemName: shape == .oval ? "circle" : "square")
-          .accessibilityLabel(Text(shape.label))
-          .tag(shape)
-      }
-    }
-    .pickerStyle(.segmented)
-  }
-
-  private func setEditorDockExpanded(_ expanded: Bool) {
-    withAnimation(.easeInOut(duration: 0.22)) {
-      editorDockExpanded = expanded
-    }
-  }
-
-  private func colorControls(title: String? = nil) -> some View {
-    colorPalette(selectedColor: model.activeStyle.color, title: title) { hex in
-      model.updateStyle { $0.color = hex }
-    }
-  }
-
-  private var textColorControls: some View {
-    HStack(spacing: 8) {
-      HStack(spacing: 8) {
-        Toggle(isOn: styleBinding(\.isBold)) {
-          Text("B").font(.title3.bold())
-        }
-        .accessibilityLabel("太字")
-        Toggle(isOn: styleBinding(\.isItalic)) {
-          Text("I").font(.title3.italic())
-        }
-        .accessibilityLabel("斜体")
-      }
-      .toggleStyle(.button)
-      .frame(width: controlLabelWidth, alignment: .leading)
-      colorPalette(selectedColor: model.activeStyle.color, title: nil, accessibilityTitle: "文字の色") {
-        hex in
-        model.updateStyle { $0.color = hex }
-      }
-    }
-  }
-
-  private func colorPalette(
-    selectedColor: String, title: String?, accessibilityTitle: String? = nil,
-    onSelect: @escaping (String) -> Void
-  ) -> some View {
-    HStack(spacing: 8) {
-      if let title {
-        controlLabel(title)
-      }
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
-          ForEach(WallCatalog.colors, id: \.self) { hex in
-            Button {
-              onSelect(hex)
-            } label: {
-              Circle().fill(Color(uiColor: UIColor(hex: hex)))
-                .frame(width: 26, height: 26)
-                .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
-                .overlay(
-                  Circle().stroke(selectedColor == hex ? Color.accentColor : .clear, lineWidth: 2))
-            }
-            .accessibilityLabel(
-              (accessibilityTitle ?? title).map { "\($0): \(colorLabel(hex))" } ?? colorLabel(hex)
-            )
-            .accessibilityAddTraits(selectedColor == hex ? .isSelected : [])
-          }
-        }
-        .padding(2)
-      }
-      .scrollBounceBehavior(.basedOnSize)
-    }
-  }
-
-  private func controlLabel(_ title: String) -> some View {
-    Text(title)
-      .fixedSize(horizontal: false, vertical: true)
-      .frame(width: controlLabelWidth, alignment: .leading)
-  }
-
-  private func sliderRow(
-    _ title: String, value: Binding<Double>, in range: ClosedRange<Double>,
-    onReset: @escaping () -> Void
-  ) -> some View {
-    HStack(spacing: 8) {
-      controlLabel(title)
-      ResettableSlider(title: title, value: value, range: range, onReset: onReset)
-        .frame(maxWidth: .infinity)
-        .frame(height: 32)
-      Text("000")
-        .monospacedDigit()
-        .fixedSize()
-        .hidden()
-        .overlay(alignment: .trailing) {
-          Text("\(Int(value.wrappedValue))")
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-        }
-        .accessibilityHidden(true)
-    }
-  }
-
-  private func styleSliderRow(
-    _ title: String, _ keyPath: WritableKeyPath<MarkStyle, Double>, in range: ClosedRange<Double>
-  ) -> some View {
-    sliderRow(title, value: styleBinding(keyPath), in: range) {
-      model.resetStyleValue(keyPath)
-    }
-  }
-
-  @ViewBuilder
-  private func styleControls(editingText: Bool) -> some View {
-    VStack(alignment: .leading, spacing: 4) {
-      if editingText {
-        ScrollView(.horizontal) {
-          HStack(spacing: 8) {
-            ForEach(TextFamily.allCases, id: \.self) { family in
-              Button {
-                model.updateStyle { $0.fontFamily = family }
-              } label: {
-                Text(family.label)
-                  .font(fontOptionPreview(family))
-                  .padding(.horizontal, 14)
-                  .padding(.vertical, 10)
-                  .background(
-                    model.activeStyle.fontFamily == family
-                      ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
-                    in: Capsule()
-                  )
-                  .overlay(
-                    Capsule().strokeBorder(
-                      model.activeStyle.fontFamily == family ? Color.accentColor : .clear,
-                      lineWidth: 2
-                    ))
-              }
-              .buttonStyle(.plain)
-              .accessibilityLabel("フォント: \(family.label)")
-              .accessibilityAddTraits(model.activeStyle.fontFamily == family ? .isSelected : [])
-            }
-          }
-          .scrollBounceBehavior(.basedOnSize)
-        }
-        styleSliderRow("文字サイズ", \.fontSize, in: 6...120)
-      } else {
-        styleSliderRow("線の太さ", \.width, in: 1...20)
-      }
-      styleSliderRow("枠線の太さ", \.outlineWidth, in: 0...12)
-      colorPalette(selectedColor: model.activeStyle.outlineColor, title: "枠線の色") { hex in
-        model.updateStyle { $0.outlineColor = hex }
-      }
-    }
-  }
-
-  private func fontOptionPreview(_ family: TextFamily) -> Font {
-    var style = model.activeStyle
-    style.fontFamily = family
-    style.fontSize = 13
-    return Font(SceneRenderer.font(style, unit: 1))
-  }
-
-  private var tools: some View {
-    HStack(spacing: 0) {
-      ForEach(EditorTool.allCases, id: \.self) { tool in
-        let label = VStack(spacing: 4) {
-          Image(systemName: tool.icon).font(.title3)
-          Text(tool.title).font(.caption2)
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 10)
-        .foregroundStyle(model.tool == tool ? Color.accentColor : .secondary)
-        .background(model.tool == tool ? Color.accentColor.opacity(0.1) : .clear)
-        .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
-
-        if tool == .eraser {
-          label
-            .contentShape(Rectangle())
-            .gesture(
-              LongPressGesture(minimumDuration: 0.6)
-                .exclusively(before: TapGesture())
-                .onEnded { action in
-                  switch action {
-                  case .first: showReset = true
-                  case .second: selectTool(tool)
-                  }
-                }
-            )
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(tool.title)
-            .accessibilityHint("長押しで編集を全リセット")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { selectTool(tool) }
-            .accessibilityAction(named: Text("編集を全リセット")) {
-              showReset = true
-            }
-        } else {
-          Button {
-            selectTool(tool)
-          } label: {
-            label
-          }
-        }
-      }
-    }
-  }
-
-  private func selectTool(_ tool: EditorTool) {
-    let isCurrentTool = model.tool == tool
-    model.tool = tool
-    if activeToolHasEditingControls {
-      setEditorDockExpanded(!isCurrentTool || !editorDockExpanded)
-    }
-  }
-
-  private func styleBinding<T>(_ keyPath: WritableKeyPath<MarkStyle, T>) -> Binding<T> {
-    Binding(
-      get: { model.activeStyle[keyPath: keyPath] },
-      set: { value in model.updateStyle { $0[keyPath: keyPath] = value } })
-  }
-
-  private func radiusBinding(_ index: Int, _ keyPath: WritableKeyPath<Hold, Double>) -> Binding<
-    Double
-  > {
-    let id = model.content.holds[index].id
-    return Binding(
-      get: {
-        model.content.holds.first { $0.id == id }?[keyPath: keyPath] ?? 0.035
-      },
-      set: { value in
-        model.change { content in
-          if let current = content.holds.firstIndex(where: { $0.id == id }) {
-            content.holds[current][keyPath: keyPath] = value
-          }
-        }
-      })
   }
 
   @discardableResult
@@ -615,311 +234,4 @@ struct EditorView: View {
   private func reportShareFailure(_ error: Error) {
     model.errorMessage = "画像を共有できませんでした。\n\(error.localizedDescription)"
   }
-
-  private func colorLabel(_ hex: String) -> String {
-    let names = ["黒", "白", "赤", "オレンジ", "黄", "緑", "青", "紫"]
-    return names[WallCatalog.colors.firstIndex(of: hex) ?? 0]
-  }
-}
-
-struct EditorControlsPanel<HoldControls: View, Content: View>: View {
-  var contentInset: CGFloat = 0
-  @ViewBuilder let holdControls: HoldControls
-  @ViewBuilder let content: Content
-
-  var body: some View {
-    HoldControlsPanelLayout {
-      paddedControls(holdControls)
-        .hidden()
-        .accessibilityHidden(true)
-      GeometryReader { viewport in
-        ScrollView(.vertical, showsIndicators: false) {
-          paddedControls(content)
-            .frame(minHeight: viewport.size.height, alignment: .bottom)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-        .padding(.horizontal, contentInset)
-      }
-    }
-  }
-
-  private func paddedControls(_ controls: some View) -> some View {
-    controls
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
-  }
-}
-
-private struct HoldControlsPanelLayout: Layout {
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    // Measure the hold controls without a vertical constraint, regardless of the active tool.
-    let width = proposal.width.flatMap { $0.isFinite ? $0 : nil }
-    let holdSize = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
-    return CGSize(
-      width: width ?? holdSize.width,
-      height: min(holdSize.height, proposal.height ?? .infinity, 240))
-  }
-
-  func placeSubviews(
-    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-  ) {
-    subviews[1].place(
-      at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(bounds.size))
-  }
-}
-
-private struct StyledTextEntry: UIViewRepresentable {
-  @Binding var text: String
-  let style: MarkStyle
-
-  func makeUIView(context: Context) -> StyledTextEntryView {
-    StyledTextEntryView(frame: .zero)
-  }
-
-  func updateUIView(_ view: StyledTextEntryView, context: Context) {
-    let binding = $text
-    view.onTextChange = {
-      if binding.wrappedValue != $0 { binding.wrappedValue = $0 }
-    }
-    view.update(text: text, style: style)
-  }
-}
-
-final class StyledTextEntryView: UITextView, UITextViewDelegate {
-  var onTextChange: ((String) -> Void)?
-  private var style = MarkStyle()
-  private var appliedStyle: MarkStyle?
-  private var didRequestFocus = false
-
-  override init(frame: CGRect, textContainer: NSTextContainer? = nil) {
-    let container = textContainer ?? NSTextContainer()
-    let storage = NSTextStorage()
-    let layout = OutlinedTextLayoutManager()
-    storage.addLayoutManager(layout)
-    layout.addTextContainer(container)
-    super.init(frame: frame, textContainer: container)
-    delegate = self
-    backgroundColor = .clear
-    textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-    accessibilityLabel = "文字を入力"
-  }
-
-  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-  override func didMoveToWindow() {
-    super.didMoveToWindow()
-    guard window != nil, !didRequestFocus else { return }
-    didRequestFocus = true
-    becomeFirstResponder()
-  }
-
-  func update(text: String, style: MarkStyle) {
-    self.style = style
-    if markedTextRange == nil, self.text != text {
-      let attributes = entryAttributes()
-      appliedStyle = style
-      attributedText = NSAttributedString(string: text, attributes: attributes)
-      typingAttributes = attributes
-    }
-    applyStyleIfNeeded()
-  }
-
-  func textViewDidChange(_ textView: UITextView) {
-    applyStyleIfNeeded()
-    onTextChange?(text)
-  }
-
-  func textViewDidChangeSelection(_ textView: UITextView) {
-    applyStyleIfNeeded()
-  }
-
-  override func unmarkText() {
-    super.unmarkText()
-    applyStyleIfNeeded()
-  }
-
-  private func entryAttributes() -> [NSAttributedString.Key: Any] {
-    let paragraph = NSMutableParagraphStyle()
-    paragraph.alignment = .center
-    var attributes = SceneRenderer.textAttributes(style, unit: 1)
-    attributes[.paragraphStyle] = paragraph
-    return attributes
-  }
-
-  private func applyStyleIfNeeded() {
-    // Replacing attributes while Japanese input is still marked can interrupt conversion.
-    guard appliedStyle != style, markedTextRange == nil else { return }
-    appliedStyle = style
-    let attributes = entryAttributes()
-    textStorage.setAttributes(attributes, range: NSRange(location: 0, length: textStorage.length))
-    typingAttributes = attributes
-  }
-}
-
-private final class OutlinedTextLayoutManager: NSLayoutManager {
-  private var drawsOutline = false
-
-  override func drawGlyphs(forGlyphRange glyphsToShow: NSRange, at origin: CGPoint) {
-    let characters = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
-    var hasOutline = false
-    textStorage?.enumerateAttribute(.strokeWidth, in: characters) { value, _, stop in
-      if let width = value as? Double, width < 0 {
-        hasOutline = true
-        stop.pointee = true
-      }
-    }
-    if hasOutline {
-      // Draw every outline before any fill so strokes cannot cover adjacent font runs.
-      drawsOutline = true
-      super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
-      drawsOutline = false
-    }
-    super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
-  }
-
-  override func showCGGlyphs(
-    _ glyphs: UnsafePointer<CGGlyph>, positions: UnsafePointer<CGPoint>, count glyphCount: Int,
-    font: UIFont, textMatrix: CGAffineTransform, attributes: [NSAttributedString.Key: Any],
-    in context: CGContext
-  ) {
-    guard let width = attributes[.strokeWidth] as? Double, width < 0 else {
-      guard !drawsOutline else { return }
-      super.showCGGlyphs(
-        glyphs, positions: positions, count: glyphCount, font: font, textMatrix: textMatrix,
-        attributes: attributes, in: context)
-      return
-    }
-
-    context.saveGState()
-    context.setTextDrawingMode(drawsOutline ? .stroke : .fill)
-    super.showCGGlyphs(
-      glyphs, positions: positions, count: glyphCount, font: font, textMatrix: textMatrix,
-      attributes: attributes, in: context)
-    context.restoreGState()
-  }
-}
-
-private struct ResettableSlider: UIViewRepresentable {
-  let title: String
-  @Binding var value: Double
-  let range: ClosedRange<Double>
-  let onReset: () -> Void
-
-  func makeUIView(context: Context) -> ResettableSliderView {
-    ResettableSliderView(frame: .zero)
-  }
-
-  func updateUIView(_ view: ResettableSliderView, context: Context) {
-    let slider = view.slider
-    slider.accessibilityLabel = title
-    slider.minimumValue = Float(range.lowerBound)
-    slider.maximumValue = Float(range.upperBound)
-    slider.onReset = onReset
-    let binding = $value
-    slider.onValueChange = { binding.wrappedValue = $0 }
-    let next = Float(value)
-    if slider.value != next && (!slider.isTracking || slider.value.rounded() != next) {
-      slider.setValue(next, animated: false)
-    }
-  }
-}
-
-final class ResettableSliderView: UIView, UIGestureRecognizerDelegate {
-  let slider = ResettableSliderControl(frame: .zero)
-
-  override init(frame: CGRect) {
-    super.init(frame: frame)
-    addSubview(slider)
-    slider.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    slider.frame = bounds
-    // Observe taps above UISlider so its own tracking gestures do not consume them first.
-    let doubleTap = UITapGestureRecognizer(target: self, action: #selector(resetFromDoubleTap))
-    doubleTap.numberOfTapsRequired = 2
-    doubleTap.delegate = self
-    addGestureRecognizer(doubleTap)
-  }
-
-  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-  func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch)
-    -> Bool
-  {
-    slider.thumbContains(touch.location(in: slider))
-  }
-
-  func gestureRecognizer(
-    _ gestureRecognizer: UIGestureRecognizer,
-    shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
-  ) -> Bool {
-    otherGestureRecognizer.view?.isDescendant(of: self) == true
-  }
-
-  @objc private func resetFromDoubleTap() {
-    // Let UISlider finish cancelling its tracking before writing the default.
-    Task { @MainActor [weak self] in
-      self?.slider.onReset?()
-    }
-  }
-}
-
-final class ResettableSliderControl: UISlider {
-  var onValueChange: ((Double) -> Void)?
-  var onReset: (() -> Void)?
-
-  override init(frame: CGRect) {
-    super.init(frame: frame)
-    setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-    addTarget(self, action: #selector(valueChanged), for: .valueChanged)
-    accessibilityCustomActions = [
-      UIAccessibilityCustomAction(
-        name: "初期値に戻す", target: self, selector: #selector(resetValue))
-    ]
-  }
-
-  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-  override func accessibilityIncrement() { adjustAccessibilityValue(by: 1) }
-
-  override func accessibilityDecrement() { adjustAccessibilityValue(by: -1) }
-
-  private func adjustAccessibilityValue(by step: Float) {
-    let next = min(maximumValue, max(minimumValue, value.rounded() + step))
-    guard next != value else { return }
-    setValue(next, animated: true)
-    valueChanged()
-  }
-
-  func thumbContains(_ point: CGPoint) -> Bool {
-    thumbRect(forBounds: bounds, trackRect: trackRect(forBounds: bounds), value: value)
-      .contains(point)
-  }
-
-  @objc private func valueChanged() {
-    onValueChange?(Double(value.rounded()))
-  }
-
-  @objc private func resetValue() -> Bool {
-    guard let onReset else { return false }
-    onReset()
-    return true
-  }
-}
-
-@MainActor
-private struct ImageShareSheet: UIViewControllerRepresentable, Identifiable {
-  let id = UUID()
-  let image: UIImage
-  let onError: @MainActor (Error) -> Void
-
-  func makeUIViewController(context: Context) -> UIActivityViewController {
-    let controller = UIActivityViewController(activityItems: [image], applicationActivities: nil)
-    controller.completionWithItemsHandler = { _, _, _, error in
-      if let error {
-        Task { @MainActor in onError(error) }
-      }
-    }
-    return controller
-  }
-
-  func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
