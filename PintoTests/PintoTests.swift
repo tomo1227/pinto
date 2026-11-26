@@ -1062,6 +1062,41 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .oval])
   }
 
+  func testCanvasPanReusesAnnotationsUntilDrawingMarginIsExhausted() throws {
+    let model = try EditorModel(document: makeDocument())
+    model.change {
+      $0.holds = [Hold(position: WallPoint(x: 0.5, y: 0.5), radiusX: 0.1, radiusY: 0.1)]
+    }
+    model.tool = .pan
+    let canvas = CanvasView(model: model)
+    canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
+    canvas.layoutIfNeeded()
+    let overlay = try XCTUnwrap(canvas.subviews.first { $0.bounds.width > canvas.bounds.width })
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    func snapshot() -> UIImage {
+      UIGraphicsImageRenderer(size: canvas.bounds.size, format: format).image {
+        canvas.layer.render(in: $0.cgContext)
+      }
+    }
+    let reference = pixel(snapshot(), x: 360, y: 400)
+    XCTAssertNotEqual(reference, [255, 255, 255, 255])
+
+    let pan = SimulatedPan()
+    pan.testState = .began
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    pan.testState = .changed
+    pan.testTranslation = CGPoint(x: 20, y: 0)
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    XCTAssertEqual(overlay.transform, CGAffineTransform(translationX: 20, y: 0))
+    XCTAssertEqual(pixel(snapshot(), x: 380, y: 400), reference)
+
+    pan.testTranslation = CGPoint(x: 80, y: 0)
+    canvas.perform(NSSelectorFromString("panned:"), with: pan)
+    XCTAssertEqual(overlay.transform, .identity)
+    XCTAssertEqual(pixel(snapshot(), x: 440, y: 400), reference)
+  }
+
   func testResetViewportButtonStaysAtCanvasEdgeAndRestoresPanAndZoomWithoutEditing() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
@@ -1718,6 +1753,41 @@ final class PintoTests: XCTestCase {
       XCTAssertEqual(model.savedContent, savedContent)
       XCTAssertTrue(model.dirty)
     }
+  }
+
+  func testFileImportPreparesSmallPreviewAndPreservesOriginalPixels() async throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "\(UUID().uuidString).png")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let originalSize = CGSize(width: 800, height: 1600)
+    try image(size: originalSize).normalizedPNG().write(to: url)
+    let imported = try await WallImageWorker.shared.importFile(url)
+    XCTAssertEqual(imported.original.size, originalSize)
+    XCTAssertEqual(imported.preview.size, CGSize(width: 512, height: 1024))
+    let normalized = try await WallImageWorker.shared.normalize(imported.original)
+    XCTAssertEqual(UIImage(data: normalized)?.size, originalSize)
+
+    try Data("invalid image".utf8).write(to: url)
+    do {
+      _ = try await WallImageWorker.shared.importFile(url)
+      XCTFail("Invalid images must fail before preview")
+    } catch PintoError.invalidImage {
+    }
+  }
+
+  func testEditorUsesDownsampledPreviewUntilOriginalPixelsAreNeeded() async throws {
+    let originalSize = CGSize(width: 1400, height: 2800)
+    let document = WallDocument(
+      imageData: try image(size: originalSize).normalizedPNG(),
+      content: WallContent(name: "Preview"))
+    let preview = try await WallImageWorker.shared.editorPreview(data: document.imageData)
+    XCTAssertEqual(preview.size, CGSize(width: 1280, height: 2560))
+    let model = try EditorModel(document: document, preview: preview)
+    XCTAssertTrue(model.displayImage(forPixelSize: CGSize(width: 600, height: 1200)) === preview)
+    XCTAssertTrue(model.displayImage(forPixelSize: originalSize) === model.image)
+    XCTAssertTrue(model.displayImage(forPixelSize: CGSize(width: 600, height: 1200)) === preview)
+    let rendered = try await model.renderForSharing()
+    XCTAssertEqual(rendered.size, originalSize)
   }
 
   func testPNGRetainsOriginalPixelSizeAndOmitsSelectionAndTitle() throws {

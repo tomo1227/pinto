@@ -1,7 +1,43 @@
+import ImageIO
 import UIKit
 
 actor WallImageWorker {
   static let shared = WallImageWorker()
+  static let editorPreviewMaxPixels = 2560
+
+  func editorPreview(data: Data) throws -> UIImage {
+    try Self.downsample(data: data, maxPixels: Self.editorPreviewMaxPixels)
+  }
+
+  func importFile(_ url: URL) throws -> (original: UIImage, preview: UIImage) {
+    try Task.checkCancellation()
+    let scoped = url.startAccessingSecurityScopedResource()
+    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+    return try registrationImages(data: Data(contentsOf: url))
+  }
+
+  func registrationImages(data: Data) throws -> (original: UIImage, preview: UIImage) {
+    let preview = try Self.downsample(data: data, maxPixels: 1024)
+    guard let original = UIImage(data: data) else { throw PintoError.invalidImage }
+    return (original, preview)
+  }
+
+  private static func downsample(data: Data, maxPixels: Int) throws -> UIImage {
+    try Task.checkCancellation()
+    let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    let options =
+      [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceShouldCacheImmediately: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+      ] as CFDictionary
+    guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
+      let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options)
+    else { throw PintoError.invalidImage }
+    try Task.checkCancellation()
+    return UIImage(cgImage: image)
+  }
 
   func detectHold(
     in image: UIImage, at position: WallPoint, style: MarkStyle, shape: HoldShape?
