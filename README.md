@@ -43,7 +43,7 @@ iOS 17 以上の iPhone 向けの SwiftUI + UIKit アプリです。サーバー
 
 ## 保存
 
-アプリの Application Support 内の `Pinto/<UUID>.pinto` に、元画像（向きを補正した PNG）と編集データを一つの JSON として atomic write で保存します。データベースは使いません。履歴には画像を含めず、直近 100 操作を画面表示中のみ保持します。
+アプリの Application Support 内の `Pinto/` に、元画像（向きを補正した `<UUID>.png`）と編集データ（`<UUID>.pinto` の JSON）を別々に保存します。自動保存では編集データだけをアトミックに更新します。旧形式の課題は一覧の読み込み時に移行し、元画像を保存できてから JSON を置き換えます。データベースは使いません。履歴には画像を含めず、直近 100 操作を画面表示中のみ保持します。
 
 編集データは変更が 0.5 秒途切れると自動保存します。ホールド・文字・ルート・表示設定・課題の設定の変更と Undo / Redo が対象です。連続した操作中は保存をまとめ、一覧へ戻るときやアプリが非アクティブ／バックグラウンドになるときは待たずに保存します。文字の入力途中は確定せず、「完了」で反映した内容を保存します。
 
@@ -70,3 +70,17 @@ xcodebuild -project Pinto.xcodeproj -scheme Pinto -showdestinations
 xcodebuild -project Pinto.xcodeproj -scheme Pinto \
   -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
+
+### Copilot で SwiftUI をレビューする
+
+`make apm_ci` で Copilot 用のスキルを復元できます。Copilot Chat では、たとえば「`swiftui-performance-audit` を使って、写真を取り込んだ後に編集画面の描画が重くなる原因を調べて。コードはまだ変更しないで」と依頼できます。コードだけで原因を絞れない場合は、Instruments で計測する手順も提案します。
+
+ビューの構成を整理したいときは、「`swiftui-view-refactor` を使って、編集画面をどうサブビューに分割するか提案して。挙動は変えず、コードはまだ変更しないで」と依頼できます。
+
+### Debug 実行時のメモリ確認（目安: 300 MB）
+
+1. Xcode の **Product → Scheme → Edit Scheme → Run → Arguments** を開き、**Arguments Passed On Launch** に `-PintoMemoryCheck` を追加して有効にします。
+2. Simulator または実機で Debug の Pinto を起動します。画面右上の `RAM` は Pinto プロセスの現在のメモリ使用量（physical footprint）、`Peak` は OS が記録した起動後の最大値です。単位は `1 MB = 1,000,000 bytes` です。
+3. 大きな写真を取り込み、編集画面を開いてホールドの輪郭検出、画像保存・共有、一覧への復帰を試します。何度か繰り返し、`Peak` が 300 MB 以下か確認します。画面がシートで隠れていても、閉じたあとにピークを確認できます。操作ごとに比較する場合は、アプリを完全に終了してから起動し直します。
+
+300 MB を超えると表示が赤くなり、最初の超過を `MemoryCheck` カテゴリのログに出します。これはビルドや Simulator 全体の使用量ではなく、アプリ単体の計測です。Simulator と実機の値は異なるため、最終判断は実機で行ってください。このチェックは使用量を制限せず、引数なしの起動や Release ビルドには表示されません。

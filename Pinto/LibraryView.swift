@@ -25,7 +25,8 @@ struct LibraryView: View {
             wallItem(document)
               .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if selectedIDs == nil {
-                  Button("削除", systemImage: "trash", role: .destructive) {
+                  // This only opens the alert; a destructive swipe action animates row removal.
+                  Button("削除", systemImage: "trash") {
                     pendingDeletion = [document.id]
                   }
                   .tint(.red)
@@ -98,14 +99,14 @@ struct LibraryView: View {
       }
       .navigationDestination(for: UUID.self) { id in
         if let document = store.walls.first(where: { $0.id == id }) {
-          EditorDestination(document: document)
+          EditorDestination(id: document.id)
         } else {
           ContentUnavailableView("課題が見つかりません", systemImage: "photo")
         }
       }
       .sheet(isPresented: $registering) {
         NewWallView { document in
-          try store.save(document)
+          try await store.save(document)
           path.append(document.id)
         }
       }
@@ -115,22 +116,19 @@ struct LibraryView: View {
       .sheet(isPresented: $showingFilters) {
         LibraryFilterView(draft: filters) { filters = $0 }
       }
-      .confirmationDialog(
-        deletionTitle,
+      .alert(
+        "削除しますか？",
         isPresented: Binding(
           get: { !pendingDeletion.isEmpty }, set: { if !$0 { pendingDeletion = [] } }
         ),
-        titleVisibility: .visible,
         presenting: pendingDeletion
       ) { ids in
-        Button("課題と編集データを削除", role: .destructive) {
-          store.delete(ids)
-          if let selectedIDs {
-            let remaining = selectedIDs.intersection(store.walls.map(\.id))
-            self.selectedIDs = remaining.isEmpty ? nil : remaining
-          }
-        }
         Button("キャンセル", role: .cancel) {}
+        Button("削除する", role: .destructive) {
+          Task { await delete(ids) }
+        }
+      } message: { ids in
+        deletionMessage(for: ids)
       }
       .alert(
         "読み込み・保存エラー",
@@ -144,18 +142,20 @@ struct LibraryView: View {
       }
     }
     .tint(Color(uiColor: UIColor(hex: "#2F7A68")))
-    .task { if !store.ready { store.load() } }
+    .task { if !store.ready { await store.load() } }
   }
 
-  private func libraryGrid(_ filtered: [WallDocument]) -> some View {
+  private func libraryGrid(_ filtered: [WallMetadata]) -> some View {
     ScrollView {
-      if !store.ready {
+      if store.loading {
+        ProgressView("課題を読み込み中…")
+      } else if !store.ready {
         ContentUnavailableView {
           Label("保存先を開けません", systemImage: "externaldrive.badge.exclamationmark")
         } description: {
           Text("端末の空き容量と保存先を確認して、再読み込みしてください。")
         } actions: {
-          Button("再読み込み") { store.load() }
+          Button("再読み込み") { Task { await store.load() } }
         }
       } else if store.walls.isEmpty {
         ContentUnavailableView {
@@ -186,16 +186,25 @@ struct LibraryView: View {
     }
   }
 
-  private var deletionTitle: String {
-    if pendingDeletion.count == 1,
-      let document = store.walls.first(where: { pendingDeletion.contains($0.id) })
+  private func deletionMessage(for ids: Set<UUID>) -> Text {
+    if ids.count == 1,
+      let document = store.walls.first(where: { ids.contains($0.id) })
     {
-      return "「\(document.content.name)」を端末から削除しますか？"
+      return Text("「\(document.content.name)」とその編集データを端末から削除します。")
     }
-    return "\(pendingDeletion.count)件の課題を端末から削除しますか？"
+
+    return Text("\(ids.count)件の課題とその編集データを端末から削除します。")
   }
 
-  private func wallItem(_ document: WallDocument) -> some View {
+  private func delete(_ ids: Set<UUID>) async {
+    await store.delete(ids)
+    if let selectedIDs {
+      let remaining = selectedIDs.intersection(store.walls.map(\.id))
+      self.selectedIDs = remaining.isEmpty ? nil : remaining
+    }
+  }
+
+  private func wallItem(_ document: WallMetadata) -> some View {
     let isSelected = selectedIDs?.contains(document.id) == true
     let tap = {
       if var selection = selectedIDs {
@@ -233,18 +242,18 @@ struct LibraryView: View {
       .accessibilityAction(named: Text("選択")) { select() }
   }
 
-  private func card(_ document: WallDocument) -> some View {
+  private func card(_ document: WallMetadata) -> some View {
     Group {
       if grid {
         VStack(alignment: .leading, spacing: 8) {
-          WallThumbnail(document: document)
+          WallThumbnail(document: document, photoURL: store.photoURL(for: document.id))
             .frame(height: 190).clipped()
           details(document)
             .padding([.horizontal, .bottom], 12)
         }
       } else {
         HStack(spacing: 12) {
-          WallThumbnail(document: document)
+          WallThumbnail(document: document, photoURL: store.photoURL(for: document.id))
             .frame(width: 80, height: 80).clipped()
             .clipShape(RoundedRectangle(cornerRadius: 8))
           details(document)
@@ -259,7 +268,7 @@ struct LibraryView: View {
     .clipShape(RoundedRectangle(cornerRadius: 16))
   }
 
-  private func details(_ document: WallDocument) -> some View {
+  private func details(_ document: WallMetadata) -> some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(document.content.name).font(.headline).lineLimit(2)
       if !document.content.grade.isEmpty {
@@ -374,16 +383,38 @@ enum UserManual {
     let parsed = try AttributedString(markdown: markdown)
     var blocks: [Block] = []
     for run in parsed.runs {
-      guard let intent = run.presentationIntent else { continue }
+      guard let intent = run.presentationIntent, let metadata = BlockMetadata(intent) else {
+        continue
+      }
+      let text = AttributedString(parsed[run.range])
+      if blocks.last?.id == metadata.id {
+        blocks[blocks.count - 1].text.append(text)
+      } else {
+        blocks.append(
+          Block(
+            id: metadata.id, text: text, headingLevel: metadata.headingLevel,
+            listMarker: metadata.listMarker))
+      }
+    }
+    guard !blocks.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+    return blocks
+  }
+
+  private struct BlockMetadata {
+    let id: Int
+    let headingLevel: Int?
+    let listMarker: String?
+
+    init?(_ intent: PresentationIntent) {
       var identity: Int?
-      var headingLevel: Int?
+      var heading: Int?
       var ordinal: Int?
       var ordered = false
       for component in intent.components {
         switch component.kind {
         case .header(let level):
           identity = component.identity
-          headingLevel = level
+          heading = level
         case .paragraph:
           identity = component.identity
         case .listItem(let number):
@@ -393,18 +424,11 @@ enum UserManual {
         default: break
         }
       }
-      guard let identity else { continue }
-      let text = AttributedString(parsed[run.range])
-      if blocks.last?.id == identity {
-        blocks[blocks.count - 1].text.append(text)
-      } else {
-        let marker = ordinal.map { ordered ? "\($0)." : "\u{2022}" }
-        blocks.append(
-          Block(id: identity, text: text, headingLevel: headingLevel, listMarker: marker))
-      }
+      guard let identity else { return nil }
+      id = identity
+      headingLevel = heading
+      listMarker = ordinal.map { ordered ? "\($0)." : "\u{2022}" }
     }
-    guard !blocks.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
-    return blocks
   }
 }
 
@@ -514,35 +538,53 @@ private struct UserManualEntryView: View {
 
 @MainActor
 private struct WallThumbnail: View {
-  let document: WallDocument
-  @State private var image: UIImage?
+  @Environment(\.displayScale) private var displayScale
+  let document: WallMetadata
+  let photoURL: URL?
+  @State private var rendered: (WallThumbnailCache.Key, UIImage)?
   @State private var failed = false
 
   var body: some View {
-    ZStack {
-      Color(uiColor: .systemGray5)
-      if let image {
-        Image(uiImage: image).resizable().scaledToFit()
-      } else if failed {
-        Label("画像を読み込めません", systemImage: "exclamationmark.triangle")
-      } else {
-        ProgressView()
+    GeometryReader { geometry in
+      let size = geometry.size
+      let maxPixels = Int((max(size.width, size.height) * displayScale).rounded(.up))
+      let key = WallThumbnailCache.Key(
+        id: document.id, updatedAt: document.updatedAt, maxPixels: maxPixels)
+      ZStack {
+        Color(uiColor: .systemGray5)
+        if let (renderedKey, image) = rendered, renderedKey == key {
+          Image(uiImage: image).resizable().scaledToFit()
+        } else if failed {
+          Label("画像を読み込めません", systemImage: "exclamationmark.triangle")
+        } else {
+          ProgressView()
+        }
       }
+      .task(id: key) { await load(key) }
     }
     .accessibilityLabel("\(document.content.name)の編集済み画像")
-    .task(id: document.updatedAt) {
-      guard let source = UIImage(data: document.imageData) else {
-        failed = true
-        return
-      }
-      image = SceneRenderer.render(image: source, content: document.content, maxDimension: 640)
+  }
+
+  private func load(_ key: WallThumbnailCache.Key) async {
+    guard key.maxPixels > 0 else { return }
+    failed = false
+    do {
+      guard let photoURL else { throw PintoError.invalidImage }
+      let image = try await WallThumbnailCache.shared.image(
+        for: key, content: document.content, photoURL: photoURL)
+      try Task.checkCancellation()
+      rendered = (key, image)
+    } catch is CancellationError {
+    } catch {
+      if !Task.isCancelled { failed = true }
     }
   }
 }
 
 @MainActor
 private struct EditorDestination: View {
-  let document: WallDocument
+  @EnvironmentObject private var store: WallStore
+  let id: UUID
   @State private var model: EditorModel?
   @State private var error: String?
 
@@ -560,7 +602,12 @@ private struct EditorDestination: View {
     }
     .task {
       guard model == nil else { return }
-      do { model = try EditorModel(document: document) } catch {
+      do {
+        let document = try await store.document(for: id)
+        try Task.checkCancellation()
+        model = try EditorModel(document: document)
+      } catch is CancellationError {
+      } catch {
         self.error = error.localizedDescription
       }
     }
@@ -569,7 +616,7 @@ private struct EditorDestination: View {
 
 @MainActor
 struct NewWallView: View {
-  var onCreate: (WallDocument) throws -> Void
+  var onCreate: (WallDocument) async throws -> Void
   @Environment(\.dismiss) private var dismiss
   @State private var name = ""
   @State private var image: UIImage?
@@ -614,7 +661,7 @@ struct NewWallView: View {
       .toolbar {
         ToolbarItem(placement: .cancellationAction) { Button("キャンセル") { dismiss() } }
         ToolbarItem(placement: .confirmationAction) {
-          Button("登録") { create() }
+          Button("登録") { Task { await create() } }
             .disabled(
               image == nil || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || busy)
         }
@@ -669,13 +716,16 @@ struct NewWallView: View {
     }
   }
 
-  private func create() {
+  private func create() async {
+    guard !busy else { return }
+    busy = true
+    defer { busy = false }
     do {
       guard let image else { throw PintoError.invalidImage }
       let document = WallDocument(
-        imageData: try image.normalizedPNG(),
+        imageData: try await WallImageWorker.shared.normalize(image),
         content: WallContent(name: name.trimmingCharacters(in: .whitespacesAndNewlines)))
-      try onCreate(document)
+      try await onCreate(document)
       dismiss()
     } catch { errorMessage = error.localizedDescription }
   }

@@ -1,0 +1,72 @@
+name: HP APM policy
+version: "1.0.0"
+
+# ポリシー違反時はインストールを拒否する
+enforcement: block
+fetch_failure: block
+
+cache:
+  ttl: 3600
+
+# APM dependencies
+dependencies:
+  allow:
+    - github.com/microsoft/**
+    - github.com/github/**
+    - github.com/anthropics/**
+    - github.com/dimillian/skills/swiftui-performance-audit
+    - github.com/dimillian/skills/swiftui-view-refactor
+    - github.com/openai/**
+    - github.com/twostraws/swiftui-agent-skill/swiftui-pro
+    - github.com/vercel-labs/**
+  deny: []
+  require_pinned_constraint: true
+  max_depth: 20
+
+# MCP servers
+mcp:
+  allow: []
+  deny: []
+  transport:
+    allow:
+      - http
+      - stdio
+
+  # apm.yml 内で直接定義された MCP を禁止
+  self_defined: deny
+
+  # 推移的依存からの MCP を自動的に信頼しない
+  trust_transitive: false
+
+# Manifest rules
+manifest:
+  scripts: deny
+  content_types:
+    allow:
+      - skill
+      - prompt
+      - instruction
+      - agent
+
+  # 明示的なファイル指定を必須にする
+  require_explicit_includes: true
+
+# Files not managed by APM
+unmanaged_files:
+  action: warn
+  directories:
+    - .github/agents
+    - .github/skills
+    - .github/instructions
+    - .github/prompts
+
+security:
+  integrity:
+    require_hashes: true
+
+  audit:
+    # インストール時のセキュリティ監査
+    on_install: block
+
+    # Lockfile と実ファイルの差分を検出
+    fail_on_drift: true

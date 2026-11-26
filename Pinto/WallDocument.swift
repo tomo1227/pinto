@@ -133,6 +133,26 @@ struct WallDocument: Codable, Identifiable, Equatable {
   var updatedAt = Date()
   var imageData: Data
   var content: WallContent
+
+  var metadata: WallMetadata {
+    WallMetadata(
+      version: version, id: id, createdAt: createdAt, updatedAt: updatedAt, content: content)
+  }
+}
+
+struct WallMetadata: Codable, Identifiable, Equatable {
+  var separatePhoto: Bool? = true
+  let version: Int
+  let id: UUID
+  let createdAt: Date
+  let updatedAt: Date
+  let content: WallContent
+
+  func document(with imageData: Data) -> WallDocument {
+    WallDocument(
+      version: version, id: id, createdAt: createdAt, updatedAt: updatedAt,
+      imageData: imageData, content: content)
+  }
 }
 
 struct LibraryFilters {

@@ -9,7 +9,7 @@ XCODE_FLAGS = -project Pinto.xcodeproj -scheme Pinto \
 	CODE_SIGNING_ALLOWED=NO
 SWIFT_PATHS = Pinto PintoTests
 
-.PHONY: build test test-ios lint format fmt
+.PHONY: build test test-ios lint complex format fmt apm_ci apm_audit
 
 build:
 	xcodebuild $(XCODE_FLAGS) -destination 'generic/platform=iOS' build
@@ -25,5 +25,14 @@ test-ios:
 lint:
 	xcrun swift-format lint --strict --recursive $(SWIFT_PATHS)
 
+complex:
+	swiftlint lint --config .swiftlint.yml $(SWIFT_PATHS)
+
 fmt format:
 	xcrun swift-format format --in-place --recursive $(SWIFT_PATHS)
+
+apm_ci:
+	apm install --policy ./apm-policy.yml --frozen
+
+apm_audit:
+	apm audit --ci --policy ./apm-policy.yml

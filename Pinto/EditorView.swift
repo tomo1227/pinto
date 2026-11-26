@@ -39,7 +39,7 @@ struct EditorView: View {
     .toolbar(model.textPrompt ? .hidden : .visible, for: .navigationBar)
     .toolbar {
       ToolbarItem(placement: .principal) {
-        Text(model.content.name + (model.dirty ? " *" : ""))
+        Text(model.content.name)
           .lineLimit(1)
           .truncationMode(.middle)
           .foregroundStyle(.primary)
@@ -74,14 +74,7 @@ struct EditorView: View {
         }
         .disabled(isSavingImage)
         .accessibilityLabel("画像を写真ライブラリに保存")
-        Button {
-          shareSheet = ImageShareSheet(
-            image: SceneRenderer.render(image: model.image, content: model.content),
-            onError: { error in
-              model.errorMessage = "画像を共有できませんでした。\n\(error.localizedDescription)"
-            }
-          )
-        } label: {
+        Button(action: shareImage) {
           Image(systemName: "square.and.arrow.up")
         }
         .disabled(isSavingImage)
@@ -119,7 +112,7 @@ struct EditorView: View {
         .tint(Color(uiColor: .label))
     }
     .confirmationDialog("未保存の編集があります", isPresented: $showLeave, titleVisibility: .visible) {
-      Button("保存して戻る") { if save() { dismiss() } }
+      Button("保存して戻る", action: leaveEditor)
       Button("変更を破棄して戻る", role: .destructive) { dismiss() }
       Button("編集を続ける", role: .cancel) {}
     } message: {
@@ -146,13 +139,17 @@ struct EditorView: View {
       }
     }
     .onChange(of: scenePhase) { _, phase in
-      if phase != .active, model.dirty { save() }
+      if phase != .active, model.dirty { Task { await save() } }
     }
   }
 
   private func leaveEditor() {
+    Task { await saveAndDismiss() }
+  }
+
+  private func saveAndDismiss() async {
     do {
-      if model.dirty { try model.save(to: store) }
+      while model.dirty { try await model.save(to: store) }
       dismiss()
     } catch {
       leaveSaveError = error.localizedDescription
@@ -566,10 +563,10 @@ struct EditorView: View {
   }
 
   @discardableResult
-  private func save() -> Bool {
+  private func save() async -> Bool {
     guard model.dirty else { return true }
     do {
-      try model.save(to: store)
+      try await model.save(to: store)
       status = "端末内に保存しました"
       return true
     } catch {
@@ -584,11 +581,11 @@ struct EditorView: View {
 
   private func saveToPhotos() {
     guard !isSavingImage else { return }
-    guard save() else { return }
     isSavingImage = true
-    status = "写真ライブラリに保存中…"
     Task {
       defer { isSavingImage = false }
+      guard await save() else { return }
+      status = "写真ライブラリに保存中…"
       do {
         try await model.saveImageToPhotos()
         status = "写真ライブラリに画像を保存しました"
@@ -597,7 +594,26 @@ struct EditorView: View {
         model.errorMessage =
           "編集データは端末内に保存しましたが、写真ライブラリに画像を保存できませんでした。\n\(error.localizedDescription)"
       }
+
     }
+  }
+
+  private func shareImage() {
+    guard !isSavingImage else { return }
+    isSavingImage = true
+    Task {
+      defer { isSavingImage = false }
+      do {
+        let image = try await model.renderForSharing()
+        shareSheet = ImageShareSheet(image: image, onError: reportShareFailure)
+      } catch {
+        reportShareFailure(error)
+      }
+    }
+  }
+
+  private func reportShareFailure(_ error: Error) {
+    model.errorMessage = "画像を共有できませんでした。\n\(error.localizedDescription)"
   }
 
   private func colorLabel(_ hex: String) -> String {

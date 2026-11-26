@@ -10,6 +10,10 @@ struct WallCanvas: UIViewRepresentable {
   func updateUIView(_ view: CanvasView, context: Context) {
     view.refresh()
   }
+
+  static func dismantleUIView(_ view: CanvasView, coordinator: ()) {
+    view.cancelHoldPlacements()
+  }
 }
 
 @MainActor
@@ -72,18 +76,35 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private var pinchResizes = false
   private var viewportPan: UIPanGestureRecognizer?
   private var trashDrag: UILongPressGestureRecognizer?
+  private let wallPhoto = UIImageView()
+  private let annotations = CanvasOverlay()
+  private let selectionOverlay = CanvasOverlay()
+  private var displayedContent: WallContent?
+  private var displayedSelection: EditorSelection?
+  private var displayedTool: EditorTool?
+  private var indexedRoute: [UUID] = []
+  private var routeNumbers: [UUID: Int] = [:]
   private let resetViewportButton = UIButton(type: .system)
   private let trashTarget = UIImageView(image: UIImage(systemName: "trash.fill"))
   private var trashDragStart: CGPoint?
   private var trashHovered = false
+  private var pendingHoldPositions: [WallPoint] = []
+  private var holdPlacementTask: Task<Void, Never>?
 
   init(model: EditorModel) {
     self.model = model
     super.init(frame: .zero)
     backgroundColor = UIColor(hex: "#E9E8E1")
-    contentMode = .redraw
     clipsToBounds = true
     isMultipleTouchEnabled = true
+    wallPhoto.image = model.image
+    wallPhoto.contentMode = .scaleToFill
+    wallPhoto.isUserInteractionEnabled = false
+    addSubview(wallPhoto)
+    addSubview(annotations)
+    addSubview(selectionOverlay)
+    annotations.paint = { [weak self] context in self?.drawAnnotations(in: context) }
+    selectionOverlay.paint = { [weak self] _ in self?.drawSelection() }
     accessibilityLabel = "課題の編集キャンバス"
     accessibilityHint =
       "タップして配置。ドラッグして移動。選択枠の四角い点をドラッグしてサイズ変更。選択物を長押ししてゴミ箱へドラッグすると削除。選択中は2本指でもサイズ変更。キャンバスを2本指で移動・拡大。"
@@ -135,6 +156,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
 
   override func layoutSubviews() {
     super.layoutSubviews()
+    annotations.frame = bounds
+    selectionOverlay.frame = bounds
+    updateLayers()
     let buttonSize: CGFloat = 44
     let inset: CGFloat = 8
     resetViewportButton.frame = CGRect(
@@ -146,12 +170,13 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   func refresh() {
+    if model.tool != .hold { cancelHoldPlacements() }
     if lastRevision != model.viewportRevision {
       zoom = 1
       offset = .zero
       lastRevision = model.viewportRevision
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   @objc private func resetViewport() {
@@ -169,15 +194,42 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       y: (bounds.height - height) / 2 + offset.y, width: width, height: height)
   }
 
-  override func draw(_ rect: CGRect) {
-    guard let context = UIGraphicsGetCurrentContext(), imageRect.width > 0 else { return }
+  private func updateLayers() {
+    let frame = imageRect
+    let content = model.canvasContent
+    let viewportChanged = wallPhoto.frame != frame
+    let contentChanged = displayedContent != content
+    if viewportChanged { wallPhoto.frame = frame }
+    if viewportChanged || contentChanged {
+      displayedContent = content
+      annotations.setNeedsDisplay()
+    }
+    if viewportChanged || contentChanged || displayedSelection != model.selection
+      || displayedTool != model.tool
+    {
+      displayedSelection = model.selection
+      displayedTool = model.tool
+      selectionOverlay.setNeedsDisplay()
+    }
+  }
+
+  private func drawAnnotations(in context: CGContext) {
     let imageFrame = imageRect
+    guard imageFrame.width > 0 else { return }
+    let content = model.canvasContent
+    if indexedRoute != content.route {
+      indexedRoute = content.route
+      routeNumbers = SceneRenderer.routeNumbers(for: indexedRoute)
+    }
     context.saveGState()
     context.translateBy(x: imageFrame.minX, y: imageFrame.minY)
-    SceneRenderer.draw(
-      image: model.image, content: model.content,
-      size: imageFrame.size, context: context)
+    SceneRenderer.drawAnnotations(
+      content: content, size: imageFrame.size, context: context, routeNumbers: routeNumbers)
     context.restoreGState()
+  }
+
+  private func drawSelection() {
+    guard imageRect.width > 0 else { return }
     if let frame = selectionRect() {
       UIColor.systemBlue.setStroke()
       let selectionFrame = frame.insetBy(dx: -5, dy: -5)
@@ -222,14 +274,15 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   }
 
   private func selectionRect() -> CGRect? {
+    let content = model.canvasContent
     let rect: CGRect?
     switch model.selection {
     case .hold(let id):
-      rect = model.content.holds.first(where: { $0.id == id }).map {
-        SceneRenderer.holdRect($0, content: model.content, size: imageRect.size)
+      rect = content.holds.first(where: { $0.id == id }).map {
+        SceneRenderer.holdRect($0, content: content, size: imageRect.size)
       }
     case .text(let id):
-      rect = model.content.texts.first(where: { $0.id == id }).map {
+      rect = content.texts.first(where: { $0.id == id }).map {
         SceneRenderer.textRect($0, size: imageRect.size)
       }
     case nil: rect = nil
@@ -240,13 +293,14 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
   private func hit(_ point: CGPoint) -> EditorSelection? {
     let p = local(point)
     let size = imageRect.size
-    for text in model.content.texts.reversed() {
+    let content = model.canvasContent
+    for text in content.texts.reversed() {
       if SceneRenderer.textRect(text, size: size).insetBy(dx: -8, dy: -8).contains(p) {
         return .text(text.id)
       }
     }
-    for hold in model.content.holds.reversed() {
-      if SceneRenderer.holdPath(hold, content: model.content, size: size, padding: 8).contains(p) {
+    for hold in content.holds.reversed() {
+      if SceneRenderer.holdPath(hold, content: content, size: size, padding: 8).contains(p) {
         return .hold(hold.id)
       }
     }
@@ -268,7 +322,11 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     case .route:
       if case .hold(let id) = target { model.appendToRoute(id) }
     case .hold:
-      if let target { model.selection = target } else { model.addHold(at: normalized(point)) }
+      if let target {
+        model.selection = target
+      } else {
+        enqueueHold(at: normalized(point))
+      }
     case .text:
       if case .text(let id) = target,
         let text = model.content.texts.first(where: { $0.id == id })
@@ -280,32 +338,46 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
         model.promptText(at: normalized(point))
       }
     }
-    setNeedsDisplay()
+    updateLayers()
+  }
+
+  func cancelHoldPlacements() {
+    holdPlacementTask?.cancel()
+    holdPlacementTask = nil
+    pendingHoldPositions.removeAll()
+  }
+
+  private func enqueueHold(at position: WallPoint) {
+    pendingHoldPositions.append(position)
+    guard holdPlacementTask == nil else { return }
+    holdPlacementTask = Task { [weak self, model] in
+      while !Task.isCancelled, let position = self?.nextHoldPosition(), model.tool == .hold {
+        if let target = self?.targetForHoldPlacement(at: position) {
+          model.selection = target
+        } else {
+          await model.addHold(at: position)
+        }
+        self?.updateLayers()
+      }
+      if !Task.isCancelled { self?.cancelHoldPlacements() }
+    }
+  }
+
+  private func nextHoldPosition() -> WallPoint? {
+    pendingHoldPositions.isEmpty ? nil : pendingHoldPositions.removeFirst()
+  }
+
+  private func targetForHoldPlacement(at position: WallPoint) -> EditorSelection? {
+    let frame = imageRect
+    let point = SceneRenderer.point(position, in: frame.size)
+    return hit(CGPoint(x: frame.minX + point.x, y: frame.minY + point.y))
   }
 
   @objc private func trashDragged(_ gesture: UILongPressGestureRecognizer) {
     let point = gesture.location(in: self)
     switch gesture.state {
     case .began:
-      guard model.tool == .hold || model.tool == .text, model.selection != nil,
-        resizeHandle(at: point) == nil,
-        hit(point) == model.selection, let frame = selectionRect()
-      else { return }
-      switch model.selection {
-      case .hold(let id):
-        guard let hold = model.content.holds.first(where: { $0.id == id }) else { return }
-        positionOrigin = hold.position
-      case .text(let id):
-        guard let text = model.content.texts.first(where: { $0.id == id }) else { return }
-        positionOrigin = text.position
-      case nil: return
-      }
-      guard frame.width > 0, imageRect.width > 0, imageRect.height > 0 else { return }
-      model.beginGesture()
-      trashDragStart = point
-      trashTarget.isHidden = false
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-      updateTrashDrag(at: point)
+      guard beginTrashDrag(at: point) else { return }
     case .changed:
       updateTrashDrag(at: point)
     case .ended:
@@ -325,7 +397,34 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       hideTrashTarget()
     default: break
     }
-    setNeedsDisplay()
+    updateLayers()
+  }
+
+  private func beginTrashDrag(at point: CGPoint) -> Bool {
+    guard model.tool == .hold || model.tool == .text, model.selection != nil,
+      resizeHandle(at: point) == nil,
+      hit(point) == model.selection, let frame = selectionRect(),
+      let position = selectionPosition()
+    else { return false }
+    positionOrigin = position
+    guard frame.width > 0, imageRect.width > 0, imageRect.height > 0 else { return false }
+    model.beginGesture()
+    trashDragStart = point
+    trashTarget.isHidden = false
+    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    updateTrashDrag(at: point)
+    return true
+  }
+
+  private func selectionPosition() -> WallPoint? {
+    switch model.selection {
+    case .hold(let id):
+      return model.content.holds.first(where: { $0.id == id })?.position
+    case .text(let id):
+      return model.content.texts.first(where: { $0.id == id })?.position
+    case nil:
+      return nil
+    }
   }
 
   private func updateTrashDrag(at point: CGPoint) {
@@ -362,50 +461,9 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     case .began:
       let location = gesture.location(in: self)
       let start = CGPoint(x: location.x - translation.x, y: location.y - translation.y)
-      movingViewport = model.tool == .pan
-      dragOrigin = offset
-      guard !movingViewport else { return }
-      resizeHandle = resizeHandle(at: start)
-      if resizeHandle == nil { model.selection = hit(start) }
-      guard model.selection != nil, model.tool == .hold || model.tool == .text else { return }
-      gestureOriginal = model.content
-      model.beginGesture()
-      if let frame = selectionRect() { resizeBase = frame.size }
-      switch model.selection {
-      case .hold(let id):
-        guard let hold = model.content.holds.first(where: { $0.id == id }) else { return }
-        positionOrigin = hold.position
-      case .text(let id):
-        guard let text = model.content.texts.first(where: { $0.id == id }) else { return }
-        positionOrigin = text.position
-      case nil: break
-      }
+      guard beginPan(at: start) else { return }
     case .changed:
-      if movingViewport {
-        offset = CGPoint(x: dragOrigin.x + translation.x, y: dragOrigin.y + translation.y)
-      } else if let original = gestureOriginal {
-        if let handle = resizeHandle {
-          let direction = handle.direction
-          let scale = handle.scale(
-            translation: translation, size: resizeBase, isText: model.editingText)
-          var scaleX = scale.width
-          var scaleY = scale.height
-          if let hold = model.selectedHold, model.content.locksHoldAspectRatio(hold) {
-            let scale =
-              direction.x == 0
-              ? scaleY
-              : direction.y == 0 ? scaleX : max(scaleX, scaleY)
-            scaleX = scale
-            scaleY = scale
-          }
-          model.resizeSelection(x: scaleX, y: scaleY, from: original)
-        } else {
-          model.moveSelection(
-            to: WallPoint(
-              x: positionOrigin.x + translation.x / imageRect.width,
-              y: positionOrigin.y + translation.y / imageRect.height))
-        }
-      }
+      updatePan(translation: translation)
     case .ended:
       if gestureOriginal != nil { model.endGesture() }
       gestureOriginal = nil
@@ -416,7 +474,53 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       resizeHandle = nil
     default: break
     }
-    setNeedsDisplay()
+    updateLayers()
+  }
+
+  private func beginPan(at start: CGPoint) -> Bool {
+    movingViewport = model.tool == .pan
+    dragOrigin = offset
+    guard !movingViewport else { return false }
+    resizeHandle = resizeHandle(at: start)
+    if resizeHandle == nil { model.selection = hit(start) }
+    guard model.selection != nil, model.tool == .hold || model.tool == .text else { return false }
+    gestureOriginal = model.content
+    model.beginGesture()
+    if let frame = selectionRect() { resizeBase = frame.size }
+    guard let position = selectionPosition() else { return false }
+    positionOrigin = position
+    return true
+  }
+
+  private func updatePan(translation: CGPoint) {
+    if movingViewport {
+      offset = CGPoint(x: dragOrigin.x + translation.x, y: dragOrigin.y + translation.y)
+      return
+    }
+    guard let original = gestureOriginal else { return }
+    if let handle = resizeHandle {
+      let scale = selectionResizeScale(for: handle, translation: translation)
+      model.resizeSelection(x: scale.width, y: scale.height, from: original)
+    } else {
+      model.moveSelection(
+        to: WallPoint(
+          x: positionOrigin.x + translation.x / imageRect.width,
+          y: positionOrigin.y + translation.y / imageRect.height))
+    }
+  }
+
+  private func selectionResizeScale(for handle: ResizeHandle, translation: CGPoint) -> CGSize {
+    let direction = handle.direction
+    let scale = handle.scale(
+      translation: translation, size: resizeBase, isText: model.editingText)
+    guard let hold = model.selectedHold, model.content.locksHoldAspectRatio(hold) else {
+      return scale
+    }
+    let uniformScale =
+      direction.x == 0
+      ? scale.height
+      : direction.y == 0 ? scale.width : max(scale.width, scale.height)
+    return CGSize(width: uniformScale, height: uniformScale)
   }
 
   @objc private func pinched(_ gesture: UIPinchGestureRecognizer) {
@@ -452,7 +556,7 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
       pinchResizes = false
     default: break
     }
-    setNeedsDisplay()
+    updateLayers()
   }
 
   func gestureRecognizer(
@@ -509,6 +613,24 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     offset.x += translation.x
     offset.y += translation.y
     gesture.setTranslation(.zero, in: self)
-    setNeedsDisplay()
+    updateLayers()
+  }
+}
+
+@MainActor
+private final class CanvasOverlay: UIView {
+  var paint: ((CGContext) -> Void)?
+
+  init() {
+    super.init(frame: .zero)
+    isOpaque = false
+    isUserInteractionEnabled = false
+    contentMode = .redraw
+  }
+
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+
+  override func draw(_ rect: CGRect) {
+    if let context = UIGraphicsGetCurrentContext() { paint?(context) }
   }
 }

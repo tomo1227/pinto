@@ -45,45 +45,51 @@ enum SceneRenderer {
   }
 
   static func font(_ style: MarkStyle, unit: CGFloat) -> UIFont {
-    let weight: UIFont.Weight
-    switch style.fontWeight {
-    case ...300: weight = .light
-    case ...400: weight = .regular
-    case ...600: weight = .semibold
-    case ...700: weight = .bold
-    default: weight = .black
-    }
     let size = style.fontSize * unit
-    let systemFont = UIFont.systemFont(ofSize: size, weight: weight)
-    var descriptor: UIFontDescriptor
+    let systemFont = UIFont.systemFont(ofSize: size, weight: systemFontWeight(style.fontWeight))
+    let descriptor = fontDescriptor(for: style, systemFont: systemFont)
+    guard style.isItalic else { return UIFont(descriptor: descriptor, size: size) }
+    let italicDescriptor =
+      descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic))
+      ?? descriptor.withMatrix(CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0))
+    return UIFont(descriptor: italicDescriptor, size: size)
+  }
+
+  private static func systemFontWeight(_ weight: Int) -> UIFont.Weight {
+    switch weight {
+    case ...300: return .light
+    case ...400: return .regular
+    case ...600: return .semibold
+    case ...700: return .bold
+    default: return .black
+    }
+  }
+
+  private static func fontDescriptor(for style: MarkStyle, systemFont: UIFont) -> UIFontDescriptor {
     switch style.fontFamily {
     case .sans:
-      descriptor = systemFont.fontDescriptor
+      return systemFont.fontDescriptor
     case .serif:
-      descriptor = systemFont.fontDescriptor.withDesign(.serif) ?? systemFont.fontDescriptor
+      return systemFont.fontDescriptor.withDesign(.serif) ?? systemFont.fontDescriptor
     case .monospace:
-      descriptor = systemFont.fontDescriptor.withDesign(.monospaced) ?? systemFont.fontDescriptor
+      return systemFont.fontDescriptor.withDesign(.monospaced) ?? systemFont.fontDescriptor
     case .roundedGothic:
-      descriptor = namedFont("HiraMaruProN-W4", fallback: systemFont).fontDescriptor
+      return namedFont("HiraMaruProN-W4", fallback: systemFont).fontDescriptor
     case .condensed:
-      let face: String
-      switch style.fontWeight {
-      case ...400: face = "AvenirNextCondensed-Regular"
-      case ...600: face = "AvenirNextCondensed-DemiBold"
-      case ...700: face = "AvenirNextCondensed-Bold"
-      default: face = "AvenirNextCondensed-Heavy"
-      }
-      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
+      return namedFont(condensedFontName(style.fontWeight), fallback: systemFont).fontDescriptor
     case .handwritten:
       let face = style.isBold ? "MarkerFelt-Wide" : "MarkerFelt-Thin"
-      descriptor = namedFont(face, fallback: systemFont).fontDescriptor
+      return namedFont(face, fallback: systemFont).fontDescriptor
     }
-    if style.isItalic {
-      descriptor =
-        descriptor.withSymbolicTraits(descriptor.symbolicTraits.union(.traitItalic))
-        ?? descriptor.withMatrix(CGAffineTransform(a: 1, b: 0, c: 0.2, d: 1, tx: 0, ty: 0))
+  }
+
+  private static func condensedFontName(_ weight: Int) -> String {
+    switch weight {
+    case ...400: return "AvenirNextCondensed-Regular"
+    case ...600: return "AvenirNextCondensed-DemiBold"
+    case ...700: return "AvenirNextCondensed-Bold"
+    default: return "AvenirNextCondensed-Heavy"
     }
-    return UIFont(descriptor: descriptor, size: size)
   }
 
   private static func namedFont(_ name: String, fallback: UIFont) -> UIFont {
@@ -117,9 +123,21 @@ enum SceneRenderer {
   }
 
   static func draw(image: UIImage, content: WallContent, size: CGSize, context: CGContext) {
+    image.draw(in: CGRect(origin: .zero, size: size))
+    drawAnnotations(content: content, size: size, context: context)
+  }
+
+  static func routeNumbers(for route: [UUID]) -> [UUID: Int] {
+    Dictionary(
+      route.enumerated().map { ($0.element, $0.offset + 1) },
+      uniquingKeysWith: { first, _ in first })
+  }
+
+  static func drawAnnotations(
+    content: WallContent, size: CGSize, context: CGContext, routeNumbers: [UUID: Int]? = nil
+  ) {
     context.saveGState()
     context.clip(to: CGRect(origin: .zero, size: size))
-    image.draw(in: CGRect(origin: .zero, size: size))
     let unit = markUnit(for: size)
     if content.showLines {
       let holds = Dictionary(uniqueKeysWithValues: content.holds.map { ($0.id, $0) })
@@ -131,13 +149,19 @@ enum SceneRenderer {
         stroke(path, style: content.lineStyle, unit: unit)
       }
     }
+    let numbers =
+      content.effectiveShowRouteNumbers
+      ? routeNumbers ?? Self.routeNumbers(for: content.route) : [:]
+    let numberFont =
+      numbers.isEmpty
+      ? nil : UIFont.boldSystemFont(ofSize: CGFloat(content.effectiveRouteNumberSize) * unit)
     for hold in content.holds {
       let path = holdPath(hold, content: content, size: size)
       stroke(path, style: hold.style, unit: unit)
-      if content.effectiveShowRouteNumbers, let index = content.route.firstIndex(of: hold.id) {
-        let label = "\(index + 1)" as NSString
+      if let numberFont, let number = numbers[hold.id] {
+        let label = "\(number)" as NSString
         let attributes: [NSAttributedString.Key: Any] = [
-          .font: UIFont.boldSystemFont(ofSize: CGFloat(content.effectiveRouteNumberSize) * unit),
+          .font: numberFont,
           .foregroundColor: UIColor(hex: content.routeNumberColor ?? hold.style.color),
         ]
         let dimensions = label.size(withAttributes: attributes)

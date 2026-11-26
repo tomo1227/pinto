@@ -56,6 +56,20 @@ private final class SimulatedPinch: UIPinchGestureRecognizer {
 
 @MainActor
 final class PintoTests: XCTestCase {
+  #if DEBUG
+    func testDebugMemoryBudgetUsesPeakEvenAfterCurrentUsageDrops() {
+      XCTAssertFalse(DebugMemorySample(current: 100_000_000, peak: 300_000_000).exceedsBudget)
+      XCTAssertTrue(DebugMemorySample(current: 100_000_000, peak: 300_000_001).exceedsBudget)
+      XCTAssertTrue(DebugMemorySample(current: 100_000_000, peak: 500_000_000).exceedsBudget)
+    }
+
+    func testDebugMemoryReadsProcessFootprintAndPeak() throws {
+      let sample = try XCTUnwrap(DebugMemorySample.read())
+      XCTAssertGreaterThan(sample.current, 0)
+      XCTAssertGreaterThanOrEqual(sample.peak, sample.current)
+    }
+  #endif
+
   private func image(size: CGSize = CGSize(width: 600, height: 800)) -> UIImage {
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
@@ -324,9 +338,9 @@ final class PintoTests: XCTestCase {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let document = try makeDocument()
-    try store.save(document)
+    try await store.save(document)
     let files = try WallFiles(directory: directory)
     let model = try EditorModel(document: document)
     model.change {
@@ -355,9 +369,9 @@ final class PintoTests: XCTestCase {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let document = try makeDocument()
-    try store.save(document)
+    try await store.save(document)
     let files = try WallFiles(directory: directory)
     let model = try EditorModel(document: document)
     model.change { $0.name = "途中の編集" }
@@ -400,18 +414,26 @@ final class PintoTests: XCTestCase {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let model = try EditorModel(document: makeDocument())
     model.change { $0.name = "戻る直前の編集" }
     let pending = Task { try await model.autosave(to: store) }
     await Task.yield()
-    try model.save(to: store)
+    try await model.save(to: store)
     let saved = model.document
     try await pending.value
     XCTAssertEqual(model.document, saved)
     XCTAssertFalse(model.dirty)
     let files = try WallFiles(directory: directory)
     XCTAssertEqual(try files.read(files.url(for: saved.id)), saved)
+  }
+
+  func testRouteNumberIndexFollowsRouteOrderNotHoldOrder() {
+    let first = UUID()
+    let second = UUID()
+    XCTAssertEqual(SceneRenderer.routeNumbers(for: [second, first]), [second: 1, first: 2])
+    XCTAssertEqual(SceneRenderer.routeNumbers(for: [first]), [first: 1])
+    XCTAssertTrue(SceneRenderer.routeNumbers(for: []).isEmpty)
   }
 
   func testRouteNumberSizeDefaultsAndAffectsRendering() throws {
@@ -760,48 +782,75 @@ final class PintoTests: XCTestCase {
     try files.save(wall)
     XCTAssertEqual(try files.list().count, 1)
     XCTAssertEqual(try files.read(files.url(for: wall.id)), wall)
+    let photoURL = files.photoURL(for: wall.id)
+    let sentinel = Date(timeIntervalSince1970: 1000)
+    try FileManager.default.setAttributes(
+      [.modificationDate: sentinel], ofItemAtPath: photoURL.path)
     wall.content.name = "更新済み"
     try files.save(wall)
     XCTAssertEqual(try files.list().count, 1)
     XCTAssertEqual(try files.read(files.url(for: wall.id)).content.name, "更新済み")
+    XCTAssertEqual(
+      try photoURL.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate,
+      sentinel)
     try files.delete(wall.id)
     XCTAssertTrue(try files.list().isEmpty)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: photoURL.path))
   }
 
-  func testStoreDeletesOnlySelectedWalls() throws {
+  func testLegacyWallMigratesWithoutChangingImageOrEdits() async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { removeTestDirectory(directory) }
+    let files = try WallFiles(directory: directory)
+    var wall = try makeDocument()
+    wall.content.name = "旧形式の課題"
+    let url = files.url(for: wall.id)
+    try JSONEncoder().encode(wall).write(to: url)
+    let store = WallStore()
+
+    await store.load(directory: directory)
+
+    XCTAssertEqual(store.walls, [wall.metadata])
+    let restored = try await store.document(for: wall.id)
+    XCTAssertEqual(restored, wall)
+    let json = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any]
+    XCTAssertNil(json?["imageData"])
+  }
+
+  func testStoreDeletesOnlySelectedWalls() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let first = try makeDocument()
     let second = try makeDocument()
     let unselected = try makeDocument()
-    for wall in [first, second, unselected] { try store.save(wall) }
+    for wall in [first, second, unselected] { try await store.save(wall) }
 
-    store.delete([first.id, second.id])
+    await store.delete([first.id, second.id])
 
-    XCTAssertEqual(store.walls, [unselected])
+    XCTAssertEqual(store.walls, [unselected.metadata])
     XCTAssertNil(store.errorMessage)
-    store.load(directory: directory)
-    XCTAssertEqual(store.walls, [unselected])
+    await store.load(directory: directory)
+    XCTAssertEqual(store.walls, [unselected.metadata])
   }
 
-  func testStoreReportsFailedDeletionWithoutBlockingOtherSelectedWalls() throws {
+  func testStoreReportsFailedDeletionWithoutBlockingOtherSelectedWalls() async throws {
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { removeTestDirectory(directory) }
     let store = WallStore()
-    store.load(directory: directory)
+    await store.load(directory: directory)
     let saved = try makeDocument()
     var missingFile = try makeDocument()
     missingFile.content.name = "削除できなかった壁"
-    try store.save(saved)
-    try store.save(missingFile)
+    try await store.save(saved)
+    try await store.save(missingFile)
     let files = try WallFiles(directory: directory)
     try files.delete(missingFile.id)
 
-    store.delete([saved.id, missingFile.id])
+    await store.delete([saved.id, missingFile.id])
 
-    XCTAssertEqual(store.walls, [missingFile])
+    XCTAssertEqual(store.walls, [missingFile.metadata])
     XCTAssertTrue(try files.list().isEmpty)
     XCTAssertTrue(try XCTUnwrap(store.errorMessage).contains(missingFile.content.name))
   }
@@ -838,16 +887,19 @@ final class PintoTests: XCTestCase {
     XCTAssertThrowsError(try files.read(files.url(for: wall.id)))
   }
 
-  func testEditorGestureIsOneUndoStepAndStyleIsUndoable() throws {
+  func testEditorGestureIsOneUndoStepAndStyleIsUndoable() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.2, y: 0.3))
+    await model.addHold(at: WallPoint(x: 0.2, y: 0.3))
     let start = model.content
     let count = model.history.past.count
     model.beginGesture()
     for step in 1...10 {
       model.moveSelection(to: WallPoint(x: Double(step) / 10, y: 0.5))
     }
+    XCTAssertEqual(model.content, start)
+    XCTAssertEqual(model.history.past.count, count)
+    XCTAssertEqual(model.canvasContent.holds[0].position.x, 1)
     model.endGesture()
     XCTAssertEqual(model.history.past.count, count + 1)
     model.undo()
@@ -863,16 +915,18 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content, moved)
   }
 
-  func testCancelledGestureRestoresContent() throws {
+  func testCancelledGestureRestoresContent() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.3, y: 0.3))
+    await model.addHold(at: WallPoint(x: 0.3, y: 0.3))
     let start = model.content
     model.beginGesture()
     model.moveSelection(to: WallPoint(x: -1, y: 2))
-    XCTAssertEqual(model.content.holds[0].position, WallPoint(x: 0, y: 1))
+    XCTAssertEqual(model.canvasContent.holds[0].position, WallPoint(x: 0, y: 1))
+    XCTAssertEqual(model.content, start)
     model.cancelGesture()
     XCTAssertEqual(model.content, start)
+    XCTAssertEqual(model.canvasContent, start)
   }
 
   func testHoldHandlesResizeInEveryDirectionWithUndoAndRedo() throws {
@@ -938,8 +992,9 @@ final class PintoTests: XCTestCase {
       gesture.testTranslation = CGPoint(x: 20, y: 0)
       gesture.testState = .changed
       canvas.perform(NSSelectorFromString("panned:"), with: gesture)
-      XCTAssertEqual(model.content.holds[0].radiusX * 600, 40, accuracy: 0.0001)
-      XCTAssertEqual(model.content.holds[0].radiusY * 800, 40, accuracy: 0.0001)
+      XCTAssertEqual(model.canvasContent.holds[0].radiusX * 600, 40, accuracy: 0.0001)
+      XCTAssertEqual(model.canvasContent.holds[0].radiusY * 800, 40, accuracy: 0.0001)
+      XCTAssertEqual(model.content, document.content)
       gesture.testState = cancelled ? .cancelled : .ended
       canvas.perform(NSSelectorFromString("panned:"), with: gesture)
       if cancelled {
@@ -985,11 +1040,11 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds[0].radiusY, hold.radiusY, accuracy: 0.001)
   }
 
-  func testChangingHoldShapeUpdatesSelectionAndNextHoldWithUndoAndRedo() throws {
+  func testChangingHoldShapeUpdatesSelectionAndNextHoldWithUndoAndRedo() async throws {
     let model = try EditorModel(document: makeDocument())
     model.change { $0.autoDetectHolds = false }
     let position = WallPoint(x: 0.3, y: 0.4)
-    model.addHold(at: position)
+    await model.addHold(at: position)
     let original = model.content.holds[0]
     XCTAssertEqual(original.effectiveShape, .oval)
     model.updateHoldShape(.rectangle)
@@ -1001,16 +1056,16 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.content.holds, [original])
     XCTAssertEqual(model.activeHoldShape, .oval)
     model.redo()
-    model.addHold(at: WallPoint(x: 0.7, y: 0.8))
+    await model.addHold(at: WallPoint(x: 0.7, y: 0.8))
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .rectangle])
     model.updateHoldShape(.oval)
     XCTAssertEqual(model.content.holds.map(\.effectiveShape), [.rectangle, .oval])
   }
 
-  func testResetViewportButtonStaysAtCanvasEdgeAndRestoresPanAndZoomWithoutEditing() throws {
+  func testResetViewportButtonStaysAtCanvasEdgeAndRestoresPanAndZoomWithoutEditing() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
     model.change { $0.holds[0].radiusX = 0.15 }
     let content = model.content
     let selection = model.selection
@@ -1069,10 +1124,10 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(model.history.past, history)
   }
 
-  func testResizeHandlesDoNotStartTrashDragOrAppearInRouteTool() throws {
+  func testResizeHandlesDoNotStartTrashDragOrAppearInRouteTool() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
     let canvas = CanvasView(model: model)
     canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
     canvas.layoutIfNeeded()
@@ -1090,7 +1145,7 @@ final class PintoTests: XCTestCase {
     XCTAssertNil(canvas.resizeHandle(at: start))
   }
 
-  func testLongPressTrashDeletesHoldsAndTextInOneUndoStep() throws {
+  func testLongPressTrashDeletesHoldsAndTextInOneUndoStep() async throws {
     for isText in [false, true] {
       let model = try EditorModel(document: makeDocument())
       if isText {
@@ -1101,7 +1156,7 @@ final class PintoTests: XCTestCase {
         model.textPrompt = false
       } else {
         model.content.autoDetectHolds = false
-        model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+        await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
         model.appendToRoute(try XCTUnwrap(model.content.holds.first).id)
       }
       let original = model.content
@@ -1142,11 +1197,11 @@ final class PintoTests: XCTestCase {
     }
   }
 
-  func testLongPressTrashCancelsOrMovesWhenDroppedOutside() throws {
+  func testLongPressTrashCancelsOrMovesWhenDroppedOutside() async throws {
     for cancelled in [false, true] {
       let model = try EditorModel(document: makeDocument())
       model.content.autoDetectHolds = false
-      model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+      await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
       let original = model.content
       let count = model.history.past.count
       let canvas = CanvasView(model: model)
@@ -1181,10 +1236,10 @@ final class PintoTests: XCTestCase {
     }
   }
 
-  func testStationaryLongPressOverTrashDoesNotDelete() throws {
+  func testStationaryLongPressOverTrashDoesNotDelete() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 744.0 / 800))
+    await model.addHold(at: WallPoint(x: 0.5, y: 744.0 / 800))
     let original = model.content
     let canvas = CanvasView(model: model)
     canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
@@ -1498,7 +1553,7 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(CanvasView.ResizeHandle.hit(at: CGPoint(x: 9, y: 9), in: smallFrame), .se)
   }
 
-  func testAllResizeCornersExpandAndShrinkHoldsAndTextWithUndo() throws {
+  func testAllResizeCornersExpandAndShrinkHoldsAndTextWithUndo() async throws {
     let frame = CGRect(x: 0, y: 0, width: 100, height: 80)
     let corners: [CanvasView.ResizeHandle] = [.nw, .ne, .se, .sw]
     for corner in corners {
@@ -1514,7 +1569,7 @@ final class PintoTests: XCTestCase {
           model.commitText()
         } else {
           model.content.autoDetectHolds = false
-          model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+          await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
         }
         let original = model.content
         let historyCount = model.history.past.count
@@ -1526,19 +1581,21 @@ final class PintoTests: XCTestCase {
           XCTAssertEqual(scale.width, expected, accuracy: 0.0001)
           XCTAssertEqual(scale.height, expected, accuracy: 0.0001)
           model.resizeSelection(x: scale.width, y: scale.height, from: original)
+          XCTAssertEqual(model.content, original)
+          let preview = model.canvasContent
           if isText {
             XCTAssertEqual(
-              model.content.texts[0].style.fontSize,
+              preview.texts[0].style.fontSize,
               original.texts[0].style.fontSize * expected, accuracy: 0.0001)
-            XCTAssertEqual(model.content.texts[0].position, original.texts[0].position)
+            XCTAssertEqual(preview.texts[0].position, original.texts[0].position)
           } else {
             XCTAssertEqual(
-              model.content.holds[0].radiusX,
+              preview.holds[0].radiusX,
               original.holds[0].radiusX * expected, accuracy: 0.0001)
             XCTAssertEqual(
-              model.content.holds[0].radiusY,
+              preview.holds[0].radiusY,
               original.holds[0].radiusY * expected, accuracy: 0.0001)
-            XCTAssertEqual(model.content.holds[0].position, original.holds[0].position)
+            XCTAssertEqual(preview.holds[0].position, original.holds[0].position)
           }
         }
         model.endGesture()
@@ -1558,17 +1615,47 @@ final class PintoTests: XCTestCase {
     }
   }
 
-  func testSelectionDrawsOutlinedSquareHandlesInAllEightDirections() throws {
+  func testThumbnailsAreDownsampledAndCachedByRevisionAndSize() async throws {
+    let document = try makeDocument()
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { removeTestDirectory(directory) }
+    let files = try WallFiles(directory: directory)
+    try files.save(document)
+    let photoURL = files.photoURL(for: document.id)
+    let cache = WallThumbnailCache()
+    let key = WallThumbnailCache.Key(id: document.id, updatedAt: document.updatedAt, maxPixels: 80)
+    let first = try await cache.image(for: key, content: document.content, photoURL: photoURL)
+    let cached = try await cache.image(for: key, content: document.content, photoURL: photoURL)
+    XCTAssertEqual(first.cgImage?.height, 80)
+    XCTAssertTrue(first === cached)
+
+    let largerKey = WallThumbnailCache.Key(
+      id: document.id, updatedAt: document.updatedAt, maxPixels: 160)
+    let larger = try await cache.image(
+      for: largerKey, content: document.content, photoURL: photoURL)
+    XCTAssertEqual(larger.cgImage?.height, 160)
+
+    var updated = document
+    updated.updatedAt = document.updatedAt.addingTimeInterval(1)
+    let updatedKey = WallThumbnailCache.Key(
+      id: updated.id, updatedAt: updated.updatedAt, maxPixels: 80)
+    let newImage = try await cache.image(
+      for: updatedKey, content: updated.content, photoURL: photoURL)
+    XCTAssertFalse(first === newImage)
+  }
+
+  func testSelectionDrawsOutlinedSquareHandlesInAllEightDirections() async throws {
     let model = try EditorModel(document: makeDocument())
     model.content.autoDetectHolds = false
-    model.addHold(at: WallPoint(x: 0.5, y: 0.5))
+    await model.addHold(at: WallPoint(x: 0.5, y: 0.5))
     let canvas = CanvasView(model: model)
     canvas.frame = CGRect(x: 0, y: 0, width: 600, height: 800)
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
     let snapshot = UIGraphicsImageRenderer(size: canvas.bounds.size, format: format).image {
       renderer in
-      canvas.draw(canvas.bounds)
+      canvas.layoutIfNeeded()
+      canvas.layer.render(in: renderer.cgContext)
     }
     let hold = try XCTUnwrap(model.content.holds.first)
     let frame = SceneRenderer.holdRect(hold, content: model.content, size: canvas.bounds.size)
@@ -1710,7 +1797,18 @@ final class PintoTests: XCTestCase {
     XCTAssertEqual(pixel(oval, x: 350, y: 360), white)
   }
 
-  func testDetectionFindsHoldAtCorrectImageCoordinatesAndRejectsFlatWall() throws {
+  func testCancelledHoldPlacementDoesNotChangeDocument() async throws {
+    let model = try EditorModel(document: makeDocument())
+    let original = model.content
+    let placement = Task { await model.addHold(at: WallPoint(x: 0.5, y: 0.5)) }
+    placement.cancel()
+    await placement.value
+    XCTAssertEqual(model.content, original)
+    XCTAssertFalse(model.canUndo)
+    XCTAssertNil(model.errorMessage)
+  }
+
+  func testDetectionFindsHoldAtCorrectImageCoordinatesAndRejectsFlatWall() async throws {
     let size = CGSize(width: 600, height: 800)
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
@@ -1731,7 +1829,7 @@ final class PintoTests: XCTestCase {
       imageData: try source.normalizedPNG(), content: WallContent(name: "自動検出"))
     document.content.newHoldShape = .rectangle
     let model = try EditorModel(document: document)
-    model.addHold(at: WallPoint(x: 135.0 / 600, y: 140.0 / 800))
+    await model.addHold(at: WallPoint(x: 135.0 / 600, y: 140.0 / 800))
     let rectangle = try XCTUnwrap(model.content.holds.first)
     XCTAssertEqual(rectangle.effectiveShape, .rectangle)
     XCTAssertEqual(rectangle.position, detected.position)
@@ -1741,7 +1839,7 @@ final class PintoTests: XCTestCase {
         image: image(), position: WallPoint(x: 0.5, y: 0.5), style: MarkStyle()))
   }
 
-  func testAutomaticHoldSizingKeepsPhotoClearOfThickLineAndOutline() throws {
+  func testAutomaticHoldSizingKeepsPhotoClearOfThickLineAndOutline() async throws {
     let size = CGSize(width: 1200, height: 900)
     let silhouette = CGRect(x: 144, y: 210, width: 96, height: 36)
     let position = WallPoint(x: silhouette.midX / size.width, y: silhouette.midY / size.height)
@@ -1764,7 +1862,7 @@ final class PintoTests: XCTestCase {
         content.holdStyle = MarkStyle(
           color: "#000000", width: 20, outlineColor: "#0000FF", outlineWidth: outlineWidth)
         let model = try EditorModel(document: WallDocument(imageData: data, content: content))
-        model.addHold(at: position)
+        await model.addHold(at: position)
         let hold = try XCTUnwrap(model.selectedHold)
         XCTAssertEqual(hold.effectiveShape, shape)
         let rect = SceneRenderer.holdRect(hold, content: model.content, size: size)

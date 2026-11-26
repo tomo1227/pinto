@@ -25,6 +25,12 @@ jobs:
       - name: Lint
         run: make lint
 
+      - name: Install SwiftLint
+        run: brew install swiftlint
+
+      - name: Check complexity
+        run: make complex
+
       - name: Build
         run: make build
 
