@@ -70,3 +70,11 @@ xcodebuild -project Pinto.xcodeproj -scheme Pinto -showdestinations
 xcodebuild -project Pinto.xcodeproj -scheme Pinto \
   -destination 'platform=iOS Simulator,name=iPhone 16' test
 ```
+
+### Debug 実行時のメモリ確認（目安: 300 MB）
+
+1. Xcode の **Product → Scheme → Edit Scheme → Run → Arguments** を開き、**Arguments Passed On Launch** に `-PintoMemoryCheck` を追加して有効にします。
+2. Simulator または実機で Debug の Pinto を起動します。画面右上の `RAM` は Pinto プロセスの現在のメモリ使用量（physical footprint）、`Peak` は OS が記録した起動後の最大値です。単位は `1 MB = 1,000,000 bytes` です。
+3. 大きな写真を取り込み、編集画面を開いてホールドの輪郭検出、画像保存・共有、一覧への復帰を試します。何度か繰り返し、`Peak` が 300 MB 以下か確認します。画面がシートで隠れていても、閉じたあとにピークを確認できます。操作ごとに比較する場合は、アプリを完全に終了してから起動し直します。
+
+300 MB を超えると表示が赤くなり、最初の超過を `MemoryCheck` カテゴリのログに出します。これはビルドや Simulator 全体の使用量ではなく、アプリ単体の計測です。Simulator と実機の値は異なるため、最終判断は実機で行ってください。このチェックは使用量を制限せず、引数なしの起動や Release ビルドには表示されません。

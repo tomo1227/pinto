@@ -56,6 +56,20 @@ private final class SimulatedPinch: UIPinchGestureRecognizer {
 
 @MainActor
 final class PintoTests: XCTestCase {
+  #if DEBUG
+    func testDebugMemoryBudgetUsesPeakEvenAfterCurrentUsageDrops() {
+      XCTAssertFalse(DebugMemorySample(current: 100_000_000, peak: 300_000_000).exceedsBudget)
+      XCTAssertTrue(DebugMemorySample(current: 100_000_000, peak: 300_000_001).exceedsBudget)
+      XCTAssertTrue(DebugMemorySample(current: 100_000_000, peak: 500_000_000).exceedsBudget)
+    }
+
+    func testDebugMemoryReadsProcessFootprintAndPeak() throws {
+      let sample = try XCTUnwrap(DebugMemorySample.read())
+      XCTAssertGreaterThan(sample.current, 0)
+      XCTAssertGreaterThanOrEqual(sample.peak, sample.current)
+    }
+  #endif
+
   private func image(size: CGSize = CGSize(width: 600, height: 800)) -> UIImage {
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1

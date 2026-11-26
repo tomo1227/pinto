@@ -1,5 +1,10 @@
 import SwiftUI
 
+#if DEBUG
+  import Darwin
+  import OSLog
+#endif
+
 @main
 @MainActor
 struct PintoApp: App {
@@ -9,8 +14,23 @@ struct PintoApp: App {
     WindowGroup {
       StartupView()
         .environmentObject(store)
+        #if DEBUG
+          .overlay(alignment: .topTrailing, content: debugMemoryOverlay)
+        #endif
     }
   }
+
+  #if DEBUG
+    @ViewBuilder
+    private func debugMemoryOverlay() -> some View {
+      if ProcessInfo.processInfo.arguments.contains("-PintoMemoryCheck") {
+        DebugMemoryBadge()
+          .padding(8)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
+    }
+  #endif
 }
 
 private struct StartupView: View {
@@ -83,3 +103,83 @@ private struct StartupRoute: View {
 #Preview("Pinto") {
   LibraryView().environmentObject(WallStore())
 }
+
+#if DEBUG
+  struct DebugMemorySample {
+    static let budgetMB: UInt64 = 300
+    private static let budgetBytes = budgetMB * 1_000_000
+    let current: UInt64
+    let peak: UInt64
+
+    var exceedsBudget: Bool { peak > Self.budgetBytes }
+
+    static func read() -> Self? {
+      var info = task_vm_info_data_t()
+      let capacity = MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size
+      var count = mach_msg_type_number_t(capacity)
+      let result = withUnsafeMutablePointer(to: &info) { pointer in
+        pointer.withMemoryRebound(to: integer_t.self, capacity: capacity) {
+          task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+        }
+      }
+
+      // Older kernels can return a shorter struct; don't treat a missing peak as zero.
+      guard result == KERN_SUCCESS,
+        let peakOffset = MemoryLayout<task_vm_info_data_t>.offset(
+          of: \.ledger_phys_footprint_peak),
+        Int(count) * MemoryLayout<integer_t>.size >= peakOffset + MemoryLayout<Int64>.size,
+        info.ledger_phys_footprint_peak > 0
+      else { return nil }
+      return Self(
+        current: info.phys_footprint,
+        peak: max(info.phys_footprint, UInt64(info.ledger_phys_footprint_peak)))
+    }
+  }
+
+  private struct DebugMemoryBadge: View {
+    private static let logger = Logger(subsystem: "com.tomokiota.pinto", category: "MemoryCheck")
+    @State private var sample: DebugMemorySample?
+    @State private var didWarn = false
+
+    var body: some View {
+      Group {
+        if let sample {
+          Text(
+            "RAM \(megabytes(sample.current)) MB · Peak \(megabytes(sample.peak))"
+              + " / \(DebugMemorySample.budgetMB) MB" + (sample.exceedsBudget ? " ⚠" : ""))
+        } else {
+          Text("RAM: 計測不可")
+        }
+      }
+      .font(.caption2.monospacedDigit())
+      .padding(6)
+      .foregroundStyle(.white)
+      .background(
+        sample?.exceedsBudget == true ? Color.red : Color.black.opacity(0.8), in: Capsule()
+      )
+      .task {
+        while !Task.isCancelled {
+          sample = DebugMemorySample.read()
+          if let sample, sample.exceedsBudget, !didWarn {
+            didWarn = true
+            Self.logger.warning(
+              "Debug memory budget exceeded: peak \(sample.peak, privacy: .public) bytes")
+          }
+          do {
+            try await Task.sleep(for: .seconds(1))
+          } catch is CancellationError {
+            return
+          } catch {
+            Self.logger.error(
+              "Memory checks stopped: \(error.localizedDescription, privacy: .public)")
+            return
+          }
+        }
+      }
+    }
+
+    private func megabytes(_ bytes: UInt64) -> String {
+      (Double(bytes) / 1_000_000).formatted(.number.precision(.fractionLength(1)))
+    }
+  }
+#endif
