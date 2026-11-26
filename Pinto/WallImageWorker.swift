@@ -1,7 +1,30 @@
+import ImageIO
 import UIKit
 
 actor WallImageWorker {
   static let shared = WallImageWorker()
+  static let editorPreviewMaxPixels = 2560
+
+  func editorPreview(data: Data) throws -> UIImage {
+    try Self.downsample(data: data, maxPixels: Self.editorPreviewMaxPixels)
+  }
+
+  private static func downsample(data: Data, maxPixels: Int) throws -> UIImage {
+    try Task.checkCancellation()
+    let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
+    let options =
+      [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceShouldCacheImmediately: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixels,
+      ] as CFDictionary
+    guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions),
+      let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options)
+    else { throw PintoError.invalidImage }
+    try Task.checkCancellation()
+    return UIImage(cgImage: image)
+  }
 
   func detectHold(
     in image: UIImage, at position: WallPoint, style: MarkStyle, shape: HoldShape?

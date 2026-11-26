@@ -604,8 +604,9 @@ private struct EditorDestination: View {
       guard model == nil else { return }
       do {
         let document = try await store.document(for: id)
+        let preview = try await WallImageWorker.shared.editorPreview(data: document.imageData)
         try Task.checkCancellation()
-        model = try EditorModel(document: document)
+        model = try EditorModel(document: document, preview: preview)
       } catch is CancellationError {
       } catch {
         self.error = error.localizedDescription

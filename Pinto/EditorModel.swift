@@ -42,6 +42,7 @@ final class EditorModel: ObservableObject {
   @Published private(set) var savedContent: WallContent
   @Published private(set) var viewportRevision = 0
   let image: UIImage
+  private let preview: UIImage
   private(set) var document: WallDocument
   private var gestureStart: WallContent?
   private var gestureSelection: EditorSelection?
@@ -50,12 +51,20 @@ final class EditorModel: ObservableObject {
   private var editingTextID: UUID?
   private var saveTask: Task<Void, Error>?
 
-  init(document: WallDocument) throws {
+  init(document: WallDocument, preview: UIImage? = nil) throws {
     guard let image = UIImage(data: document.imageData) else { throw PintoError.invalidImage }
     self.document = document
     self.image = image
+    self.preview = preview ?? image
     self.content = document.content
     self.savedContent = document.content
+  }
+
+  func displayImage(forPixelSize size: CGSize) -> UIImage {
+    let previewPixels = max(preview.size.width, preview.size.height) * preview.scale
+    let originalPixels = max(image.size.width, image.size.height) * image.scale
+    return originalPixels > previewPixels && max(size.width, size.height) > previewPixels
+      ? image : preview
   }
 
   var dirty: Bool { content != savedContent }

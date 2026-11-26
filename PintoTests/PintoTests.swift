@@ -1720,6 +1720,21 @@ final class PintoTests: XCTestCase {
     }
   }
 
+  func testEditorUsesDownsampledPreviewUntilOriginalPixelsAreNeeded() async throws {
+    let originalSize = CGSize(width: 1400, height: 2800)
+    let document = WallDocument(
+      imageData: try image(size: originalSize).normalizedPNG(),
+      content: WallContent(name: "Preview"))
+    let preview = try await WallImageWorker.shared.editorPreview(data: document.imageData)
+    XCTAssertEqual(preview.size, CGSize(width: 1280, height: 2560))
+    let model = try EditorModel(document: document, preview: preview)
+    XCTAssertTrue(model.displayImage(forPixelSize: CGSize(width: 600, height: 1200)) === preview)
+    XCTAssertTrue(model.displayImage(forPixelSize: originalSize) === model.image)
+    XCTAssertTrue(model.displayImage(forPixelSize: CGSize(width: 600, height: 1200)) === preview)
+    let rendered = try await model.renderForSharing()
+    XCTAssertEqual(rendered.size, originalSize)
+  }
+
   func testPNGRetainsOriginalPixelSizeAndOmitsSelectionAndTitle() throws {
     let source = image(size: CGSize(width: 2400, height: 3200))
     let content = WallContent(name: "このタイトルは画像には追加されない")

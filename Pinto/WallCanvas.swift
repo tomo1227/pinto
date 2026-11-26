@@ -97,7 +97,6 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     backgroundColor = UIColor(hex: "#E9E8E1")
     clipsToBounds = true
     isMultipleTouchEnabled = true
-    wallPhoto.image = model.image
     wallPhoto.contentMode = .scaleToFill
     wallPhoto.isUserInteractionEnabled = false
     addSubview(wallPhoto)
@@ -199,6 +198,10 @@ final class CanvasView: UIView, UIGestureRecognizerDelegate {
     let content = model.canvasContent
     let viewportChanged = wallPhoto.frame != frame
     let contentChanged = displayedContent != content
+    let scale = max(1, traitCollection.displayScale)
+    let displayImage = model.displayImage(
+      forPixelSize: CGSize(width: frame.width * scale, height: frame.height * scale))
+    if wallPhoto.image !== displayImage { wallPhoto.image = displayImage }
     if viewportChanged { wallPhoto.frame = frame }
     if viewportChanged || contentChanged {
       displayedContent = content
