@@ -15,3 +15,7 @@ node_modules/
 .wrangler/
 apps/web/test-results/
 apps/web/playwright-report/
+
+
+# APM dependencies
+apm_modules/

@@ -1,0 +1,419 @@
+lockfile_version: '4'
+apm_version: 0.38.1
+manifest_targets:
+- copilot
+dependencies:
+- repo_url: github/awesome-copilot
+  name: git-commit
+  host: github.com
+  resolved_commit: f10fdb8b2660ce85c98f220b2f1ca24653768a5c
+  resolved_ref: f10fdb8b2660ce85c98f220b2f1ca24653768a5c
+  version: unknown
+  virtual_path: skills/git-commit
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/git-commit
+  - .agents/skills/git-commit/LICENSE
+  - .agents/skills/git-commit/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/git-commit/LICENSE: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
+    .agents/skills/git-commit/SKILL.md: sha256:a95bb7e996516a1c73df745b0598ba650d7161eb1da559712e8fabb5dacb7c5c
+  content_hash: sha256:4dd3e1b182db4b2313a255c68bc07abb93a6398c10f3a8b8a75758f77cff99b8
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
+- repo_url: microsoft/apm
+  name: apm-guide
+  host: github.com
+  resolved_commit: 1759e1e5d6273a7da8ddd27d5a23312ae9b3df4b
+  resolved_ref: v0.36.0
+  version: 1.0.0
+  virtual_path: packages/apm-guide
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
+  - .agents/skills/apm-usage
+  - .agents/skills/apm-usage/LICENSE
+  - .agents/skills/apm-usage/SKILL.md
+  - .agents/skills/apm-usage/authentication.md
+  - .agents/skills/apm-usage/commands.md
+  - .agents/skills/apm-usage/dependencies.md
+  - .agents/skills/apm-usage/governance.md
+  - .agents/skills/apm-usage/installation.md
+  - .agents/skills/apm-usage/package-authoring.md
+  - .agents/skills/apm-usage/troubleshooting.md
+  - .agents/skills/apm-usage/workflow.md
+  - .github/agents/apm-expert.agent.md
+  deployed_file_hashes:
+    .agents/skills/apm-usage/LICENSE: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+    .agents/skills/apm-usage/SKILL.md: sha256:715b6d3497d5ca30f4751463091b8ff7cd85dc51e375d2176aea8f0867081c38
+    .agents/skills/apm-usage/authentication.md: sha256:96a12c079ca1bcda3e06da3c2171c4dc897f185116b65c5953003524e582330e
+    .agents/skills/apm-usage/commands.md: sha256:d37472aba7fc3ffc7e5fe7c6ceda2bfaf760bb6a5f39411d3537fad4c07d55c6
+    .agents/skills/apm-usage/dependencies.md: sha256:677279e74665bcffc8fe4a5bc9290a38bd26a24534952ef1aa5e01858fc0de32
+    .agents/skills/apm-usage/governance.md: sha256:7489356994e05d984348af6b37504b40971a80dcccde12c25cf2398926ea1aeb
+    .agents/skills/apm-usage/installation.md: sha256:a8d33ceeb41626d809ed07e0cdd16ba74f0510b5842bab64b7f6dc3e3fdb1057
+    .agents/skills/apm-usage/package-authoring.md: sha256:3aa51296a70099a81feed7447ac21bc82dceb79b8bdf18ce547fd4667691ea29
+    .agents/skills/apm-usage/troubleshooting.md: sha256:dae797b388dcb591c2276e8d2c07aee2a5313c5188aae15c4486bb7fee4065cd
+    .agents/skills/apm-usage/workflow.md: sha256:1bbb710fa9fd710aa2258aea52f6d905c6a2b3d366a1fdc723b028b4bfd2dbae
+    .github/agents/apm-expert.agent.md: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+  content_hash: sha256:48d1efb200892808001a09321e78e8f6f02696738dd1b603ada5a7d85df0b893
+  declared_license: Apache-2.0
+  carried_licenses:
+  - path: .apm/skills/apm-usage/LICENSE
+    source: LICENSE
+    hash: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+- repo_url: twostraws/swiftui-agent-skill
+  materialization_repo_url: twostraws/SwiftUI-Agent-Skill
+  name: swiftui-pro
+  host: github.com
+  resolved_commit: f2920b63995263f57b3e198674e89a602efba6d2
+  resolved_ref: f2920b63995263f57b3e198674e89a602efba6d2
+  version: unknown
+  virtual_path: swiftui-pro
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/swiftui-pro
+  - .agents/skills/swiftui-pro/LICENSE
+  - .agents/skills/swiftui-pro/SKILL.md
+  - .agents/skills/swiftui-pro/agents/openai.yaml
+  - .agents/skills/swiftui-pro/assets/swiftui-pro-icon.png
+  - .agents/skills/swiftui-pro/assets/swiftui-pro-icon.svg
+  - .agents/skills/swiftui-pro/references/accessibility.md
+  - .agents/skills/swiftui-pro/references/api.md
+  - .agents/skills/swiftui-pro/references/data.md
+  - .agents/skills/swiftui-pro/references/design.md
+  - .agents/skills/swiftui-pro/references/hygiene.md
+  - .agents/skills/swiftui-pro/references/localization.md
+  - .agents/skills/swiftui-pro/references/navigation.md
+  - .agents/skills/swiftui-pro/references/performance-plus.md
+  - .agents/skills/swiftui-pro/references/performance.md
+  - .agents/skills/swiftui-pro/references/resizability.md
+  - .agents/skills/swiftui-pro/references/swift.md
+  - .agents/skills/swiftui-pro/references/views.md
+  deployed_file_hashes:
+    .agents/skills/swiftui-pro/LICENSE: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
+    .agents/skills/swiftui-pro/SKILL.md: sha256:fc62139e262bd364cbbcab9b9f97557cd3fd6d2d4f73c4fab039d562fc324643
+    .agents/skills/swiftui-pro/agents/openai.yaml: sha256:429c39b71692d4dc86e2b616f28b7e7f56207361c5b5a0b06df4746af96d5fa3
+    .agents/skills/swiftui-pro/assets/swiftui-pro-icon.png: sha256:51a28a5834e6d251def3c562712db1e2124e6d67b62be89fe4c1ca628e37a70a
+    .agents/skills/swiftui-pro/assets/swiftui-pro-icon.svg: sha256:a15c0a3030f08ffcc442aed9b7f2f19840877e43f980ad4dfdef515e9aeb44b3
+    .agents/skills/swiftui-pro/references/accessibility.md: sha256:46f865d3e5cf63f4394e8d55628e06897bf9eec7409d69331931225eac69a198
+    .agents/skills/swiftui-pro/references/api.md: sha256:a12fb9dcc02093b560dd82e2882556d7cd2d6652edc0006eb24ebc14bc669448
+    .agents/skills/swiftui-pro/references/data.md: sha256:291a81fb0fc1befebcafe576d9e35cc8d47bb4d63baef50f6f2292300be797dd
+    .agents/skills/swiftui-pro/references/design.md: sha256:8f2d05504e4d51dc2a0d91d2b0a580457cd98d0145826e4c0bc35dc67f006793
+    .agents/skills/swiftui-pro/references/hygiene.md: sha256:18c945717a842912180c218c10e7e76b496c11a87a77c1be65a504c70850877c
+    .agents/skills/swiftui-pro/references/localization.md: sha256:54f1d15bd8f726409a72622964005d2732148da614dc022bf7729f68ab246571
+    .agents/skills/swiftui-pro/references/navigation.md: sha256:24b95bbaa01970ff0a6625a7a201d81191ab1746dbe317bd7583d1f3f7ce53a3
+    .agents/skills/swiftui-pro/references/performance-plus.md: sha256:b7c77ac07548f9f8b6440daab607b0fa22796fc498ca644e3fa9890ee7912068
+    .agents/skills/swiftui-pro/references/performance.md: sha256:82ee00cc74109dd7e6296dc872d410742a8584ad6d0bc4ae902fad0220392e38
+    .agents/skills/swiftui-pro/references/resizability.md: sha256:2e1a88a675fe2eaf326fb1a50fafae4123725e6b4278c311c875335651a60226
+    .agents/skills/swiftui-pro/references/swift.md: sha256:fda431d8d1cc58bddc38a2075d5818b3d41df9b69886e8b1f6e0370ba1f9f773
+    .agents/skills/swiftui-pro/references/views.md: sha256:e9c7ce9ef17e23b713a2565ee9d7f5db11e036adbae1a6b9c14d21d8b3dddce7
+  content_hash: sha256:771a8656c998b7c7bc37963d2ebc30f939f45d7917e72400f81ccd1df595d87b
+  carried_licenses:
+  - path: LICENSE
+    source: LICENSE
+    hash: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
+deployments:
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:715b6d3497d5ca30f4751463091b8ff7cd85dc51e375d2176aea8f0867081c38
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/authentication.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:96a12c079ca1bcda3e06da3c2171c4dc897f185116b65c5953003524e582330e
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/commands.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:d37472aba7fc3ffc7e5fe7c6ceda2bfaf760bb6a5f39411d3537fad4c07d55c6
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/dependencies.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:677279e74665bcffc8fe4a5bc9290a38bd26a24534952ef1aa5e01858fc0de32
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/governance.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:7489356994e05d984348af6b37504b40971a80dcccde12c25cf2398926ea1aeb
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/installation.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:a8d33ceeb41626d809ed07e0cdd16ba74f0510b5842bab64b7f6dc3e3fdb1057
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/package-authoring.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:3aa51296a70099a81feed7447ac21bc82dceb79b8bdf18ce547fd4667691ea29
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/troubleshooting.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:dae797b388dcb591c2276e8d2c07aee2a5313c5188aae15c4486bb7fee4065cd
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apm-usage/workflow.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:1bbb710fa9fd710aa2258aea52f6d905c6a2b3d366a1fdc723b028b4bfd2dbae
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/git-commit
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/git-commit
+  active_owner: github/awesome-copilot/skills/git-commit
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/git-commit/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/git-commit
+  active_owner: github/awesome-copilot/skills/git-commit
+  content_hash: sha256:e32449d23085399adc1222f7a17408b730550258e51627c153cb108ca9955823
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/git-commit/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - github/awesome-copilot/skills/git-commit
+  active_owner: github/awesome-copilot/skills/git-commit
+  content_hash: sha256:a95bb7e996516a1c73df745b0598ba650d7161eb1da559712e8fabb5dacb7c5c
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:fc62139e262bd364cbbcab9b9f97557cd3fd6d2d4f73c4fab039d562fc324643
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:429c39b71692d4dc86e2b616f28b7e7f56207361c5b5a0b06df4746af96d5fa3
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/assets/swiftui-pro-icon.png
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:51a28a5834e6d251def3c562712db1e2124e6d67b62be89fe4c1ca628e37a70a
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/assets/swiftui-pro-icon.svg
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:a15c0a3030f08ffcc442aed9b7f2f19840877e43f980ad4dfdef515e9aeb44b3
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/accessibility.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:46f865d3e5cf63f4394e8d55628e06897bf9eec7409d69331931225eac69a198
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/api.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:a12fb9dcc02093b560dd82e2882556d7cd2d6652edc0006eb24ebc14bc669448
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/data.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:291a81fb0fc1befebcafe576d9e35cc8d47bb4d63baef50f6f2292300be797dd
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/design.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:8f2d05504e4d51dc2a0d91d2b0a580457cd98d0145826e4c0bc35dc67f006793
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/hygiene.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:18c945717a842912180c218c10e7e76b496c11a87a77c1be65a504c70850877c
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/localization.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:54f1d15bd8f726409a72622964005d2732148da614dc022bf7729f68ab246571
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/navigation.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:24b95bbaa01970ff0a6625a7a201d81191ab1746dbe317bd7583d1f3f7ce53a3
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/performance-plus.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:b7c77ac07548f9f8b6440daab607b0fa22796fc498ca644e3fa9890ee7912068
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/performance.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:82ee00cc74109dd7e6296dc872d410742a8584ad6d0bc4ae902fad0220392e38
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/resizability.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:2e1a88a675fe2eaf326fb1a50fafae4123725e6b4278c311c875335651a60226
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/swift.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:fda431d8d1cc58bddc38a2075d5818b3d41df9b69886e8b1f6e0370ba1f9f773
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-pro/references/views.md
+  runtime: null
+  scope: project
+  owners:
+  - twostraws/swiftui-agent-skill/swiftui-pro
+  active_owner: twostraws/swiftui-agent-skill/swiftui-pro
+  content_hash: sha256:e9c7ce9ef17e23b713a2565ee9d7f5db11e036adbae1a6b9c14d21d8b3dddce7
+- kind: project-relative
+  target: copilot
+  value: .github/agents/apm-expert.agent.md
+  runtime: null
+  scope: project
+  owners:
+  - microsoft/apm/packages/apm-guide
+  active_owner: microsoft/apm/packages/apm-guide
+  content_hash: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
