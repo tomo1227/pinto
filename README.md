@@ -60,6 +60,9 @@ iOS 17 以上の iPhone 向けの SwiftUI + UIKit アプリです。サーバー
 ## 検証
 
 Xcode の **Product → Test（⌘U）** で `PintoTests` を実行できます。保存・再読み込み・破損データ、ルートの整合性、Undo / Redo、ジェスチャーの履歴、輪郭検出、PNG の寸法と線のスケールなどをテストします。
+自動保存テストでは待機を制御し、実時間で 0.5 秒待たずにキャンセルや即時保存との順序を検証します。
+
+ローカルの `make test` はビルドとテストを続けて実行します。CI ではシミュレータの起動を先に始め、`make build-ios-tests` でビルドしてから、同じシミュレータが起動したことを確認して `make test-ios-without-building` を実行します。CI ログではビルド、起動待ち、テスト実行を別々に確認できます。
 
 リポジトリルートからのビルド例:
 
@@ -76,6 +79,10 @@ xcodebuild -project Pinto.xcodeproj -scheme Pinto \
 ### Copilot で SwiftUI をレビューする
 
 `make apm_ci` で Copilot 用のスキルを復元できます。Copilot Chat では、たとえば「`swiftui-performance-audit` を使って、写真を取り込んだ後に編集画面の描画が重くなる原因を調べて。コードはまだ変更しないで」と依頼できます。コードだけで原因を絞れない場合は、Instruments で計測する手順も提案します。
+
+### Copilot で Swift Testing をレビューする
+
+Copilot Chat で「`swift-testing-pro` を使って、Pinto のテストをレビューして」と依頼できます。このスキルも `make apm_ci` で復元できます。
 
 ビューの構成を整理したいときは、「`swiftui-view-refactor` を使って、編集画面をどうサブビューに分割するか提案して。挙動は変えず、コードはまだ変更しないで」と依頼できます。
 

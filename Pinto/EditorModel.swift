@@ -135,9 +135,12 @@ final class EditorModel: ObservableObject {
     try await task.value
   }
 
-  func autosave(to store: WallStore) async throws {
+  func autosave(
+    to store: WallStore,
+    wait: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+  ) async throws {
     guard dirty else { return }
-    try await Task.sleep(for: .milliseconds(500))
+    try await wait(.milliseconds(500))
     try Task.checkCancellation()
     if dirty { try await save(to: store) }
   }
