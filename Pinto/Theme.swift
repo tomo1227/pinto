@@ -8,7 +8,7 @@ enum Theme {
   /// チョークの白。壁の上に置く前景・文字に使う。
   static let chalk = Color(light: UIColor(hex: "#FFFEFA"), dark: UIColor(hex: "#FFFEFA"))
   /// 壁の影になる岩。サムネイルの余白や強い背景に使う。
-  static let shadowRock = Color(light: UIColor(hex: "#2A2F2C"), dark: UIColor(hex: "#1B1E1C"))
+  static let shadowRock = Color(light: UIColor(hex: "#282C33"), dark: UIColor(hex: "#181C22"))
   /// テープの黄。アクセントの強調に使う。
   static let tapeYellow = Color(light: UIColor(hex: "#F2D13D"), dark: UIColor(hex: "#E3C22E"))
   /// ホールドの赤。破壊的な操作に使う。
