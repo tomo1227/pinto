@@ -17,11 +17,16 @@ struct EditorDock: View {
     VStack(spacing: 0) {
       if activeToolHasEditingControls && editorDockExpanded {
         EditorToolControlsPanel(model: model, mode: .dock)
+          .padding(.horizontal, 12)
       }
-      Divider()
       tools
     }
     .background(.bar)
+    .overlay(alignment: .top) {
+      Rectangle()
+        .fill(Theme.shadowRock.opacity(0.25))
+        .frame(height: 1 / 3)
+    }
   }
 
   private func setEditorDockExpanded(_ expanded: Bool) {
@@ -31,46 +36,63 @@ struct EditorDock: View {
   }
 
   private var tools: some View {
-    HStack(spacing: 0) {
+    HStack(spacing: 12) {
       ForEach(EditorTool.allCases, id: \.self) { tool in
-        let label = VStack(spacing: 4) {
-          Image(systemName: tool.icon).font(.title3)
-          Text(tool.title).font(.caption2)
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 10)
-        .foregroundStyle(model.tool == tool ? Color.accentColor : .secondary)
-        .background(model.tool == tool ? Color.accentColor.opacity(0.1) : .clear)
-        .accessibilityAddTraits(model.tool == tool ? .isSelected : [])
-
-        if tool == .eraser {
-          label
-            .contentShape(Rectangle())
-            .gesture(
-              LongPressGesture(minimumDuration: 0.6)
-                .exclusively(before: TapGesture())
-                .onEnded { action in
-                  switch action {
-                  case .first: requestReset()
-                  case .second: selectTool(tool)
-                  }
-                }
-            )
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(tool.title)
-            .accessibilityHint("長押しで編集を全リセット")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { selectTool(tool) }
-            .accessibilityAction(named: Text("編集を全リセット")) {
-              requestReset()
-            }
-        } else {
-          Button {
-            selectTool(tool)
-          } label: {
-            label
-          }
-        }
+        toolButton(tool)
       }
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.horizontal, 10)
+    .padding(.top, 12)
+    .padding(.bottom, 12)
+  }
+
+  @ViewBuilder
+  private func toolButton(_ tool: EditorTool) -> some View {
+    let isSelected = model.tool == tool
+    if tool == .eraser {
+      Image(systemName: tool.icon)
+        .font(.system(size: 19, weight: .medium))
+        .frame(width: 44, height: 44)
+        .foregroundStyle(isSelected ? Theme.chalk : Theme.shadowRock)
+        .background(
+          Circle().fill(isSelected ? Theme.holdRed : Theme.shadowRock.opacity(0.06))
+        )
+        .contentShape(Circle())
+        .gesture(
+          LongPressGesture(minimumDuration: 0.6)
+            .exclusively(before: TapGesture())
+            .onEnded { action in
+              switch action {
+              case .first: requestReset()
+              case .second: selectTool(tool)
+              }
+            }
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(tool.title)
+        .accessibilityHint("長押しで編集を全リセット")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { selectTool(tool) }
+        .accessibilityAction(named: Text("編集を全リセット")) {
+          requestReset()
+        }
+    } else {
+      Button {
+        selectTool(tool)
+      } label: {
+        Image(systemName: tool.icon)
+          .font(.system(size: 19, weight: .medium))
+          .frame(width: 44, height: 44)
+          .foregroundStyle(isSelected ? Theme.chalk : Theme.shadowRock)
+          .background(
+            Circle().fill(isSelected ? Theme.accentBlue : Theme.shadowRock.opacity(0.06))
+          )
+          .contentShape(Circle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(tool.title)
+      .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
   }
 

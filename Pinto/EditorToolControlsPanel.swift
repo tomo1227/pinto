@@ -47,11 +47,13 @@ struct EditorToolControlsPanel: View {
       }
       HStack {
         Spacer()
-        Button(role: .destructive) {
+        Button {
           model.removeSelection()
         } label: {
           Label("削除", systemImage: "trash")
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(model.selection == nil ? Color.secondary.opacity(0.4) : Theme.holdRed)
         .disabled(model.selection == nil)
       }
     }
@@ -174,13 +176,13 @@ struct EditorToolControlsPanel: View {
                   .padding(.vertical, 10)
                   .background(
                     model.activeStyle.fontFamily == family
-                      ? Color.accentColor.opacity(0.25) : Color.secondary.opacity(0.12),
+                      ? Theme.accentBlue.opacity(0.22) : Theme.shadowRock.opacity(0.07),
                     in: Capsule()
                   )
                   .overlay(
                     Capsule().strokeBorder(
-                      model.activeStyle.fontFamily == family ? Color.accentColor : .clear,
-                      lineWidth: 2
+                      model.activeStyle.fontFamily == family ? Theme.accentBlue : .clear,
+                      lineWidth: 1.5
                     ))
               }
               .buttonStyle(.plain)

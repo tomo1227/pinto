@@ -63,9 +63,11 @@ struct LibraryWallCard: View {
 
   private var details: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text(document.content.name).font(.headline).lineLimit(2)
-      if !document.content.grade.isEmpty {
-        Text(document.content.grade).font(.subheadline)
+      Text(document.content.name).font(Theme.roundedHeadline(16)).lineLimit(2)
+      if grid {
+        if !document.content.grade.isEmpty {
+          Text(document.content.grade).font(.subheadline)
+        }
       }
       if !document.content.gymName.isEmpty {
         Text(document.content.gymName).font(.caption).foregroundStyle(.secondary)

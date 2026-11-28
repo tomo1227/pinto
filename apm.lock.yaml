@@ -1,8 +1,25 @@
 lockfile_version: '4'
-apm_version: 0.38.1
+apm_version: 0.39.1
 manifest_targets:
 - copilot
 dependencies:
+- repo_url: anthropics/skills
+  name: frontend-design
+  host: github.com
+  resolved_commit: e4bb5d960d87126ff3b3a8af1a104b7db67560ba
+  resolved_ref: e4bb5d960d87126ff3b3a8af1a104b7db67560ba
+  version: unknown
+  virtual_path: skills/frontend-design
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/frontend-design
+  - .agents/skills/frontend-design/LICENSE.txt
+  - .agents/skills/frontend-design/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/frontend-design/LICENSE.txt: sha256:0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+    .agents/skills/frontend-design/SKILL.md: sha256:d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3
+  content_hash: sha256:d43ace63d22e3502ab5c53b63138dafd0431ed5fd2fa63320285c8167ab27de6
 - repo_url: dimillian/skills
   materialization_repo_url: Dimillian/Skills
   name: swiftui-performance-audit
@@ -67,6 +84,233 @@ dependencies:
   - path: LICENSE
     source: LICENSE
     hash: sha256:df17aae89ce4705d0a6e5f7b46eeea3b9023967ecad948f8779b47039eb55a8b
+- repo_url: emilkowalski/skills
+  name: skills
+  host: github.com
+  resolved_commit: 64eb3deb9a5fbfa041faf783e0bc3fd635872e9c
+  resolved_ref: 64eb3deb9a5fbfa041faf783e0bc3fd635872e9c
+  version: unknown
+  package_type: skill_bundle
+  deployed_files:
+  - .agents/skills/animate
+  - .agents/skills/animate-expo
+  - .agents/skills/animate-expo/LICENSE
+  - .agents/skills/animate-expo/RECIPES.md
+  - .agents/skills/animate-expo/SKILL.md
+  - .agents/skills/animate/LICENSE
+  - .agents/skills/animate/RECIPES.md
+  - .agents/skills/animate/SKILL.md
+  - .agents/skills/animation-performance
+  - .agents/skills/animation-performance/LICENSE
+  - .agents/skills/animation-performance/SKILL.md
+  - .agents/skills/animation-vocabulary
+  - .agents/skills/animation-vocabulary/LICENSE
+  - .agents/skills/animation-vocabulary/SKILL.md
+  - .agents/skills/apple-design
+  - .agents/skills/apple-design/LICENSE
+  - .agents/skills/apple-design/SKILL.md
+  - .agents/skills/ask-emil
+  - .agents/skills/ask-emil/LICENSE
+  - .agents/skills/ask-emil/SKILL.md
+  - .agents/skills/ask-sonner
+  - .agents/skills/ask-sonner/API.md
+  - .agents/skills/ask-sonner/LICENSE
+  - .agents/skills/ask-sonner/SKILL.md
+  - .agents/skills/break-ui
+  - .agents/skills/break-ui/CATALOG.md
+  - .agents/skills/break-ui/LICENSE
+  - .agents/skills/break-ui/SKILL.md
+  - .agents/skills/choreograph
+  - .agents/skills/choreograph/LICENSE
+  - .agents/skills/choreograph/RECIPES.md
+  - .agents/skills/choreograph/SKILL.md
+  - .agents/skills/emil-design-eng
+  - .agents/skills/emil-design-eng/LICENSE
+  - .agents/skills/emil-design-eng/SKILL.md
+  - .agents/skills/find-animation-opportunities
+  - .agents/skills/find-animation-opportunities/LICENSE
+  - .agents/skills/find-animation-opportunities/SKILL.md
+  - .agents/skills/gestures
+  - .agents/skills/gestures/LICENSE
+  - .agents/skills/gestures/SKILL.md
+  - .agents/skills/improve-animations
+  - .agents/skills/improve-animations/AUDIT.md
+  - .agents/skills/improve-animations/LICENSE
+  - .agents/skills/improve-animations/PLAN-TEMPLATE.md
+  - .agents/skills/improve-animations/SKILL.md
+  - .agents/skills/learn-taste
+  - .agents/skills/learn-taste/LICENSE
+  - .agents/skills/learn-taste/SKILL.md
+  - .agents/skills/mobile-native
+  - .agents/skills/mobile-native/LICENSE
+  - .agents/skills/mobile-native/SKILL.md
+  - .agents/skills/pick-ui-library
+  - .agents/skills/pick-ui-library/LICENSE
+  - .agents/skills/pick-ui-library/SKILL.md
+  - .agents/skills/prototype
+  - .agents/skills/prototype/LICENSE
+  - .agents/skills/prototype/PICKER.md
+  - .agents/skills/prototype/SKILL.md
+  - .agents/skills/remove-animations
+  - .agents/skills/remove-animations/LICENSE
+  - .agents/skills/remove-animations/SKILL.md
+  - .agents/skills/review-animations
+  - .agents/skills/review-animations/LICENSE
+  - .agents/skills/review-animations/SKILL.md
+  - .agents/skills/review-animations/STANDARDS.md
+  - .agents/skills/write-swift
+  - .agents/skills/write-swift/LICENSE
+  - .agents/skills/write-swift/SKILL.md
+  deployed_file_hashes:
+    .agents/skills/animate-expo/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/animate-expo/RECIPES.md: sha256:31373774c7eef1d3d9f366b638fa2b722f9c730a98e292cda1aa7df2c2b39a56
+    .agents/skills/animate-expo/SKILL.md: sha256:67e5d2ebe23b3edf52ce9d399532f2ead2bd7eff127919dd1c3bbe489b04dd4d
+    .agents/skills/animate/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/animate/RECIPES.md: sha256:129cddcba35dedacd307ef2de7f2c71e6d23efd9c1756dde44168241207581f9
+    .agents/skills/animate/SKILL.md: sha256:4ce49ea635ec175b45552bae070ea07b2d6aa5367047994250c1c095b71c8585
+    .agents/skills/animation-performance/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/animation-performance/SKILL.md: sha256:6481e7a611b54c0d1d229ac3ac516c05648e63aa79de88c0a1bdc5ae2666ab80
+    .agents/skills/animation-vocabulary/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/animation-vocabulary/SKILL.md: sha256:42df33f1583483cc441fcd76693b3399148602705d2e9b8a26665d6b1951cd0b
+    .agents/skills/apple-design/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/apple-design/SKILL.md: sha256:7fbacf928637e136da6d475358d0639667a3637ba772f03f8e815bb4c0b86946
+    .agents/skills/ask-emil/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/ask-emil/SKILL.md: sha256:b14d6fec27af1ce59e48c5444520c08abc3ae90e93e1843e19ca382512ac6233
+    .agents/skills/ask-sonner/API.md: sha256:0e0c44a4a28c5f2ceaefc5fb215bf75febe29166066dd502fc7a47ef390c0593
+    .agents/skills/ask-sonner/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/ask-sonner/SKILL.md: sha256:4350ebfef0437875de80cc989059900b21ad621ea09f4709cc2917e7dee82d46
+    .agents/skills/break-ui/CATALOG.md: sha256:80522dcc81039bf317bce5adcb7b499e9d9da3c98952abb4dfb34ba6c1c32360
+    .agents/skills/break-ui/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/break-ui/SKILL.md: sha256:fb126d176f3b6bf7dfe71f2ae6620ab3dd81e6282c672a1801720055addfce18
+    .agents/skills/choreograph/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/choreograph/RECIPES.md: sha256:c256ff760f42d905b19f97becd2c0caaf40a95b41b49770c973281374c9600cf
+    .agents/skills/choreograph/SKILL.md: sha256:0a6802bb2fd5a3993842d48332b8ab56ae5bab369ffa8700f85f6fcff56b8478
+    .agents/skills/emil-design-eng/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/emil-design-eng/SKILL.md: sha256:cdbfe467e6c9a4940c3a19e795cecf1ba659378d7412e06c245c6ae49da47da6
+    .agents/skills/find-animation-opportunities/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/find-animation-opportunities/SKILL.md: sha256:331479e0d867f90d637ef3ef1bdbbd38498d144ab493442afdfbc138abc751b4
+    .agents/skills/gestures/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/gestures/SKILL.md: sha256:1928c86cce924a2a178ddd156ba5ed0f184665a1f95b549724ffb5ae703e994f
+    .agents/skills/improve-animations/AUDIT.md: sha256:90312d201cd8ce7dc8add4147570cd47cdb6c901e9980951d9f7b4851b738524
+    .agents/skills/improve-animations/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/improve-animations/PLAN-TEMPLATE.md: sha256:e25250c49937e183cca5bc42a057d9f5407a0cacd30d0aad1a4b6d59d7b2a844
+    .agents/skills/improve-animations/SKILL.md: sha256:632be90e04261192112571b05abd5708fbb846808a4a7780717ee206daa6c6f6
+    .agents/skills/learn-taste/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/learn-taste/SKILL.md: sha256:d624b8cd475eec24c5dc3f49b0380b56c8dab8399df11b92d7c9685aa8d4d33e
+    .agents/skills/mobile-native/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/mobile-native/SKILL.md: sha256:705e267bc47ea61e4c6f94d121efeebdb994055f482673b8a72f4a0dd62f1968
+    .agents/skills/pick-ui-library/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/pick-ui-library/SKILL.md: sha256:db10dc6b2a0c340d873f69e35140ceb3c929e15664b33fcacd1ecb25c5574df3
+    .agents/skills/prototype/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/prototype/PICKER.md: sha256:6c1d7a8d1f34dbc83a2e2068cd49f42107f1d02fb4e80369bb4e978d1e026b8d
+    .agents/skills/prototype/SKILL.md: sha256:30def86c5a5a0794a954b2a046d24c847c7129f316d79892abff73d54d79adc0
+    .agents/skills/remove-animations/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/remove-animations/SKILL.md: sha256:228d98a3d05637f2ff8fc2d1c2bd88c14783c8c901105cac39a7ae24a4d3e408
+    .agents/skills/review-animations/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/review-animations/SKILL.md: sha256:9ceb5072ce5d5e51b07efa60817c66d06fc6492b7900b44dff5ff0f8f7bcf188
+    .agents/skills/review-animations/STANDARDS.md: sha256:2d2c28e9fe98dd55a879bafa1684827c812eb31f6b63fe578141d3978ddc664e
+    .agents/skills/write-swift/LICENSE: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+    .agents/skills/write-swift/SKILL.md: sha256:ad8f3af70b627c165ecd73ecdba49449e35301dd845c397cf813f06582bbdac2
+  content_hash: sha256:59d8abda3ccdb759a2068a9c3963429c97ecf68382ffcd39676b267334f7db5f
+  carried_licenses:
+  - path: skills/animate-expo/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/animate/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/animation-performance/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/animation-vocabulary/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/apple-design/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/ask-emil/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/ask-sonner/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/break-ui/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/choreograph/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/emil-design-eng/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/find-animation-opportunities/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/gestures/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/improve-animations/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/learn-taste/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/mobile-native/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/pick-ui-library/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/prototype/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/remove-animations/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/review-animations/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+  - path: skills/write-swift/LICENSE
+    source: LICENSE
+    hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- repo_url: flowritescode/fwc-swiftui-skills
+  materialization_repo_url: FloWritesCode/fwc-swiftui-skills
+  name: fwc-swiftui-skills
+  host: github.com
+  resolved_commit: 3a6c74be7bf9cbc6b19c2025922f6b364542c000
+  resolved_ref: 3a6c74be7bf9cbc6b19c2025922f6b364542c000
+  version: unknown
+  package_type: skill_bundle
+  deployed_files:
+  - .agents/skills/swiftui-iphone-duo
+  - .agents/skills/swiftui-iphone-duo/LICENSE
+  - .agents/skills/swiftui-iphone-duo/SKILL.md
+  - .agents/skills/swiftui-iphone-duo/reference.md
+  - .agents/skills/swiftui-liquid-glass
+  - .agents/skills/swiftui-liquid-glass/LICENSE
+  - .agents/skills/swiftui-liquid-glass/SKILL.md
+  - .agents/skills/swiftui-liquid-glass/reference.md
+  deployed_file_hashes:
+    .agents/skills/swiftui-iphone-duo/LICENSE: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+    .agents/skills/swiftui-iphone-duo/SKILL.md: sha256:f0eafc60de6d3d0e5fe8fc26efd9840268f7c9a380e1b89b43349c74472cc7e6
+    .agents/skills/swiftui-iphone-duo/reference.md: sha256:87a4615dd2698e324e7767ff52cd891071be553d920d53dd1f44a03337f63955
+    .agents/skills/swiftui-liquid-glass/LICENSE: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+    .agents/skills/swiftui-liquid-glass/SKILL.md: sha256:6709806c1c76aa238434dd3a15b2d5430005b6f077830372966debc817542d41
+    .agents/skills/swiftui-liquid-glass/reference.md: sha256:97376366dadeb113e1a7bd5dd0e2d65c7af4ecd68f865b7102a259980c3e466c
+  content_hash: sha256:e741c867c907e8407662e66a0f1950efe864d1e4372ac2332981b10940c482a8
+  carried_licenses:
+  - path: .agents/skills/swiftui-iphone-duo/LICENSE
+    source: LICENSE
+    hash: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+  - path: .agents/skills/swiftui-liquid-glass/LICENSE
+    source: LICENSE
+    hash: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+  - path: skills/swiftui-iphone-duo/LICENSE
+    source: LICENSE
+    hash: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+  - path: skills/swiftui-liquid-glass/LICENSE
+    source: LICENSE
+    hash: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
 - repo_url: github/awesome-copilot
   name: git-commit
   host: github.com
@@ -121,7 +365,7 @@ dependencies:
     .agents/skills/apm-usage/package-authoring.md: sha256:3aa51296a70099a81feed7447ac21bc82dceb79b8bdf18ce547fd4667691ea29
     .agents/skills/apm-usage/troubleshooting.md: sha256:dae797b388dcb591c2276e8d2c07aee2a5313c5188aae15c4486bb7fee4065cd
     .agents/skills/apm-usage/workflow.md: sha256:1bbb710fa9fd710aa2258aea52f6d905c6a2b3d366a1fdc723b028b4bfd2dbae
-    .github/agents/apm-expert.agent.md: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+    .github/agents/apm-expert.agent.md: sha256:aecc7ce509b98322b8391b96f813234b6584c4889f5b6da8c5e9f230f07f643e
   content_hash: sha256:48d1efb200892808001a09321e78e8f6f02696738dd1b603ada5a7d85df0b893
   declared_license: Apache-2.0
   carried_licenses:
@@ -184,6 +428,132 @@ dependencies:
     source: LICENSE
     hash: sha256:b9b479e6df9f27cbc8e7abe91f771b396f3f0fa114d070c7c0b02c820c6b74dc
 deployments:
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate-expo
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate-expo/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate-expo/RECIPES.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:31373774c7eef1d3d9f366b638fa2b722f9c730a98e292cda1aa7df2c2b39a56
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate-expo/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:67e5d2ebe23b3edf52ce9d399532f2ead2bd7eff127919dd1c3bbe489b04dd4d
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate/RECIPES.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:129cddcba35dedacd307ef2de7f2c71e6d23efd9c1756dde44168241207581f9
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animate/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ce49ea635ec175b45552bae070ea07b2d6aa5367047994250c1c095b71c8585
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animation-performance
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animation-performance/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animation-performance/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:6481e7a611b54c0d1d229ac3ac516c05648e63aa79de88c0a1bdc5ae2666ab80
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animation-vocabulary
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animation-vocabulary/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/animation-vocabulary/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:42df33f1583483cc441fcd76693b3399148602705d2e9b8a26665d6b1951cd0b
 - kind: project-relative
   target: copilot
   value: .agents/skills/apm-usage
@@ -285,6 +655,276 @@ deployments:
   content_hash: sha256:1bbb710fa9fd710aa2258aea52f6d905c6a2b3d366a1fdc723b028b4bfd2dbae
 - kind: project-relative
   target: copilot
+  value: .agents/skills/apple-design
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apple-design/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/apple-design/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:7fbacf928637e136da6d475358d0639667a3637ba772f03f8e815bb4c0b86946
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-emil
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-emil/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-emil/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:b14d6fec27af1ce59e48c5444520c08abc3ae90e93e1843e19ca382512ac6233
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-sonner
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-sonner/API.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:0e0c44a4a28c5f2ceaefc5fb215bf75febe29166066dd502fc7a47ef390c0593
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-sonner/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/ask-sonner/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4350ebfef0437875de80cc989059900b21ad621ea09f4709cc2917e7dee82d46
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/break-ui
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/break-ui/CATALOG.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:80522dcc81039bf317bce5adcb7b499e9d9da3c98952abb4dfb34ba6c1c32360
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/break-ui/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/break-ui/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:fb126d176f3b6bf7dfe71f2ae6620ab3dd81e6282c672a1801720055addfce18
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/choreograph
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/choreograph/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/choreograph/RECIPES.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:c256ff760f42d905b19f97becd2c0caaf40a95b41b49770c973281374c9600cf
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/choreograph/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:0a6802bb2fd5a3993842d48332b8ab56ae5bab369ffa8700f85f6fcff56b8478
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/emil-design-eng
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/emil-design-eng/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/emil-design-eng/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:cdbfe467e6c9a4940c3a19e795cecf1ba659378d7412e06c245c6ae49da47da6
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/find-animation-opportunities
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/find-animation-opportunities/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/find-animation-opportunities/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:331479e0d867f90d637ef3ef1bdbbd38498d144ab493442afdfbc138abc751b4
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/frontend-design
+  runtime: null
+  scope: project
+  owners:
+  - anthropics/skills/skills/frontend-design
+  active_owner: anthropics/skills/skills/frontend-design
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/frontend-design/LICENSE.txt
+  runtime: null
+  scope: project
+  owners:
+  - anthropics/skills/skills/frontend-design
+  active_owner: anthropics/skills/skills/frontend-design
+  content_hash: sha256:0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/frontend-design/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - anthropics/skills/skills/frontend-design
+  active_owner: anthropics/skills/skills/frontend-design
+  content_hash: sha256:d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/gestures
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/gestures/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/gestures/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:1928c86cce924a2a178ddd156ba5ed0f184665a1f95b549724ffb5ae703e994f
+- kind: project-relative
+  target: copilot
   value: .agents/skills/git-commit
   runtime: null
   scope: project
@@ -310,6 +950,303 @@ deployments:
   - github/awesome-copilot/skills/git-commit
   active_owner: github/awesome-copilot/skills/git-commit
   content_hash: sha256:a95bb7e996516a1c73df745b0598ba650d7161eb1da559712e8fabb5dacb7c5c
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/improve-animations
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/improve-animations/AUDIT.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:90312d201cd8ce7dc8add4147570cd47cdb6c901e9980951d9f7b4851b738524
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/improve-animations/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/improve-animations/PLAN-TEMPLATE.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:e25250c49937e183cca5bc42a057d9f5407a0cacd30d0aad1a4b6d59d7b2a844
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/improve-animations/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:632be90e04261192112571b05abd5708fbb846808a4a7780717ee206daa6c6f6
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/learn-taste
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/learn-taste/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/learn-taste/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:d624b8cd475eec24c5dc3f49b0380b56c8dab8399df11b92d7c9685aa8d4d33e
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/mobile-native
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/mobile-native/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/mobile-native/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:705e267bc47ea61e4c6f94d121efeebdb994055f482673b8a72f4a0dd62f1968
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/pick-ui-library
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/pick-ui-library/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/pick-ui-library/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:db10dc6b2a0c340d873f69e35140ceb3c929e15664b33fcacd1ecb25c5574df3
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/prototype
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/prototype/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/prototype/PICKER.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:6c1d7a8d1f34dbc83a2e2068cd49f42107f1d02fb4e80369bb4e978d1e026b8d
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/prototype/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:30def86c5a5a0794a954b2a046d24c847c7129f316d79892abff73d54d79adc0
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/remove-animations
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/remove-animations/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/remove-animations/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:228d98a3d05637f2ff8fc2d1c2bd88c14783c8c901105cac39a7ae24a4d3e408
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/review-animations
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/review-animations/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/review-animations/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:9ceb5072ce5d5e51b07efa60817c66d06fc6492b7900b44dff5ff0f8f7bcf188
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/review-animations/STANDARDS.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:2d2c28e9fe98dd55a879bafa1684827c812eb31f6b63fe578141d3978ddc664e
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-iphone-duo
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-iphone-duo/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-iphone-duo/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: sha256:f0eafc60de6d3d0e5fe8fc26efd9840268f7c9a380e1b89b43349c74472cc7e6
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-iphone-duo/reference.md
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: sha256:87a4615dd2698e324e7767ff52cd891071be553d920d53dd1f44a03337f63955
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-liquid-glass
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-liquid-glass/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: sha256:8e9a399801eb1b940c906fb37ddc0df449463044f1fa43a848cb0eb32e49b283
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-liquid-glass/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: sha256:6709806c1c76aa238434dd3a15b2d5430005b6f077830372966debc817542d41
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/swiftui-liquid-glass/reference.md
+  runtime: null
+  scope: project
+  owners:
+  - flowritescode/fwc-swiftui-skills
+  active_owner: flowritescode/fwc-swiftui-skills
+  content_hash: sha256:97376366dadeb113e1a7bd5dd0e2d65c7af4ecd68f865b7102a259980c3e466c
 - kind: project-relative
   target: copilot
   value: .agents/skills/swiftui-performance-audit
@@ -618,10 +1555,37 @@ deployments:
   content_hash: sha256:8140a642ad16f33d416b987ddcb04755727d2409f535bd1c83ebc7ecfd438515
 - kind: project-relative
   target: copilot
+  value: .agents/skills/write-swift
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: null
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/write-swift/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:4ff5bdb7887ec1435c9cab0e8d1a7caee704d894d65c2a008ccc68b1cc2f260b
+- kind: project-relative
+  target: copilot
+  value: .agents/skills/write-swift/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - emilkowalski/skills
+  active_owner: emilkowalski/skills
+  content_hash: sha256:ad8f3af70b627c165ecd73ecdba49449e35301dd845c397cf813f06582bbdac2
+- kind: project-relative
+  target: copilot
   value: .github/agents/apm-expert.agent.md
   runtime: null
   scope: project
   owners:
   - microsoft/apm/packages/apm-guide
   active_owner: microsoft/apm/packages/apm-guide
-  content_hash: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+  content_hash: sha256:aecc7ce509b98322b8391b96f813234b6584c4889f5b6da8c5e9f230f07f643e

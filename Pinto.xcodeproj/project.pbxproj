@@ -33,6 +33,7 @@
 		DF4403CA36854EA3AA4866C5 /* EditorToolControlsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 819957F4BA42445EA0641D84 /* EditorToolControlsPanel.swift */; };
 		233909094157461EBF897BA6 /* EditorColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 818750F670DF4FB093305BD0 /* EditorColorPalette.swift */; };
 		FDEF1672F2D44270AC150BC5 /* EditorControlLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66AD6E5FBEFB4538A6459D0F /* EditorControlLabel.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* Theme.swift */; };
 		A107CAC78B614AD9AF313CE5 /* EditorSliderRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4415297065C244FFA975811A /* EditorSliderRow.swift */; };
 		1CBD99355FF94F14953E4ECF /* LibraryFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F55ACAD7174B93A4A3C0B6 /* LibraryFilterView.swift */; };
 		896502D7325F4F3492361A5F /* UserManual.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDD14BCCECA4FE889F01022 /* UserManual.swift */; };
@@ -85,6 +86,7 @@
 		819957F4BA42445EA0641D84 /* EditorToolControlsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorToolControlsPanel.swift; sourceTree = "<group>"; };
 		818750F670DF4FB093305BD0 /* EditorColorPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorColorPalette.swift; sourceTree = "<group>"; };
 		66AD6E5FBEFB4538A6459D0F /* EditorControlLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorControlLabel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		4415297065C244FFA975811A /* EditorSliderRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSliderRow.swift; sourceTree = "<group>"; };
 		B6F55ACAD7174B93A4A3C0B6 /* LibraryFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryFilterView.swift; sourceTree = "<group>"; };
 		DBDD14BCCECA4FE889F01022 /* UserManual.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManual.swift; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 				819957F4BA42445EA0641D84 /* EditorToolControlsPanel.swift */,
 				818750F670DF4FB093305BD0 /* EditorColorPalette.swift */,
 				66AD6E5FBEFB4538A6459D0F /* EditorControlLabel.swift */,
+				A1B2C3D4E5F60718293A4B5D /* Theme.swift */,
 				4415297065C244FFA975811A /* EditorSliderRow.swift */,
 				A20000000000000000000008 /* EditorView.swift */,
 				A20000000000000000000009 /* WallSettingsView.swift */,
@@ -305,6 +308,7 @@
 				DF4403CA36854EA3AA4866C5 /* EditorToolControlsPanel.swift in Sources */,
 				233909094157461EBF897BA6 /* EditorColorPalette.swift in Sources */,
 				FDEF1672F2D44270AC150BC5 /* EditorControlLabel.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* Theme.swift in Sources */,
 				A107CAC78B614AD9AF313CE5 /* EditorSliderRow.swift in Sources */,
 				A10000000000000000000008 /* EditorView.swift in Sources */,
 				A10000000000000000000009 /* WallSettingsView.swift in Sources */,

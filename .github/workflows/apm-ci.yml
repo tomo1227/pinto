@@ -18,7 +18,7 @@ jobs:
       - name: Setup APM
         uses: microsoft/apm-action@64544310be26812256300543071bfbaa8bc93aad # v1.12.0
         with:
-          apm-version: "0.38.1"
+          apm-version: "0.39.1"
           setup-only: "true"
       - name: Install APM dependencies
         run: make apm_ci

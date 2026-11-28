@@ -15,13 +15,15 @@ struct WallThumbnail: View {
       let key = WallThumbnailCache.Key(
         id: document.id, updatedAt: document.updatedAt, maxPixels: maxPixels)
       ZStack {
-        Color(uiColor: .systemGray5)
+        Color(Theme.shadowRock)
         if let (renderedKey, image) = rendered, renderedKey == key {
           Image(uiImage: image).resizable().scaledToFit()
         } else if failed {
           Label("画像を読み込めません", systemImage: "exclamationmark.triangle")
+            .foregroundStyle(Theme.chalk)
         } else {
           ProgressView()
+            .tint(Theme.chalk.opacity(0.7))
         }
       }
       .task(id: key) { await load(key) }

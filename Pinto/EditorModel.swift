@@ -17,7 +17,7 @@ enum EditorTool: String, CaseIterable {
   var icon: String {
     switch self {
     case .pan: return "hand.draw"
-    case .hold: return "circle"
+    case .hold: return "circle.dashed"
     case .route: return "point.topleft.down.to.point.bottomright.curvepath"
     case .text: return "textformat"
     case .eraser: return "eraser"

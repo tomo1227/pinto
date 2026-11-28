@@ -12,16 +12,21 @@ struct EditorColorPalette: View {
         EditorControlLabel(title: title)
       }
       ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
           ForEach(WallCatalog.colors, id: \.self) { hex in
             Button {
               onSelect(hex)
             } label: {
               Circle().fill(Color(uiColor: UIColor(hex: hex)))
-                .frame(width: 26, height: 26)
-                .overlay(Circle().strokeBorder(.gray, lineWidth: 0.5))
+                .frame(width: 28, height: 28)
+                .overlay(Circle().strokeBorder(Theme.shadowRock.opacity(0.2), lineWidth: 0.5))
                 .overlay(
-                  Circle().stroke(selectedColor == hex ? Color.accentColor : .clear, lineWidth: 2))
+                  Circle().stroke(selectedColor == hex ? Theme.chalk : .clear, lineWidth: 2)
+                )
+                .padding(2)
+                .background(
+                  Circle().stroke(selectedColor == hex ? Theme.accentBlue : .clear, lineWidth: 2)
+                )
             }
             .accessibilityLabel(
               (accessibilityTitle ?? title).map { "\($0): \(colorLabel(hex))" } ?? colorLabel(hex)

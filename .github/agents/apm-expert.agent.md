@@ -46,4 +46,4 @@ apm audit --ci                          # 5. validate in CI
 
 For detailed reference on commands, authentication, dependencies, governance,
 and package authoring, see the
-[APM Usage Skill](../../apm_modules/microsoft/apm/packages/apm-guide/.apm/skills/apm-usage/SKILL.md).
+[APM Usage Skill](../../.agents/skills/apm-usage/SKILL.md).

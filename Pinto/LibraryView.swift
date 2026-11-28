@@ -40,7 +40,7 @@ struct LibraryView: View {
           libraryGrid(filtered)
         }
       }
-      .background(Color(uiColor: .systemGroupedBackground))
+      .background(Theme.wall)
       .navigationTitle(selectedIDs.map { "\($0.count)件選択中" } ?? "")
       .navigationBarTitleDisplayMode(.inline)
       .searchable(text: $search, prompt: "課題名・グレード・タグ")
