@@ -4,7 +4,7 @@ import SwiftUI
 // 壁（Wall）を背景に、チョーク（Chalk）とホールド・テープの6色で構成する。
 enum Theme {
   /// 壁の下地。カード面や一覧の背景に使う。
-  static let wall = Color(light: UIColor(hex: "#E9E8E1"), dark: UIColor(hex: "#262926"))
+  static let wall = Color(light: UIColor(hex: "#E9E8E1"), dark: UIColor(hex: "#26292E"))
   /// チョークの白。壁の上に置く前景・文字に使う。
   static let chalk = Color(light: UIColor(hex: "#FFFEFA"), dark: UIColor(hex: "#FFFEFA"))
   /// 壁の影になる岩。サムネイルの余白や強い背景に使う。
