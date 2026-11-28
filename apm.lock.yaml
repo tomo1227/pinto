@@ -1,5 +1,5 @@
 lockfile_version: '4'
-apm_version: 0.38.1
+apm_version: 0.39.1
 manifest_targets:
 - copilot
 dependencies:
@@ -279,7 +279,7 @@ dependencies:
   host: github.com
   resolved_commit: 3a6c74be7bf9cbc6b19c2025922f6b364542c000
   resolved_ref: 3a6c74be7bf9cbc6b19c2025922f6b364542c000
-  version: 0.0.0
+  version: unknown
   package_type: skill_bundle
   deployed_files:
   - .agents/skills/swiftui-iphone-duo
@@ -365,7 +365,7 @@ dependencies:
     .agents/skills/apm-usage/package-authoring.md: sha256:3aa51296a70099a81feed7447ac21bc82dceb79b8bdf18ce547fd4667691ea29
     .agents/skills/apm-usage/troubleshooting.md: sha256:dae797b388dcb591c2276e8d2c07aee2a5313c5188aae15c4486bb7fee4065cd
     .agents/skills/apm-usage/workflow.md: sha256:1bbb710fa9fd710aa2258aea52f6d905c6a2b3d366a1fdc723b028b4bfd2dbae
-    .github/agents/apm-expert.agent.md: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+    .github/agents/apm-expert.agent.md: sha256:aecc7ce509b98322b8391b96f813234b6584c4889f5b6da8c5e9f230f07f643e
   content_hash: sha256:48d1efb200892808001a09321e78e8f6f02696738dd1b603ada5a7d85df0b893
   declared_license: Apache-2.0
   carried_licenses:
@@ -1588,4 +1588,4 @@ deployments:
   owners:
   - microsoft/apm/packages/apm-guide
   active_owner: microsoft/apm/packages/apm-guide
-  content_hash: sha256:f6cded3e7eef97ad8fff06208bcfd5a0beafb9cfe810f78e10294c90e16fd8ae
+  content_hash: sha256:aecc7ce509b98322b8391b96f813234b6584c4889f5b6da8c5e9f230f07f643e

@@ -19,6 +19,8 @@ dependencies:
     - github.com/openai/**
     - github.com/twostraws/swiftui-agent-skill/swiftui-pro
     - github.com/vercel-labs/**
+    - github.com/emilkowalski/skills
+    - github.com/FloWritesCode/fwc-swiftui-skills
   deny: []
   require_pinned_constraint: true
   max_depth: 20
