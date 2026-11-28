@@ -86,7 +86,7 @@ struct EditorDock: View {
           .frame(width: 44, height: 44)
           .foregroundStyle(isSelected ? Theme.chalk : Theme.shadowRock)
           .background(
-            Circle().fill(isSelected ? Theme.cragGreen : Theme.shadowRock.opacity(0.06))
+            Circle().fill(isSelected ? Theme.accentBlue : Theme.shadowRock.opacity(0.06))
           )
           .contentShape(Circle())
       }

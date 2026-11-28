@@ -24,7 +24,7 @@ struct EditorColorPalette: View {
                   Circle().stroke(selectedColor == hex ? Theme.chalk : .clear, lineWidth: 2))
                 .padding(2)
                 .background(
-                  Circle().stroke(selectedColor == hex ? Theme.cragGreen : .clear, lineWidth: 2)
+                  Circle().stroke(selectedColor == hex ? Theme.accentBlue : .clear, lineWidth: 2)
                 )
             }
             .accessibilityLabel(

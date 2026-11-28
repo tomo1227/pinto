@@ -13,8 +13,8 @@ enum Theme {
   static let tapeYellow = Color(light: UIColor(hex: "#F2D13D"), dark: UIColor(hex: "#E3C22E"))
   /// ホールドの赤。破壊的な操作に使う。
   static let holdRed = Color(light: UIColor(hex: "#E55050"), dark: UIColor(hex: "#E86868"))
-  /// 岩場の緑。アプリのアクセントカラー（AccentColor と同値）。
-  static let cragGreen = Color(light: UIColor(hex: "#2F7A68"), dark: UIColor(hex: "#5FB39E"))
+  /// 岩場の空の青。アプリのアクセントカラー（AccentColor と同値）。
+  static let accentBlue = Color(light: UIColor(hex: "#005CC8"), dark: UIColor(hex: "#58AAFF"))
 
   /// 壁にひかれたテープ風の帯。課題名やステータス表示の背景に使う。
   static var tape: some View { TapeTitleBackground() }

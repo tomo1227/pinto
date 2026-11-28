@@ -176,12 +176,12 @@ struct EditorToolControlsPanel: View {
                   .padding(.vertical, 10)
                   .background(
                     model.activeStyle.fontFamily == family
-                      ? Theme.cragGreen.opacity(0.22) : Theme.shadowRock.opacity(0.07),
+                      ? Theme.accentBlue.opacity(0.22) : Theme.shadowRock.opacity(0.07),
                     in: Capsule()
                   )
                   .overlay(
                     Capsule().strokeBorder(
-                      model.activeStyle.fontFamily == family ? Theme.cragGreen : .clear,
+                      model.activeStyle.fontFamily == family ? Theme.accentBlue : .clear,
                       lineWidth: 1.5
                     ))
               }
