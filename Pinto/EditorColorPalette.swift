@@ -21,7 +21,8 @@ struct EditorColorPalette: View {
                 .frame(width: 28, height: 28)
                 .overlay(Circle().strokeBorder(Theme.shadowRock.opacity(0.2), lineWidth: 0.5))
                 .overlay(
-                  Circle().stroke(selectedColor == hex ? Theme.chalk : .clear, lineWidth: 2))
+                  Circle().stroke(selectedColor == hex ? Theme.chalk : .clear, lineWidth: 2)
+                )
                 .padding(2)
                 .background(
                   Circle().stroke(selectedColor == hex ? Theme.accentBlue : .clear, lineWidth: 2)

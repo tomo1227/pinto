@@ -58,10 +58,11 @@ extension Theme {
       let notchDepth = height / 4
       cgContext.move(to: CGPoint(x: 0, y: notchDepth))
       cgContext.addLine(to: CGPoint(x: 0, y: height - notchDepth))
-      for index in 0 ..< notches {
+      for index in 0..<notches {
         let x = notchWidth * CGFloat(index)
         let midX = x + notchWidth / 2
-        cgContext.addLine(to: CGPoint(x: midX, y: index.isMultiple(of: 2) ? height - notchDepth : notchDepth))
+        cgContext.addLine(
+          to: CGPoint(x: midX, y: index.isMultiple(of: 2) ? height - notchDepth : notchDepth))
       }
       cgContext.addLine(to: CGPoint(x: width, y: notchDepth))
       cgContext.addLine(to: CGPoint(x: width, y: height - notchDepth))
@@ -74,9 +75,10 @@ extension Theme {
 
 extension Color {
   init(light: UIColor, dark: UIColor) {
-    self.init(uiColor: UIColor { traits in
-      traits.userInterfaceStyle == .dark ? dark : light
-    })
+    self.init(
+      uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark ? dark : light
+      })
   }
 }
 
