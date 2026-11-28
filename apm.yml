@@ -15,6 +15,9 @@ dependencies:
     - twostraws/SwiftUI-Agent-Skill/swiftui-pro#f2920b63995263f57b3e198674e89a602efba6d2
     - Dimillian/Skills/swiftui-performance-audit#05ba982bfeb0d77d3c97d4542b0ee15034d05f84
     - Dimillian/Skills/swiftui-view-refactor#05ba982bfeb0d77d3c97d4542b0ee15034d05f84
+    - anthropics/skills/skills/frontend-design#e4bb5d960d87126ff3b3a8af1a104b7db67560ba
+    - emilkowalski/skills#64eb3deb9a5fbfa041faf783e0bc3fd635872e9c
+    - FloWritesCode/fwc-swiftui-skills#3a6c74be7bf9cbc6b19c2025922f6b364542c000
   mcp: []
 # apm pack に含めるローカルコンテンツ
 includes: []
