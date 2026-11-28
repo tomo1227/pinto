@@ -22,11 +22,11 @@ struct EditorTextEntryOverlay<Controls: View>: View {
         Spacer()
         Button(action: finishTextEntry) {
           Text("完了")
-            .font(.headline)
-            .foregroundStyle(.primary)
+            .font(Theme.roundedHeadline(15))
+            .foregroundStyle(Theme.shadowRock)
             .padding(.horizontal, 18)
             .padding(.vertical, 10)
-            .background(.regularMaterial, in: Capsule())
+            .background(Theme.tapeYellow, in: Capsule())
         }
       }
       .padding(.horizontal, 20)

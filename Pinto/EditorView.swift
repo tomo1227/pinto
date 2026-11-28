@@ -20,8 +20,15 @@ struct EditorView: View {
       WallCanvas(model: model)
         .overlay(alignment: .topLeading) {
           if let status {
-            Text(status).font(.caption).padding(10)
-              .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8)).padding(8)
+            Text(status)
+              .font(Theme.roundedBody(12))
+              .foregroundStyle(Theme.shadowRock)
+              .padding(.horizontal, 10)
+              .padding(.vertical, 4)
+              .background(Theme.tape)
+              .rotationEffect(.degrees(-1.5))
+              .clipShape(RoundedRectangle(cornerRadius: 2))
+              .padding(8)
           }
         }
         .allowsHitTesting(!model.textPrompt)
@@ -34,7 +41,7 @@ struct EditorView: View {
         }
       }
     }
-    .background(Color(uiColor: .systemBackground))
+    .background(Theme.wall)
     .safeAreaInset(edge: .bottom, spacing: 0) {
       if !model.textPrompt {
         EditorDock(
